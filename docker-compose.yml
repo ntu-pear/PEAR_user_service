@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sa
+    environment:
+      SA_PASSWORD: "ILOVEFYP123!"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    hostname: sa
+
+  api:
+    build: .
+    container_name: user_service
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      DB_DRIVER: ODBC Driver 17 for SQL Server
+      DB_SERVER: sa,1433
+      DB_USER: sa
+      DB_PASSWORD: ILOVEFYP123!
+      DB_NAME: FYP
+    command: bash -c "python create_db.py && python init_db.py && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"
