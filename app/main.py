@@ -20,4 +20,4 @@ app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Patient API hello"} 
+    return {"message": "Welcome to the User API hello"} 

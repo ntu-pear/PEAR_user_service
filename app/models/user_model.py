@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, BigInteger
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
@@ -16,7 +17,7 @@ class User(Base):
     dateOfBirth = Column(DateTime, nullable=False)
     gender = Column(String(1), nullable=False)
     contactNo = Column(String(32), nullable=False)
-    allowNotifcation = Column(String(1), default='Y', nullable=False)
+    allowNotification = Column(String(1), default='Y', nullable=False)
     profilePicture = Column(String(32))
     lockoutReason = Column(String(255))
     
@@ -39,9 +40,11 @@ class User(Base):
     lockOutEnabled = Column(String(1))
     accessFailedCount = Column(BigInteger)
 
-    createdDate = Column(DateTime,nullable=False)
-    modifiedDate = Column(DateTime, default=datetime.now(), nullable=False)
-    createdById = Column(ForeignKey("USER.id"), nullable=False)
-    modifiedbyId = Column(ForeignKey("USER.id"), nullable=False)
+    createdDate = Column(DateTime,server_default=func.now(),nullable=False)
+    modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    #fake default first before it is properly settled
+    createdById = Column(ForeignKey("USER.id"), default=1, nullable=False)
+    modifiedbyId = Column(ForeignKey("USER.id"), default=1, nullable=False)
 
 # Ensure other models follow similar changes for consistency
