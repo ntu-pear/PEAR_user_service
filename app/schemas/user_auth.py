@@ -7,3 +7,4 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     userId: int = None
+    role: str = None

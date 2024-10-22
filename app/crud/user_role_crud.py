@@ -7,6 +7,9 @@ from app.models.role_model import Role
 def get_user_role(db: Session, user_role_id: int):
     return db.query(UserRole).filter(UserRole.id == user_role_id).first()
 
+def get_user_role_by_user(db: Session, user_id: int):
+    return db.query(UserRole).filter(UserRole.userId == user_id).first()
+
 # Get all user roles for a specific user, with optional pagination
 def get_user_roles(db: Session, userId: int, skip: int = 0, limit: int = 10):
     return db.query(UserRole).filter(UserRole.userId == userId).order_by(UserRole.id).offset(skip).limit(limit).all()

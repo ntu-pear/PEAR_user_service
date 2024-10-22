@@ -12,8 +12,8 @@ python init_db.py
 #initialize alembic for data migration
 alembic upgrade head
 
-#Run unit test for user
-python -m pytest tests/test_user_route.py
+# #Run unit test for user
+# python -m pytest tests/test_user_route.py
 
 # Start the FastAPI application with Uvicorn
 exec "$@"

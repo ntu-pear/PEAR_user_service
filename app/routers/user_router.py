@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user
 from ..schemas import user as schemas_user
+from ..service.email_service import generate_confirmation_token, confirm_token,send_confirmation_email
 
 router = APIRouter(
     tags=["users"],
@@ -11,7 +12,13 @@ router = APIRouter(
 )
 
 @router.post("/users/", response_model=schemas_user.UserBase)
-def create_user(user: schemas_user.UserBase, db: Session = Depends(get_db)):
+async def create_user(user: schemas_user.UserBase, db: Session = Depends(get_db)):
+    #Email Confirmation
+    token = generate_confirmation_token(user.email)
+    await send_confirmation_email(user.email, token)
+    #Send Phone
+
+    
     return crud_user.create_user(db=db, user=user)
 
 @router.get("/users/{userId}", response_model=schemas_user.UserBase)
@@ -33,7 +40,7 @@ async def get_user_by_email(email: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.put("/users/{userId}", response_model=schemas_user.UserBase)
+@router.put("/users/{userId}", response_model=schemas_user.UserUpdate)
 def update_user(userId: int, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
     db_user = crud_user.update_user(db=db, userId=userId, user=user)
     if db_user is None:

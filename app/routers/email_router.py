@@ -14,7 +14,6 @@ async def request_email_confirmation(user_id: int, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="User not found")
     
     token = generate_confirmation_token(user.email)
-    
     await send_confirmation_email(user.email, token)
     return {"msg": "Confirmation email sent"}
 
