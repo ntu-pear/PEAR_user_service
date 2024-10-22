@@ -32,7 +32,51 @@ class UserBase(BaseModel):
     accessFailedCount: Optional[int]=None
 
 class UserCreate(UserBase):
-    pass
+    firstName: str
+    lastName: str
+    preferredName: Optional[str] = None
+    nric: str
+    address: str
+    dateOfBirth: datetime
+    gender: str
+    contactNo: str
+    allowNotification:str
+    profilePicture: Optional[str]=None
+    lockoutReason: Optional[str]=None
+    status:str
+    userName:str
+    email:str
+    emailConfirmed:str
+    passwordHash:str
+    phoneNumber: Optional[str]=None
+    phoneNumberConfirmed:str
+    twoFactorEnabled: str
+
 
 class UserUpdate(UserBase):
     pass
+
+class UserRead(UserBase):
+    id:int
+    firstName: str
+    lastName: str
+    preferredName: Optional[str] = None
+    nric: str
+    address: str
+    dateOfBirth: datetime
+    gender: str
+    contactNo: str
+    allowNotification:str
+    profilePicture: Optional[str]=None
+    lockoutReason: Optional[str]=None
+    status:str
+    userName:str
+    email:str
+    emailConfirmed:str
+    passwordHash:str
+    phoneNumber: Optional[str]=None
+    phoneNumberConfirmed:str
+    twoFactorEnabled: str
+
+    class Config:
+        orm_mode = True

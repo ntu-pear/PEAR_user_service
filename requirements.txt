@@ -6,3 +6,12 @@ sqlalchemy
 pyodbc
 uvicorn
 python-dotenv
+alembic
+passlib
+pyjwt
+python-jose[cryptography]
+python-multipart
+itsdangerous
+fastapi-mail
+pytest
+httpx
