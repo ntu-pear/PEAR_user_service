@@ -1,17 +1,17 @@
-fastapi
-pydantic
-psycopg2-binary
-databases
-sqlalchemy
-pyodbc
-uvicorn
-python-dotenv
-alembic
-passlib
-pyjwt
-python-jose[cryptography]
-python-multipart
-itsdangerous
-fastapi-mail
-pytest
-httpx
+fastapi == 0.112.2
+pydantic == 2.8.2
+psycopg2-binary == 2.9.9
+databases == 0.9.0
+sqlalchemy == 2.0.33
+pyodbc == 5.1.0
+uvicorn == 0.30.6
+python-dotenv == 1.0.1
+alembic == 1.13.2
+passlib == 1.7.4
+pyjwt == 2.9.0
+python-jose[cryptography] == 3.3.0
+python-multipart == 0.0.13
+itsdangerous == 2.2.0
+fastapi-mail == 1.4.1
+pytest == 8.3.3
+httpx == 0.27.2
