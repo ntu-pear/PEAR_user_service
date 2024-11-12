@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fyp-config
+  namespace: fyp-dev
+data:
+  DB_DRIVER: "ODBC Driver 17 for SQL Server"
+  DB_SERVER: "sa,1433"
+  DB_NAME: "fyp"
