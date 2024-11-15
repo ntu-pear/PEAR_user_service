@@ -15,6 +15,7 @@ async def request_email_confirmation(user_id: int, db: Session = Depends(get_db)
     
     token = generate_confirmation_token(user.email)
     await send_confirmation_email(user.email, token)
+    # await send_email("test1","test2",user.email)
     return {"msg": "Confirmation email sent"}
 
 # Confirm Email

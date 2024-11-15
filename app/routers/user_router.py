@@ -17,8 +17,6 @@ async def create_user(user: schemas_user.UserBase, db: Session = Depends(get_db)
     token = generate_confirmation_token(user.email)
     await send_confirmation_email(user.email, token)
     #Send Phone
-
-    
     return crud_user.create_user(db=db, user=user)
 
 @router.get("/users/{userId}", response_model=schemas_user.UserBase)
