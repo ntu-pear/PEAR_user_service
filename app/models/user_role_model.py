@@ -12,8 +12,8 @@ class UserRole(Base):
     # createdDate = Column(DateTime, server_default=func.now(), nullable=False)
     # modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
     
-    # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
+    #createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
+    #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'), default=1, nullable=True)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), default=1, nullable=True) 
 
