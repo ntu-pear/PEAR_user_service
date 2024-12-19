@@ -13,14 +13,16 @@ from ..schemas import user_auth
 
 router = APIRouter()
 
-@router.post("/login", response_model=user_auth.Token)
+@router.post("/login")#, response_model=user_auth.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.userName == form_data.username).first()
+    
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="The user does not exist")
     if not user_auth_service.verify_password(form_data.password, user.passwordHash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     role=get_user_role_by_user(db=db,user_id=user.id)
+    
     data={"userId":user.id,"roleId":role.roleId}
     data=json.dumps(data)
     access_token = user_auth_service.create_access_token(data={"sub": data})
