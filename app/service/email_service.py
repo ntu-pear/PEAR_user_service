@@ -23,17 +23,19 @@ config = ConnectionConfig(
 SECRET_KEY = os.getenv('SECRET_KEY')
 SALT = os.getenv('SALT')
 
-def generate_confirmation_token(email: str) -> str:
+def generate_confirmation_token(email: str) -> str:#(email: str, userName: str) -> str:
     serializer = URLSafeTimedSerializer(SECRET_KEY)
-    return serializer.dumps(email, salt=SALT)
+    payload = {"email": email}#, "userName": userName}
+    return serializer.dumps(payload, salt=SALT)
 
 def confirm_token(token: str, expiration=3600):
     serializer = URLSafeTimedSerializer(SECRET_KEY)
     try:
-        email = serializer.loads(token, salt=SALT, max_age=expiration)
-    except Exception as e:
+        userDetails = serializer.loads(token, salt=SALT, max_age=expiration)
+        #print(userDetails)
+    except Exception as e:      
         return False
-    return email
+    return userDetails
 
 async def send_confirmation_email(email: str, token: str):
     confirmation_url = f"http://localhost:8000/confirm-email/{token}"
@@ -41,6 +43,19 @@ async def send_confirmation_email(email: str, token: str):
         subject="Email Confirmation",
         recipients=[email],  # List of recipients, as a list
         body=f"Please click the following link to confirm your email: {confirmation_url}",
+        subtype="html"
+    )
+
+    fm = FastMail(config)
+    await fm.send_message(message)
+
+## Reset Password
+async def send_reset_password_email(email: str, token: str):
+    resetpassword_url = f"http://localhost:8000/forget-password/{token}"
+    message = MessageSchema(
+        subject="Reset Password",
+        recipients=[email],  # List of recipients, as a list
+        body=f"Please click the following link to reset your password: {resetpassword_url}",
         subtype="html"
     )
 
