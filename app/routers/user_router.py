@@ -4,6 +4,7 @@ from ..database import get_db
 from ..crud import user_crud as crud_user
 from ..schemas import user as schemas_user
 from ..service.email_service import generate_confirmation_token, confirm_token,send_confirmation_email
+from app.models.user_model import User
 
 router = APIRouter(
     tags=["users"],
@@ -14,7 +15,7 @@ router = APIRouter(
 @router.post("/users/", response_model=schemas_user.UserBase)
 async def create_user(user: schemas_user.UserBase, db: Session = Depends(get_db)):
     #Email Confirmation
-    token = generate_confirmation_token(user.email)
+    token = generate_confirmation_token(user.email)#, user.userName)
     await send_confirmation_email(user.email, token)
     #Send Phone
     return crud_user.create_user(db=db, user=user)
@@ -26,7 +27,7 @@ def read_user(userId: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.get("/users/", response_model=list[schemas_user.UserBase])
+@router.get("/users/", response_model=list[schemas_user.UserRead])
 def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     users = crud_user.get_users(db=db, skip=skip, limit=limit)
     return users
@@ -52,3 +53,19 @@ def delete_user(userId: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+@router.post("/users/reset_password/{token}")
+async def reset_user_password(token: str, newPassword: str, db: Session = Depends(get_db)):
+    try:
+        userDetails = confirm_token(token) 
+    except:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    
+    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+    #return user
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.password = newPassword
+    db.commit()
+    
+    return {"Password Updated"}
