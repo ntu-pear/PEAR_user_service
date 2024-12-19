@@ -1,14 +1,15 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
 class UserBase(BaseModel):
+    #id: int
     firstName: str
     lastName: str
     preferredName: Optional[str] = None
     nric: str
     address: str
-    dateOfBirth: datetime
+    dateOfBirth: datetime= Field("DD-MM-YYYY")
     gender: str
     contactNo: str
     #Why is this not boolean?
@@ -30,6 +31,7 @@ class UserBase(BaseModel):
     lockOutEnd: Optional[datetime]=None
     lockOutEnabled: Optional[str]=None
     accessFailedCount: Optional[int]=None
+    #verified: str
 
 class UserCreate(UserBase):
     firstName: str
@@ -48,7 +50,7 @@ class UserCreate(UserBase):
     email:str
     passwordHash:str
     phoneNumber: Optional[str]=None
-
+    
 
 class UserUpdate(UserBase):
     firstName: str
@@ -91,3 +93,5 @@ class UserRead(UserBase):
 
     class Config:
         orm_mode = True
+
+
