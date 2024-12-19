@@ -1,11 +1,21 @@
 from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import and_
 from app.models.user_role_model import UserRole
 from app.schemas.user_role import UserRoleCreate, UserRoleUpdate
 from app.models.role_model import Role
 
+# Get all users roles
+def get_all_user_roles(db: Session, skip: int = 0, limit: int = 10):
+    #sort according to UserID
+    return db.query(UserRole).order_by(UserRole.userId).offset(skip).limit(limit).all()
+
 # Get a single user role by user role ID
 def get_user_role(db: Session, user_role_id: int):
     return db.query(UserRole).filter(UserRole.id == user_role_id).first()
+# Get a single user role by userID
+def get_user_role_userId(db: Session, user_Id: int):
+    return db.query(UserRole).filter(UserRole.userId == user_Id).all()
 
 def get_user_role_by_user(db: Session, user_id: int):
     return db.query(UserRole).filter(UserRole.userId == user_id).first()
@@ -24,7 +34,13 @@ def get_user_by_roles(db: Session, role: str, skip: int = 0, limit: int = 10):
 
 # Create a new user role
 def create_user_role(db: Session, user_role: UserRoleCreate):
+
     db_user_role = UserRole(**user_role.dict())
+    # Check if the combination already exists
+    existing_role = db.query(UserRole).filter(and_(UserRole.userId == db_user_role.userId, UserRole.roleId == db_user_role.roleId)).first()
+    if existing_role:
+        raise HTTPException(status_code=404, detail="This user-role combination already exists.")
+       
     db.add(db_user_role)
     db.commit()
     db.refresh(db_user_role)
@@ -53,3 +69,15 @@ def delete_user_role(db: Session, user_role_id: int):
     db.delete(db_user_role)
     db.commit()
     return db_user_role
+
+# Delete all existing user role by user ID
+def delete_user_role_userId(db: Session, userId: int):
+    db_user_role = db.query(UserRole).filter(UserRole.userId == userId).order_by(UserRole.id).all()
+    
+    if db_user_role is None:
+        return None
+    for role in db_user_role:
+        db.delete(role)
+    db.commit()
+    return db_user_role
+
