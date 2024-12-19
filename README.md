@@ -17,22 +17,22 @@ docker compose up --build
 ### When Deployed for Local Development:
 Clone the repository using the following command:
 ```bash
-git clone https://github.com/ntu-pear/PEAR_patient_service.git
-cd PEAR_patient_service
+git clone https://github.com/ntu-pear/PEAR_user_service.git
+cd PEAR_user_service
 ```
 Setting Up Your Environment
 1. Create a Virtual Environment:
 Conda:
 ```bash
 # This is to set the python version in your conda environment to 3.9.19
-conda create -n pear_patient_service python=3.9.19
-conda activate pear_patient_service
+conda create -n pear_user_service python=3.9.19
+conda activate pear_user_service
 ```
 Python
 ```bash
-python -m venv pear_patient_service
-pear_patient_service/Scripts/activate #for windows
-# source pear_patient_service/bin/activate for linux
+python -m venv pear_user_service
+pear_user_service/Scripts/activate #for windows
+# source pear_user_service/bin/activate for linux
 ```
 Install the required dependencies
 ```bash
