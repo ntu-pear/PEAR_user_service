@@ -8,14 +8,14 @@ class Role(Base):
 
     id = Column(Integer, primary_key=True)
     active = Column(String(1),default='Y', nullable=False)
-    role = Column(String(255), unique=True, nullable=False)
+    role = Column(String(255), nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
-    modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
+    #createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
+    #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
 
     # Relationships
     # createdBy = relationship('User', foreign_keys=[createdById])

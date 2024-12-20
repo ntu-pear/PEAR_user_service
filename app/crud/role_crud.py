@@ -11,11 +11,12 @@ def get_roles(db: Session, skip: int = 0, limit: int = 10):
 
 def create_role(db: Session, role: RoleCreate):
     # Check if the role already exists
-    existing_role = db.query(Role).filter(Role.role == role.role).first()
+    existing_role = db.query(Role).filter(Role.id == role.id).first()
     if existing_role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A role with this name already exists."
+            #detail="A role with this name already exists."
+            detail="User already has a role."
         )
     
     db_role = Role(**role.dict())

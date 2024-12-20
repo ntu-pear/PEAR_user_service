@@ -5,6 +5,7 @@ from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
+from ..crud import user_role_crud as crud_role_user
 
 def get_user(db: Session, userId: int):
     return db.query(User).filter(User.id == userId).first()
@@ -73,6 +74,8 @@ def update_user(db: Session, userId: int, user: UserUpdate):
 def delete_user(db: Session, userId: int):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
+        #delete all user role associated with user
+        crud_role_user.delete_user_role_userId(db, db_user.id)
         db.delete(db_user)
         db.commit()
     return db_user

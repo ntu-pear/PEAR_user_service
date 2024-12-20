@@ -1,9 +1,10 @@
-from sqlalchemy import BigInteger, Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import BigInteger, Column, Integer, String, Date,DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 from .user_role_model import UserRole
 from .privacy_level_setting_model import PrivacyLevelSetting
+ 
 
 class User(Base):
     __tablename__ = 'TABLE_USER'
@@ -15,7 +16,7 @@ class User(Base):
     preferredName = Column(String(255))
     nric = Column(String(9), unique=True, nullable=False)
     address = Column(String(255),nullable=False)
-    dateOfBirth = Column(DateTime,nullable=False)
+    dateOfBirth = Column(Date,nullable=False)
     gender = Column(String(1),nullable=False)
     contactNo = Column(String(32),nullable=False)
     allowNotification = Column(String(1),default='Y',nullable=False)
@@ -26,7 +27,7 @@ class User(Base):
     status = Column(String(50),nullable=False)
     userName = Column(String(255), unique=True,nullable=False)
     email = Column(String(255), unique=True,nullable=False)
-    emailConfirmed = Column(String(1), default='N', nullable=False)
+    emailConfirmed = Column(String(1), default='F', nullable=False)
     passwordHash = Column(String(255),nullable=False)
     securityStamp = Column(String(255))
     concurrencyStamp = Column(String(255))
@@ -38,7 +39,7 @@ class User(Base):
     accessFailedCount = Column(BigInteger)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-
+    
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
