@@ -1,7 +1,7 @@
 import os
 import sqlalchemy as sa
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
@@ -29,10 +29,10 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 # COMMMENT out this section when doing local development
 connection_url = sa.URL.create(
     "mssql+pyodbc",
-    username=DB_USERNAME_DEV,
-    password=DB_PASSWORD_DEV,
+    #username=DB_USERNAME_DEV,
+    #password=DB_PASSWORD_DEV,
     host=DB_SERVER_DEV,
-    port=DB_DATABASE_PORT,
+    #port=DB_DATABASE_PORT,
     database=DB_DATABASE_DEV,
     query={"driver": DB_DRIVER_DEV, "TrustServerCertificate": "yes"},
 )
@@ -46,7 +46,7 @@ connection_url = sa.URL.create(
 #     host=DB_SERVER,
 #     port=DB_DATABASE_PORT,
 #     database=DB_DATABASE,
-#     query={"driver": DB_DRIVER, "TrustServerCertificate": "yes"},
+#     query={"driver": DB_DRIVER_DEV, "TrustServerCertificate": "yes"},
 # )
 ##############################################
 
@@ -57,9 +57,10 @@ engine = sa.create_engine(connection_url)
 # engine = create_engine(DATABASE_URL, connect_args={"timeout": 30})
 # engine_dev = create_engine(DATABASE_URL_DEV, )  # Increase the timeout if necessary
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autoflush=False, bind=engine)#autocommit=True, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()
