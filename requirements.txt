@@ -19,5 +19,5 @@ google-auth
 google-auth-oauthlib == 1.0.0
 google-auth-httplib2
 google-api-python-client
-#vonage == 3.17.4
-#twilio
+pyotp
+captcha

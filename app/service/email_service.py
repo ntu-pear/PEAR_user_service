@@ -61,3 +61,15 @@ async def send_reset_password_email(email: str, token: str):
 
     fm = FastMail(config)
     await fm.send_message(message)
+    
+## Send 2FA email
+async def send_2fa_email(email: str, code: int):
+    message = MessageSchema(
+        subject="Verification Code",
+        recipients=[email],  # List of recipients, as a list
+        body=f"Your verification code is: {code}. Please note that the code will expire in 5 minutes.",
+        subtype="html"
+    )
+
+    fm = FastMail(config)
+    await fm.send_message(message)
