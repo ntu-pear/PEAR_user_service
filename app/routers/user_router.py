@@ -89,4 +89,4 @@ async def reset_user_password(token: str, newPassword: str, db: Session = Depend
     user.password = newPassword
     db.commit()
     
-    return {"Password Updated"}
+    return {"Successfully changed Password"}

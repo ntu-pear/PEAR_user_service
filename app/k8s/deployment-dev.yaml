@@ -23,7 +23,7 @@ spec:
         - name: DB_DRIVER_DEV
           value: "ODBC Driver 17 for SQL Server"
         - name: DB_SERVER_DEV
-          value: "172.21.148.178"
+          value: "10.96.188.171"
         - name: DB_DATABASE_DEV
           value: "user_service_dev"
         - name: DB_DATABASE_PORT

@@ -17,7 +17,7 @@ DB_USERNAME_DEV = os.getenv("DB_USERNAME_DEV")
 DB_PASSWORD_DEV = os.getenv("DB_PASSWORD_DEV")
 
 # Get the database URL from environment (DOCKER LOCAL)
-DB_URL_LOCAL = os.getenv("DB_URL_LOCAL")
+#DB_URL_LOCAL = os.getenv("DB_URL_LOCAL")
 DB_DRIVER = os.getenv("DB_DRIVER")
 DB_SERVER = os.getenv("DB_SERVER")
 DB_DATABASE = os.getenv("DB_DATABASE")
@@ -29,10 +29,10 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 # COMMMENT out this section when doing local development
 connection_url = sa.URL.create(
     "mssql+pyodbc",
-    #username=DB_USERNAME_DEV,
-    #password=DB_PASSWORD_DEV,
+    username=DB_USERNAME_DEV,
+    password=DB_PASSWORD_DEV,
     host=DB_SERVER_DEV,
-    #port=DB_DATABASE_PORT,
+    port=DB_DATABASE_PORT,
     database=DB_DATABASE_DEV,
     query={"driver": DB_DRIVER_DEV, "TrustServerCertificate": "yes"},
 )
