@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ..service.email_service import generate_confirmation_token, confirm_token,send_confirmation_email
+from ..service.email_service import generate_email_token, confirm_token,send_confirmation_email
 
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -14,7 +14,7 @@ async def request_email_confirmation(user_id: int, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    token = generate_confirmation_token(user.email)
+    token = generate_email_token(user.email)
     await send_confirmation_email(user.email, token)
     # await send_email("test1","test2",user.email)
     return {"msg": "Confirmation email sent"}
