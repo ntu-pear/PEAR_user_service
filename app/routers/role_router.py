@@ -30,7 +30,7 @@ def update_existing_role(roleId: int, role: RoleUpdate, db: Session = Depends(ge
     return db_role
 
 @router.delete("/roles/{roleId}", response_model=Role)
-def delete_role(roleId: int, db: Session = Depends(get_db)):
+def delete_exisiting_role(roleId: int, db: Session = Depends(get_db)):
     db_role = delete_role(db, roleId=roleId)
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")

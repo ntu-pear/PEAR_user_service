@@ -30,7 +30,9 @@ class User(Base):
     #userName = Column(String(255), unique=True,nullable=False)
     email = Column(String(255), unique=True,nullable=False)
     emailConfirmed = Column(String(1), default='F', nullable=False)
-    passwordHash = Column(String(255),nullable=False)
+    passwordHash = Column(String(255))
+    verified = Column(String(1), default="N", nullable=False)
+
     securityStamp = Column(String(255))
     concurrencyStamp = Column(String(255))
     #phoneNumber = Column(String(32))

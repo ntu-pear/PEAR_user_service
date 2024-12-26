@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user
 from ..schemas import user as schemas_user
-from ..service.email_service import generate_email_token, confirm_token,send_confirmation_email
+from ..service.email_service import send_registration_email,generate_email_token, confirm_token,send_confirmation_email
 from app.models.user_model import User
 
 router = APIRouter(
@@ -11,19 +11,35 @@ router = APIRouter(
     dependencies=[Depends(get_db)],
     responses={404: {"description": "Not found"}},
 )
-
-@router.post("/users/register_account/", response_model=schemas_user.UserBase)
-async def create_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
+#Create Acc, unverified
+@router.post("/users/create_account/", response_model=schemas_user.TempUserCreate)
+async def create_user(user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
+    
+    db_user=crud_user.create_user(db=db, user=user)
+    if db_user:
+        #Send registration email
+        token = generate_email_token(user.email)
+        await send_registration_email(user.email, token)
+   
+    return db_user
+#Verify Acc, add password
+@router.post("/users/verify_account/", response_model=schemas_user.UserBase)
+async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
     userDetails= confirm_token(token)
     if not userDetails:
         raise HTTPException(status_code=404, detail="Invalid Token")
-    db_user = crud_user.create_user(db=db, user=user)
+    
+    db_user = crud_user.verify_user(db=db, user=user)
+
     if db_user:
         #Email Confirmation
         token = generate_email_token(user.email)
         await send_confirmation_email(user.email, token)
 
     return db_user
+
+
+
 
 @router.get("/users/{userId}", response_model=schemas_user.UserRead)
 def read_user(userId: int, db: Session = Depends(get_db)):

@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, Field
+from datetime import datetime, date
 from typing import Optional
 
 class UserBase(BaseModel):
@@ -19,7 +19,8 @@ class UserCreate(UserBase):
     nric: str
     passwordHash:str
     
-    
+class TempUserCreate(UserBase):
+    nric: str
 
 class UserUpdate(UserBase):
     firstName: Optional[str] = None
@@ -53,8 +54,8 @@ class UserRead(BaseModel):
     status:str
     email:str
     emailConfirmed:str
-    passwordHash:str
-
+    passwordHash:Optional[str]=None
+    verified: str
     twoFactorEnabled: str
 
     class Config:
