@@ -105,32 +105,3 @@ Maps user to their secret question and answer
 
 
 
-#UserCreate
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "preferredName": "Johnny",
-  "nric": "S1234567D",
-  "address": "123 Orchard Road, #12-34, Singapore 238888",
-  "dateOfBirth": "1990-05-14T00:00:00Z",
-  "gender": "M",
-  "contactNo": "+65 91234567",
-  "allowNotification": "T",
-  "profilePicture": "https://example.com/",
-  "lockoutReason": "None",
-  "loginTimeStamp": "2024-09-20T04:03:39.213Z",
-  "lastPasswordChanged": "2024-08-15T12:34:56.789Z",
-  "status": "Active",
-  "userName": "john.doe",
-  "email": "john.doe@example.com",
-  "emailConfirmed": "T",
-  "passwordHash": "hashed_password_string",
-  "securityStamp": "random_security_stamp",
-  "concurrencyStamp": "random_concurrency_stamp",
-  "phoneNumber": "+65 91234567",
-  "phoneNumberConfirmed": "T",
-  "twoFactorEnabled": "T",
-  "lockOutEnd": "2024-09-20T04:03:39.213Z",
-  "lockOutEnabled": "T",
-  "accessFailedCount": 0
-}
