@@ -12,7 +12,7 @@ router = APIRouter(
     responses={404: {"description": "Not found"}},
 )
 
-@router.post("/users/register_account", response_model=schemas_user.UserBase)
+@router.post("/users/register_account/", response_model=schemas_user.UserBase)
 async def create_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
     userDetails= confirm_token(token)
     if not userDetails:
@@ -20,7 +20,7 @@ async def create_user(token: str, user: schemas_user.UserCreate, db: Session = D
     db_user = crud_user.create_user(db=db, user=user)
     if db_user:
         #Email Confirmation
-        token = generate_email_token(user.email)#, user.userName)
+        token = generate_email_token(user.email)
         await send_confirmation_email(user.email, token)
 
     return db_user
