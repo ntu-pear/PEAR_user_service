@@ -58,3 +58,19 @@ def delete_user(userId: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+@router.post("/users/reset_password/{token}")
+async def reset_user_password(token: str, newPassword: str, db: Session = Depends(get_db)):
+    try:
+        userDetails = confirm_token(token) 
+    except:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    
+    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+    #return user
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.password = newPassword
+    db.commit()
+    
+    return {"Password Updated"}

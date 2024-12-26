@@ -50,13 +50,37 @@ async def send_confirmation_email(email: str, token: str):
     fm = FastMail(config)
     await fm.send_message(message)
 
-
 async def send_registration_email(email: str, token: str):
     confirmation_url = f"http://localhost:8000/user/register_account/{token}"
     message = MessageSchema(
         subject="Account Registration",
         recipients=[email],  # List of recipients, as a list
         body=f"Please click the following link to register your account: {confirmation_url}",
+        subtype="html"
+    )
+
+    fm = FastMail(config)
+    await fm.send_message(message)
+
+## Reset Password
+async def send_reset_password_email(email: str, token: str):
+    resetpassword_url = f"http://localhost:8000/forget-password/{token}"
+    message = MessageSchema(
+        subject="Reset Password",
+        recipients=[email],  # List of recipients, as a list
+        body=f"Please click the following link to reset your password: {resetpassword_url}",
+        subtype="html"
+    )
+
+    fm = FastMail(config)
+    await fm.send_message(message)
+    
+## Send 2FA email
+async def send_2fa_email(email: str, code: int):
+    message = MessageSchema(
+        subject="Verification Code",
+        recipients=[email],  # List of recipients, as a list
+        body=f"Your verification code is: {code}. Please note that the code will expire in 5 minutes.",
         subtype="html"
     )
 

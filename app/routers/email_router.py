@@ -25,9 +25,13 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
     try:
         userDetails = confirm_token(token)
        
+        userDetails = confirm_token(token)
+       
     except:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     
+    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+    #return user
     user = db.query(User).filter(User.email == userDetails.get("email")).first()
     #return user
     if not user:
@@ -37,15 +41,3 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
     db.commit()
     
     return {"msg": "Email confirmed"}
-
-# Request Email Confirmation
-#@router.post("/request-reset-password/")
-#async def request_reset_confirmation(user_email: str, db: Session = Depends(get_db)):
-#    user = db.query(User).filter(User.email == user_email).first()
-#    if not user:
-#        raise HTTPException(status_code=404, detail="User not found")
-    
-#    token = generate_confirmation_token(user.email)
-#    await send_resetpassword_email(user.email, token)
-    # await send_email("test1","test2",user.email)
-#    return {"msg": "Reset password email sent"}

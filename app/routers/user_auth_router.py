@@ -15,6 +15,7 @@ from ..schemas import user_auth
 router = APIRouter()
 
 @router.post("/login")#, response_model=user_auth.Token)
+@router.post("/login")#, response_model=user_auth.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     #Get User
     user = db.query(User).filter(User.email == form_data.email).first()
@@ -27,6 +28,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     #Get user roleID
     role=get_user_role_by_user(db=db,user_id=user.id)
 
+    
     data={"userId":user.id,"roleId":role.roleId}
     #Convert to JSON
     data=json.dumps(data)
