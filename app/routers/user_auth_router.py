@@ -15,7 +15,6 @@ from ..schemas import user_auth
 router = APIRouter()
 
 @router.post("/login")#, response_model=user_auth.Token)
-@router.post("/login")#, response_model=user_auth.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     #Get User
     user = db.query(User).filter(User.email == form_data.email).first()
