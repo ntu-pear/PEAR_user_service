@@ -4,19 +4,19 @@ from typing import Optional
 
 class RoleBase(BaseModel):
     id: int
-    role: str
+    roleName: str
     createdDate: datetime
     modifiedDate: datetime
     active: str
 
 class RoleCreate(RoleBase):
-    role: str
+    pass
 
 class RoleUpdate(RoleBase):
     pass
 
 class Role(RoleBase):
-    role: str
+    pass
 
     class Config:
         orm_mode = True
