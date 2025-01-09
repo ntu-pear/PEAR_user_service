@@ -8,7 +8,7 @@ class UserRole(Base):
 
     id = Column(Integer, primary_key=True)
     userId = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=False)  # FK to User
-    roleId = Column(Integer, ForeignKey('ROLES.id'), nullable=False)  # FK to Role
+    roleId = Column(Integer, ForeignKey('TABLE_ROLES.id'), nullable=False)  # FK to Role
     # createdDate = Column(DateTime, server_default=func.now(), nullable=False)
     # modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
     
@@ -17,5 +17,5 @@ class UserRole(Base):
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'), default=1, nullable=True)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), default=1, nullable=True) 
 
-    user = relationship('User', back_populates='roles', foreign_keys=[userId])
-    role = relationship('Role', foreign_keys=[roleId])
+    #user = relationship('User', back_populates='roles', foreign_keys=[userId])
+    #role = relationship('Role', foreign_keys=[roleId])

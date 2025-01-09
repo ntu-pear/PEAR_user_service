@@ -4,11 +4,11 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 class Role(Base):
-    __tablename__ = 'ROLES'
+    __tablename__ = 'TABLE_ROLES'
 
     id = Column(Integer, primary_key=True)
     active = Column(String(1),default='Y', nullable=False)
-    role = Column(String(255), nullable=False)
+    roleName = Column(String(255), unique=True, nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     
@@ -23,3 +23,6 @@ class Role(Base):
 
     # Use back_populates instead of backref for privacy settings
     privacyLevelSettings = relationship('PrivacyLevelSetting', back_populates='role')
+
+    # Back-reference to users
+    users = relationship('User', back_populates='role')  # One-to-Many relationship

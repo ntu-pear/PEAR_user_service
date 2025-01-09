@@ -5,15 +5,13 @@ from typing import Optional
 class UserBase(BaseModel):
     #id: int
     
-    firstName: str
-    lastName: str
-    preferredName: Optional[str] = None
-    address: str
-    dateOfBirth: date= Field("YYYY-MM-DD")
-    gender: str
+    nric_FullName: str
+    nric_Address: str
+    nric_DateOfBirth: date= Field("YYYY-MM-DD")
+    nric_Gender: str
     contactNo: str
     email: str
-    role: str 
+    roleName: str 
 
 class UserCreate(UserBase):
     nric: str
@@ -23,30 +21,24 @@ class TempUserCreate(UserBase):
     nric: str
 
 class UserUpdate(UserBase):
-    firstName: Optional[str] = None
-    lastName: Optional[str] = None
-    preferredName: Optional[str] = None
-    address: Optional[str] = None
-    dateOfBirth: Optional[date] = None
-    gender: Optional[str] = None
+    nric_Address: Optional[str] = None
+    nric_DateOfBirth: Optional[date] = None
+    nric_Gender: Optional[str] = None
     contactNo: Optional[str] = None
     allowNotification: Optional[str] = None
     profilePicture: Optional[str] = None
     lockoutReason: Optional[str] = None
     status: Optional[str] = None
-    #userName: Optional[str] = None
     email: Optional[str] = None
-    phoneNumber: Optional[str] = None
 
 class UserRead(BaseModel):
     id:int
-    firstName: str
-    lastName: str
-    preferredName: Optional[str] = None
+    nric_FullName: str
     nric: str
-    address: str
-    dateOfBirth: date
-    gender: str
+    nric_Address: str
+    nric_DateOfBirth: date
+    nric_Gender: str
+    roleName: str
     contactNo: str
     allowNotification:str
     profilePicture: Optional[str]=None

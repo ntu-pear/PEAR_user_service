@@ -2,7 +2,8 @@ from sqlalchemy import BigInteger, Column, Integer, String, Date,DateTime, Forei
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
-from .user_role_model import UserRole
+
+from .role_model import Role
 from .privacy_level_setting_model import PrivacyLevelSetting
  
 
@@ -11,16 +12,13 @@ class User(Base):
 
     id = Column(Integer, primary_key=True)
     active = Column(String(1),default='Y',nullable=False)
-    firstName = Column(String(255),nullable=False)
-    lastName = Column(String(255),nullable=False)
-    preferredName = Column(String(255))
+    nric_FullName = Column(String(255), nullable=False)
     nric = Column(String(9), unique=True, nullable=False)
-    address = Column(String(255),nullable=False)
-    dateOfBirth = Column(Date,nullable=False)
-    gender = Column(String(1),nullable=False)
+    nric_Address = Column(String(255),nullable=False)
+    nric_DateOfBirth = Column(Date,nullable=False)
+    nric_Gender = Column(String(1), nullable=False)
     contactNo = Column(String(32),nullable=False)
     contactNoConfirmed = Column(String(1), default='N', nullable=False)
-    role = Column(String(20),nullable=False)
     allowNotification = Column(String(1),default='Y',nullable=False)
     profilePicture = Column(String(32))
     lockoutReason = Column(String(255))
@@ -57,4 +55,7 @@ class User(Base):
     # Explicitly define the relationship to created privacy settings
     # createdPrivacySettings = relationship('PrivacyLevelSetting', foreign_keys=[PrivacyLevelSetting.createdById])
 
-    roles = relationship('UserRole', back_populates='user', foreign_keys=[UserRole.userId])
+    # Foreign key to Role table
+    roleName = Column(String(255), ForeignKey('TABLE_ROLES.roleName'), nullable=False)
+    # Relationship to Role table
+    role = relationship('Role', back_populates='users')  # Many-to-One relationship
