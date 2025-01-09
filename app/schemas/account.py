@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class ResetPasswordBase(BaseModel):
-    dateOfBirth: date = Field("YYYY-MM-DD")
+    nric_DateOfBirth: date = Field("YYYY-MM-DD")
     nric: str
     email: str
-    userRole: str
+    roleName: str
