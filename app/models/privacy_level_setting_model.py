@@ -8,7 +8,7 @@ class PrivacyLevelSetting(Base):
 
     id = Column(Integer, primary_key=True)
     active = Column(String(1),default='Y', nullable=False)
-    roleId = Column(Integer, ForeignKey('ROLES.id'), nullable=False)  # FK to Role
+    roleId = Column(Integer, ForeignKey('TABLE_ROLES.id'), nullable=False)  # FK to Role
     privacyLevelSensitive = Column(BigInteger, nullable=False )
     privacyLevelNonSensitive = Column(BigInteger, nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)
