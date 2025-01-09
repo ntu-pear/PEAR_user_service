@@ -1,6 +1,9 @@
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from fastapi_mail.email_utils import DefaultChecker
 from fastapi_mail.errors import ConnectionErrors
+from ..schemas import email as email
+import json
+import httpx
 import os
 from pathlib import Path
 from pydantic import EmailStr
@@ -86,3 +89,15 @@ async def send_2fa_email(email: str, code: int):
 
     fm = FastMail(config)
     await fm.send_message(message)
+
+#send email
+def send_email(email: email.EmailBase):
+    try:
+        email_service_url = "http://localhost:8001/api/v1/send-email/"
+        response = httpx.post(email_service_url, json=email.dict())
+        response.raise_for_status()  # Raise exception for HTTP errors
+        return response.json()
+    except httpx.RequestError as e:
+        raise RuntimeError(f"Request error: {e}")
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(f"HTTP error: {e.response.status_code} - {e.response.text}")

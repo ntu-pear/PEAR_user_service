@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from ..models.role_model import Role
+from ..models.user_model import User
 from ..schemas.role import RoleCreate, RoleUpdate
 from fastapi import HTTPException, status
 
@@ -15,8 +16,7 @@ def create_role(db: Session, role: RoleCreate):
     if existing_role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            #detail="A role with this name already exists."
-            detail="User already has a role."
+            #etail="A role with this name already exists."
         )
     
     db_role = Role(**role.dict())
@@ -40,3 +40,13 @@ def delete_role(db: Session, roleId: int):
         db.delete(db_role)
         db.commit()
     return db_role
+
+def get_users_by_role(role_name: str, db: Session):
+    # Fetch the role by name
+    role = db.query(Role).filter(Role.roleName == role_name).first()
+    if not role:
+        return {"error": "Role not found"}
+    
+    # Get all users associated with this role
+    users = db.query(User).filter(User.roleName == role.roleName).all()
+    return [{"id": user.id, "FullName": user.nric_FullName} for user in users]

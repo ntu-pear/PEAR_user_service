@@ -13,8 +13,12 @@ router = APIRouter(
 )
 #Create Acc, unverified
 @router.post("/users/create_account/", response_model=schemas_user.TempUserCreate)
-async def create_user(user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
-    
+async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
+    if not userDetails:
+        raise HTTPException(status_code=404, detail="Invalid Token")
+    if (userDetails.roleName != "Admin"):
+         raise HTTPException(status_code=404, detail="User is not authorised")
     db_user=crud_user.create_user(db=db, user=user)
     if db_user:
         #Send registration email
@@ -28,9 +32,7 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     userDetails= confirm_token(token)
     if not userDetails:
         raise HTTPException(status_code=404, detail="Invalid Token")
-    
     db_user = crud_user.verify_user(db=db, user=user)
-
     if db_user:
         #Email Confirmation
         token = generate_email_token(user.email)
@@ -38,37 +40,39 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
 
     return db_user
 
-
-
-
 @router.get("/users/{userId}", response_model=schemas_user.UserRead)
-def read_user(userId: int, db: Session = Depends(get_db)):
+def read_user(token: str, userId: int, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @router.get("/users/", response_model=list[schemas_user.UserRead])
-def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_users(token:str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
     users = crud_user.get_users(db=db, skip=skip, limit=limit)
     return users
 
 @router.get("/users/get_email/{email}", response_model=schemas_user.UserRead)
-async def get_user_by_email(email: str, db: Session = Depends(get_db)):
+async def get_user_by_email(token:str, email: str, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
     db_user = crud_user.get_user_by_email(db=db, email=email)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @router.put("/users/{userId}", response_model=schemas_user.UserUpdate)
-def update_user(userId: int, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
+def update_user(token:str, userId: int, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
     db_user = crud_user.update_user(db=db, userId=userId, user=user)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @router.delete("/users/{userId}", response_model=schemas_user.UserBase)
-def delete_user(userId: int, db: Session = Depends(get_db)):
+def delete_user(token: str, userId: int, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
     db_user = crud_user.delete_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")

@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ..service.email_service import generate_email_token, confirm_token,send_confirmation_email
+from ..service.email_service import generate_email_token, confirm_token,send_confirmation_email, send_email
 
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user_model import User
+from ..schemas import email as email
+import httpx
 
 router = APIRouter()
 
@@ -24,9 +26,7 @@ async def request_email_confirmation(user_id: int, db: Session = Depends(get_db)
 async def confirm_email(token: str, db: Session = Depends(get_db)):
     try:
         userDetails = confirm_token(token)
-       
-        userDetails = confirm_token(token)
-       
+
     except:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     
@@ -41,3 +41,9 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
     db.commit()
     
     return {"msg": "Email confirmed"}
+
+@router.post("/send_email/")
+async def sending_email(email: email.EmailBase):
+    hello =send_email(email)
+    # await send_email("test1","test2",user.email)
+    return hello

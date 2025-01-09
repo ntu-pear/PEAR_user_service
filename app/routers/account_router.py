@@ -15,23 +15,19 @@ router = APIRouter()
 # Request password reset
 @router.post("/request-reset-password/")
 async def request_reset_confirmation(account: schemas_account.ResetPasswordBase, db: Session = Depends(get_db)):
-    #user = db.query(User).filter(User.email == account.email).first()
+
     user = crud_user.get_user_by_email(db=db, email=account.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    #RoleMap = crud_role_user.get_user_role_userId(db=db, user_Id = user.id)
-    #userRole = role_crud.get_role(db=db, roleId = RoleMap.roleId)
-    
-    fields_to_check = ["nric", "dateOfBirth","role"]
+    fields_to_check = ["nric", "dateOfBirth","roleName"]
     for field in fields_to_check:
         if getattr(user, field) != getattr(account, field):
             raise HTTPException(status_code=404, detail="Invalid Details")
-    #if((user.nric != account.nric) | (user.dateOfBirth != account.dateOfBirth)| (userRole.role != account.userRole)):
-    #    raise HTTPException(status_code=404, detail="Invalid Details")
+        
     token = generate_email_token(user.email)
     await send_resetpassword_email(user.email, token)
-    # await send_email("test1","test2",user.email)
+  
     return {"msg": "Reset password email sent"}
 
 @router.post("/reset_password/{token}")

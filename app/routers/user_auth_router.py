@@ -14,8 +14,8 @@ from ..schemas import user_auth
 
 router = APIRouter()
 
-@router.post("/login")#, response_model=user_auth.Token)
-@router.post("/login")#, response_model=user_auth.Token)
+
+@router.post("/login/")#, response_model=user_auth.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     #Get User
     user = db.query(User).filter(User.email == form_data.email).first()
@@ -25,17 +25,13 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user_auth_service.verify_password(form_data.password, user.passwordHash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
-    #Get user roleID
-    role=get_user_role_by_user(db=db,user_id=user.id)
-
-    
-    data={"userId":user.id,"roleId":role.roleId}
+    data={"userId":user.id,"roleName": user.roleName}
     #Convert to JSON
     data=json.dumps(data)
     #Add data into access token
     access_token = user_auth_service.create_access_token(data={"sub": data})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.get("/current_user", response_model=user_auth.TokenData)
+@router.get("/current_user/", response_model=user_auth.TokenData)
 def read_current_user(current_access: user_auth.TokenData = Depends(user_auth_service.get_current_user)):
     return current_access

@@ -114,9 +114,49 @@ def create_user(db: Session, user: TempUserCreate):
 
     return db_user
 
+def super_create_user(db: Session, user: TempUserCreate):
+    # Check NRIC Format
+    if not validate_nric(user.nric):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid NRIC Format."
+        )
+    # Check if the email is already registered
+    existing_user_email = db.query(User).filter(User.email == user.email).first()
+    if existing_user_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this email already exists."
+        )
+    # Check if the nric is already registered
+    existing_user_nric = db.query(User).filter(User.nric == user.nric).first()
+    if existing_user_nric:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this nric already exists."
+        )
+    # Use a transaction to ensure rollback on error
+    try:
+        db_user = User(**user.dict())
+        
+        # Begin transaction
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+
+    except IntegrityError:
+        # Rollback transaction if any IntegrityError occurs
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An error occurred: possibly a duplicate unique field."
+        )
+
+    return db_user
+
 def verify_userDetails(db_user, user):
     # Define the fields to compare
-    fields_to_check = ["nric", "email", "dateOfBirth", "contactNo", "role"]
+    fields_to_check = ["nric_FullName","nric", "email", "nric_DateOfBirth", "contactNo", "roleName"]
     for field in fields_to_check:
         if getattr(db_user, field) != getattr(user, field):
             return False
