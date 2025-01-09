@@ -17,5 +17,5 @@ class UserRole(Base):
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'), default=1, nullable=True)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), default=1, nullable=True) 
 
-    user = relationship('User', back_populates='roles', foreign_keys=[userId])
-    role = relationship('Role', foreign_keys=[roleId])
+    #user = relationship('User', back_populates='roles', foreign_keys=[userId])
+    #role = relationship('Role', foreign_keys=[roleId])
