@@ -29,11 +29,8 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
 
     except:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
-    
     user = db.query(User).filter(User.email == userDetails.get("email")).first()
-    #return user
-    user = db.query(User).filter(User.email == userDetails.get("email")).first()
-    #return user
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     

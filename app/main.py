@@ -2,8 +2,18 @@ from fastapi import FastAPI
 from .database import engine, Base
 from .routers import user_auth_router, user_router,role_router,privacy_level_setting_router,secret_question_router,user_secret_question_router,user_role_router,email_router,verification_router,account_router
 from fastapi.middleware.cors import CORSMiddleware
+import os
+from dotenv import load_dotenv
 
 app = FastAPI()
+load_dotenv()
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://localhost:5173",
+    os.getenv("WEB_FE_ORIGIN"),
+    # Add other origins if needed
+]
 
 # middleware to connect to the frontend
 app.add_middleware(

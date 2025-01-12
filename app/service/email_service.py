@@ -2,7 +2,7 @@ from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 from fastapi_mail.email_utils import DefaultChecker
 from fastapi_mail.errors import ConnectionErrors
 from ..schemas import email as email
-import json
+
 import httpx
 import os
 from pathlib import Path
@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 SALT = os.getenv('SALT')
 
 
-def generate_email_token(email: str) -> str:#(email: str, userName: str) -> str:
+def generate_email_token(email: str) -> str:
     serializer = URLSafeTimedSerializer(SECRET_KEY)
     payload = {"email": email}#, "userName": userName}
     return serializer.dumps(payload, salt=SALT)
@@ -54,11 +54,11 @@ async def send_confirmation_email(email: str, token: str):
     await fm.send_message(message)
 
 async def send_registration_email(email: str, token: str):
-    confirmation_url = f"http://localhost:8000/user/register_account/{token}"
+    registration_url = f"http://localhost:8000/user/register_account/{token}"
     message = MessageSchema(
         subject="Account Registration",
         recipients=[email],  # List of recipients, as a list
-        body=f"Please click the following link to register your account: {confirmation_url}",
+        body=f"Please click the following link to register your account: {registration_url}",
         subtype="html"
     )
 

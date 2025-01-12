@@ -13,14 +13,14 @@ from ..service.email_service import *
 router = APIRouter()
 
 # Request password reset
-@router.post("/request-reset-password/")
+@router.post("/account/request-reset-password/")
 async def request_reset_confirmation(account: schemas_account.ResetPasswordBase, db: Session = Depends(get_db)):
 
     user = crud_user.get_user_by_email(db=db, email=account.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    fields_to_check = ["nric", "dateOfBirth","roleName"]
+    fields_to_check = ["nric", "nric_DateOfBirth","roleName"]
     for field in fields_to_check:
         if getattr(user, field) != getattr(account, field):
             raise HTTPException(status_code=404, detail="Invalid Details")
@@ -30,7 +30,7 @@ async def request_reset_confirmation(account: schemas_account.ResetPasswordBase,
   
     return {"msg": "Reset password email sent"}
 
-@router.post("/reset_password/{token}")
+@router.post("/account/reset_password/{token}")
 async def reset_user_password(token: str, newPassword: str, confirmPassword: str, db: Session = Depends(get_db)):
     try:
         userDetails = confirm_token(token) 

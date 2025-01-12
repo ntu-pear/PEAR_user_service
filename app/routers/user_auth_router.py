@@ -22,7 +22,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="The user does not exist")
-    if not user_auth_service.verify_password(form_data.password, user.passwordHash):
+    if not user_auth_service.verify_password(form_data.password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
     data={"userId":user.id,"roleName": user.roleName}

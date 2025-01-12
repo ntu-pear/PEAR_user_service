@@ -3,8 +3,15 @@ from datetime import date
 from typing import Optional
 
 
-class ResetPasswordBase(BaseModel):
+class AccountBase(BaseModel):
     nric_DateOfBirth: date = Field("YYYY-MM-DD")
     nric: str
     email: str
     roleName: str
+
+
+class ResetPasswordBase(AccountBase):
+    pass
+
+class ResendEmail(AccountBase):
+    pass

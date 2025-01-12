@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user
 from ..schemas import user as schemas_user
+from ..schemas import account as schemas_account
 from ..service.email_service import send_registration_email,generate_email_token, confirm_token,send_confirmation_email
 from app.models.user_model import User
 
@@ -17,8 +18,8 @@ async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session
     userDetails= confirm_token(token)
     if not userDetails:
         raise HTTPException(status_code=404, detail="Invalid Token")
-    if (userDetails.roleName != "Admin"):
-         raise HTTPException(status_code=404, detail="User is not authorised")
+    #if (userDetails.roleName != "Admin"):
+    #     raise HTTPException(status_code=404, detail="User is not authorised")
     db_user=crud_user.create_user(db=db, user=user)
     if db_user:
         #Send registration email
@@ -33,12 +34,23 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     if not userDetails:
         raise HTTPException(status_code=404, detail="Invalid Token")
     db_user = crud_user.verify_user(db=db, user=user)
-    if db_user:
-        #Email Confirmation
-        token = generate_email_token(user.email)
-        await send_confirmation_email(user.email, token)
 
     return db_user
+
+#Resend account confirmation email
+@router.post("/users/request/resend_registration_email", response_model=schemas_user.UserBase)
+async def resend_registration_email(token: str, user: schemas_account.ResendEmail, db: Session = Depends(get_db)):
+    userDetails= confirm_token(token)
+    if not userDetails:
+        raise HTTPException(status_code=404, detail="Invalid Token")
+    if (userDetails.roleName != "ADMIN"):
+         raise HTTPException(status_code=404, detail="User is not authorised")
+  
+    #Send registration Email
+    token = generate_email_token(user.email)
+    await send_confirmation_email(user.email, token)
+
+    return {"Message":"Email Sent"}
 
 @router.get("/users/{userId}", response_model=schemas_user.UserRead)
 def read_user(token: str, userId: int, db: Session = Depends(get_db)):
@@ -78,19 +90,3 @@ def delete_user(token: str, userId: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.post("/users/reset_password/{token}")
-async def reset_user_password(token: str, newPassword: str, db: Session = Depends(get_db)):
-    try:
-        userDetails = confirm_token(token) 
-    except:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
-    
-    user = db.query(User).filter(User.email == userDetails.get("email")).first()
-    #return user
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    user.password = newPassword
-    db.commit()
-    
-    return {"Successfully changed Password"}

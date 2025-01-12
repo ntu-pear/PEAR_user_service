@@ -3,7 +3,6 @@ from datetime import datetime, date
 from typing import Optional
 
 class UserBase(BaseModel):
-    #id: int
     
     nric_FullName: str
     nric_Address: str
@@ -15,14 +14,14 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     nric: str
-    passwordHash:str
+    password:str
     
 class TempUserCreate(UserBase):
     nric: str
 
-class UserUpdate(UserBase):
+class UserUpdate(BaseModel):
     nric_Address: Optional[str] = None
-    nric_DateOfBirth: Optional[date] = None
+    #nric_DateOfBirth: Optional[date] = None
     nric_Gender: Optional[str] = None
     contactNo: Optional[str] = None
     allowNotification: Optional[str] = None
@@ -46,11 +45,18 @@ class UserRead(BaseModel):
     status:str
     email:str
     emailConfirmed:str
-    passwordHash:Optional[str]=None
+    password:Optional[str]=None
     verified: str
     twoFactorEnabled: str
+    createdById: Optional[int]=None
+    createdDate: datetime
+    modifiedById: Optional[int]=None
+    modifiedDate: datetime
 
     class Config:
         orm_mode = True
+        json_encoders = {
+            datetime: lambda v: v.strftime('%Y-%m-%d %H:%M:%S') if v else None
+        }
 
 

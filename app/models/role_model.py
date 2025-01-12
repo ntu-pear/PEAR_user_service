@@ -12,14 +12,10 @@ class Role(Base):
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     
-    # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    #createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
-    #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
-
-    # Relationships
-    # createdBy = relationship('User', foreign_keys=[createdById])
-    # modifiedBy = relationship('User', foreign_keys=[modifiedById])
+    #createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
+    #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
+    createdById = Column(Integer,nullable=False)
+    modifiedById = Column(Integer,nullable=False) 
 
     # Use back_populates instead of backref for privacy settings
     privacyLevelSettings = relationship('PrivacyLevelSetting', back_populates='role')

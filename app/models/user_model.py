@@ -17,6 +17,7 @@ class User(Base):
     nric_Address = Column(String(255),nullable=False)
     nric_DateOfBirth = Column(Date,nullable=False)
     nric_Gender = Column(String(1), nullable=False)
+    preferredName= Column(String(255), nullable=True)
     contactNo = Column(String(32),nullable=False)
     contactNoConfirmed = Column(String(1), default='N', nullable=False)
     allowNotification = Column(String(1),default='Y',nullable=False)
@@ -25,10 +26,10 @@ class User(Base):
     loginTimeStamp = Column(DateTime)#,nullable=False)
     lastPasswordChanged = Column(DateTime)#,nullable=False)
     status = Column(String(50),default="ACTIVE",nullable=False)
-    #userName = Column(String(255), unique=True,nullable=False)
+ 
     email = Column(String(255), unique=True,nullable=False)
     emailConfirmed = Column(String(1), default='F', nullable=False)
-    passwordHash = Column(String(255))
+    password = Column(String(255))
     verified = Column(String(1), default="N", nullable=False)
 
     securityStamp = Column(String(255))
@@ -47,10 +48,10 @@ class User(Base):
     captchaFailedCount = Column(BigInteger, default="0")
 
 
-    # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
-    modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
+    createdById = Column(Integer, nullable=False)
+    modifiedById = Column(Integer, nullable=False)
+    #createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
+    #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
 
     # Explicitly define the relationship to created privacy settings
     # createdPrivacySettings = relationship('PrivacyLevelSetting', foreign_keys=[PrivacyLevelSetting.createdById])

@@ -7,6 +7,8 @@ class RoleBase(BaseModel):
     roleName: str
     createdDate: datetime
     modifiedDate: datetime
+    createdById: int
+    modifiedById: int
     active: str
 
 class RoleCreate(RoleBase):

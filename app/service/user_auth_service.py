@@ -59,7 +59,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         data=json.loads(data)
         print(data)
         userId=data["userId"]
-        roleId=data["roleId"]
+        
         if userId is None:
             raise credentials_exception
     except JWTError:
@@ -69,4 +69,4 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     role = get_role(db=db,roleId=roleId)
     if userId is None or role is None:
         raise credentials_exception
-    return {"userId":user.id,"role":role.role}
+    return {"userId":user.id, "roleName":user.roleName}
