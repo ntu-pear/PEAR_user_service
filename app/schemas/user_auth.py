@@ -7,7 +7,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     userId: int = None
-    role: str = None
+    roleName: str = None
 
 
 class TwoFACodeRequest(BaseModel):

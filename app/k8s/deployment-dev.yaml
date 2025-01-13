@@ -15,23 +15,23 @@ spec:
         app: user-service-dev
     spec:
       containers:
-      - name: user-service
-        image: host.minikube.internal:5000/user_service_dev  # Replace with your Docker image
-        ports:
-        - containerPort: 8000
-        env:
-        - name: DB_DRIVER_DEV
-          value: "ODBC Driver 17 for SQL Server"
-        - name: DB_SERVER_DEV
-          value: "10.96.188.171"
-        - name: DB_DATABASE_DEV
-          value: "user_service_dev"
-        - name: DB_DATABASE_PORT
-          value: "1433"
-        - name: DB_USERNAME_DEV
-          value: "sa"
-        - name: DB_PASSWORD_DEV
-          value: "Fyppear@2"
+        - name: user-service
+          image: host.minikube.internal:5000/user_service_dev # Replace with your Docker image
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DB_DRIVER_DEV
+              value: 'ODBC Driver 17 for SQL Server'
+            - name: DB_SERVER_DEV
+              value: '192.168.188.171'
+            - name: DB_DATABASE_DEV
+              value: 'user_service_dev'
+            - name: DB_DATABASE_PORT
+              value: '1433'
+            - name: DB_USERNAME_DEV
+              value: 'sa'
+            - name: DB_PASSWORD_DEV
+              value: 'Fyppear@2'
 ---
 apiVersion: v1
 kind: Service

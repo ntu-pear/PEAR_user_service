@@ -18,7 +18,7 @@ router = APIRouter()
 @router.post("/login/")#, response_model=user_auth.Token)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     #Get User
-    user = db.query(User).filter(User.email == form_data.email).first()
+    user = db.query(User).filter(User.email == form_data.username).first() #default oauth2 form uses username and password, no email
     
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="The user does not exist")

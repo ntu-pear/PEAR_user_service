@@ -34,7 +34,7 @@ connection_url = sa.URL.create(
     host=DB_SERVER_DEV,
     port=DB_DATABASE_PORT,
     database=DB_DATABASE_DEV,
-    query={"driver": DB_DRIVER_DEV, "TrustServerCertificate": "yes"},
+    query={"driver": DB_DRIVER_DEV},
 )
 ###############################################################
 

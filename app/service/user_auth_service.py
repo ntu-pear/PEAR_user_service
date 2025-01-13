@@ -66,7 +66,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
 
     user = db.query(User).filter(User.id == userId).first()
-    role = get_role(db=db,roleId=roleId)
-    if userId is None or role is None:
+    # role = get_role(db=db,roleId=roleId)
+    # if userId is None or role is None:
+    if user is None:
         raise credentials_exception
     return {"userId":user.id, "roleName":user.roleName}
