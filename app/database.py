@@ -49,15 +49,14 @@ connection_url = sa.URL.create(
 #     query={"driver": DB_DRIVER_DEV, "TrustServerCertificate": "yes"},
 # )
 ##############################################
-
 print(connection_url)
 engine = sa.create_engine(connection_url)
-##############################################################
+#############################################################
 # print(DATABASE_URL)
 # engine = create_engine(DATABASE_URL, connect_args={"timeout": 30})
 # engine_dev = create_engine(DATABASE_URL_DEV, )  # Increase the timeout if necessary
 
-SessionLocal = sessionmaker(autoflush=False, bind=engine)#autocommit=True, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 

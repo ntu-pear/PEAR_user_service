@@ -12,6 +12,7 @@ from ..service import user_auth_service
 from ..schemas import user_auth
 
 
+
 router = APIRouter()
 
 
@@ -30,7 +31,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     data=json.dumps(data)
     #Add data into access token
     access_token = user_auth_service.create_access_token(data={"sub": data})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "data":data}
 
 @router.get("/current_user/", response_model=user_auth.TokenData)
 def read_current_user(current_access: user_auth.TokenData = Depends(user_auth_service.get_current_user)):
