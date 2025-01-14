@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class RoleBase(BaseModel):
-    id: int
+   # id: int
     roleName: str
     createdDate: datetime
     modifiedDate: datetime
