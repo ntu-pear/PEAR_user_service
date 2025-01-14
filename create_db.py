@@ -18,12 +18,12 @@ DB_DATABASE = os.getenv("DB_DATABASE")
 create_db_query = f"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{DB_DATABASE}') CREATE DATABASE [{DB_DATABASE}];"
 
 try:
-    connection_string = f"DRIVER={driver};SERVER={server};DATABASE={database};UID={username};PWD={password};"
+    connection_string = f"DRIVER={driver};SERVER={server};DATABASE={DB_DATABASE};UID={username};PWD={password};"
     with pyodbc.connect(connection_string, autocommit=True) as conn:
         with conn.cursor() as cursor:
             cursor.execute(create_db_query)
             print(f"Database '{DB_DATABASE}' created or already exists.")
 except Exception as e:
     print("Error details:")
-    print(f"Driver: {driver}, Server: {server}, Database: {database}, User: {username}")
+    print(f"Driver: {driver}, Server: {server}, Database: {DB_DATABASE}, User: {username}")
     print(f"An error occurred: {e}")
