@@ -32,7 +32,7 @@ Python
 ```bash
 python -m venv pear_user_service
 pear_user_service/Scripts/activate #for windows
-# source pear_patient_service/bin/activate for linux
+# source pear_user_service/bin/activate for linux
 ```
 Install the required dependencies
 ```bash

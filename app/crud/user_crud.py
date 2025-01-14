@@ -8,7 +8,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
 from ..crud import user_role_crud as crud_role_user
 from app.service.common_service import validate_nric
+from app.service.user_service import verify_userDetails, validate_password_format
 import uuid
+
 
 def get_user(db: Session, userId: int):
     return db.query(User).filter(User.id == userId).first()
@@ -56,6 +58,8 @@ def verify_user(db: Session, user: UserCreate):
 
     # Use a transaction to ensure rollback on error
     try:
+        #Check password format
+        validate_password_format(user.password)
         # Hashes the password
         db_user.passwordHash = user_auth_service.get_password_hash(user.passwordHash)
         db_user.verified = "Y"
@@ -161,10 +165,3 @@ def super_create_user(db: Session, user: TempUserCreate):
 
     return db_user
 
-def verify_userDetails(db_user, user):
-    # Define the fields to compare
-    fields_to_check = ["nric_FullName","nric", "email", "nric_DateOfBirth", "contactNo", "roleName"]
-    for field in fields_to_check:
-        if getattr(db_user, field) != getattr(user, field):
-            return False
-    return True

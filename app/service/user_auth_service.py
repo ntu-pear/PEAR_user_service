@@ -39,10 +39,12 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 def decode_access_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
-        user_id: str = payload.get("sub")
-        if user_id is None:
+        data = payload.get("sub")
+        userDetails = json.loads(data)
+
+        if userDetails is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-        return user_id
+        return userDetails
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token")
 
@@ -58,16 +60,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         data=payload.get("sub")
         data=json.loads(data)
         print(data)
-        userId=data["userId"]
-        
-        if userId is None:
+        userDetails=data 
+        if userDetails is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == userId).first()
-    # role = get_role(db=db,roleId=roleId)
-    # if userId is None or role is None:
-    if user is None:
+    user = db.query(User).filter(User.id == userDetails["userId"]).first()
+  
+    if userDetails is None:
         raise credentials_exception
     return {"userId":user.id, "roleName":user.roleName}
