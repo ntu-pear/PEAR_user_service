@@ -81,7 +81,7 @@ def verify_user(db: Session, user: UserCreate):
 def create_user(db: Session, user: TempUserCreate):
     # Generate unique ID
     while True:
-        user.id = str(uuid.uuid4())
+        user.id = user.roleName[0] + str(uuid.uuid4())
         existing_user_id = db.query(User).filter(User.id == user.id).first()
         if not existing_user_id:
             break
