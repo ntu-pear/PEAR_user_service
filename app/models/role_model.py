@@ -14,8 +14,8 @@ class Role(Base):
     
     #createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    createdById = Column(Integer,nullable=False)
-    modifiedById = Column(Integer,nullable=False) 
+    createdById = Column(String(255),nullable=False)
+    modifiedById = Column(String(255),nullable=False) 
 
     # Use back_populates instead of backref for privacy settings
     privacyLevelSettings = relationship('PrivacyLevelSetting', back_populates='role')

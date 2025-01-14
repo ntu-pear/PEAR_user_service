@@ -16,9 +16,9 @@ router = APIRouter(
 @router.post("/users/create_account/", response_model=schemas_user.TempUserCreate)
 async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
     userDetails= confirm_token(token)
-    if not userDetails:
-        raise HTTPException(status_code=404, detail="Invalid Token")
-    #if (userDetails.roleName != "Admin"):
+    # if not userDetails:
+    #     raise HTTPException(status_code=404, detail="Invalid Token")
+    # if (userDetails.roleName != "Admin"):
     #     raise HTTPException(status_code=404, detail="User is not authorised")
     db_user=crud_user.create_user(db=db, user=user)
     if db_user:

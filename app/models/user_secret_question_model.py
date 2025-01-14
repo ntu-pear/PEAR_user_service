@@ -6,9 +6,9 @@ from app.database import Base
 class UserSecretQuestion(Base):
     __tablename__ = 'USER_SECRET_QUESTION'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String(255), primary_key=True)
     active = Column(String(1),default='Y',nullable=False)
-    userId = Column(Integer, ForeignKey('TABLE_USER.id'))  # FK to User
+    userId = Column(String(255), ForeignKey('TABLE_USER.id'))  # FK to User
     secretQuestionId = Column(Integer, ForeignKey('SECRET_QUESTION.id'))  # FK to SecretQuestion
     secretQuestionAnswer = Column(String(255), nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)
@@ -16,8 +16,8 @@ class UserSecretQuestion(Base):
     
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
-    modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
+    createdById = Column(String(255), ForeignKey('TABLE_USER.id'), nullable=True)
+    modifiedById = Column(String(255), ForeignKey('TABLE_USER.id'), nullable=True)
 
 
     # Specify foreign_keys explicitly for user relationship to avoid ambiguity

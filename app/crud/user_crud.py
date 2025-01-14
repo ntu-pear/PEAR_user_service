@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
 from ..crud import user_role_crud as crud_role_user
 from app.service.common_service import validate_nric
-
+import uuid
 
 def get_user(db: Session, userId: int):
     return db.query(User).filter(User.id == userId).first()
@@ -75,6 +75,12 @@ def verify_user(db: Session, user: UserCreate):
     return db_user
 
 def create_user(db: Session, user: TempUserCreate):
+    # Generate unique ID
+    while True:
+        user.id = str(uuid.uuid4())
+        existing_user_id = db.query(User).filter(User.id == user.id).first()
+        if not existing_user_id:
+            break
     # Check NRIC Format
     if not validate_nric(user.nric):
         raise HTTPException(
@@ -104,9 +110,10 @@ def create_user(db: Session, user: TempUserCreate):
         db.commit()
         db.refresh(db_user)
 
-    except IntegrityError:
+    except IntegrityError as e:
         # Rollback transaction if any IntegrityError occurs
         db.rollback()
+        print(e.orig)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."
