@@ -86,12 +86,15 @@ def verify_user(db: Session, user: UserCreate):
     return db_user
 
 def create_user(db: Session, user: TempUserCreate, created_by: int):
-    # Generate unique ID
+    # Generate a unique ID with a fixed length of 11
     while True:
-        user.id = user.roleName[0] + str(uuid.uuid4())
-        existing_user_id = db.query(User).filter(User.id == user.id).first()
+        unique_id = "U" + str(uuid.uuid4().hex[:10])
+        # Ensure the total length is 11 characters
+        userId =unique_id[:10]  # Truncate to 11 if necessary
+        existing_user_id = db.query(User).filter(User.id == userId).first()
         if not existing_user_id:
             break
+
     # Check NRIC Format
     if not validate_nric(user.nric):
         raise HTTPException(
@@ -114,7 +117,7 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
         )
     # Use a transaction to ensure rollback on error
     try:
-        db_user = User(**user.dict(), createdById = created_by, modifiedById= created_by)
+        db_user = User(**user.dict(), createdById = created_by, modifiedById= created_by, id=userId)
 
         # Begin transaction
         db.add(db_user)

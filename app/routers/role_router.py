@@ -21,7 +21,7 @@ def read_roles(token:str, skip: int = 0, limit: int = 10, db: Session = Depends(
     roles = get_roles(db, skip=skip, limit=limit)
     return roles
 
-@router.post("/roles/", response_model=RoleCreate )
+@router.post("/roles/", response_model=RoleRead )
 def create_new_role(token:str, role: RoleCreate, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     return create_role(db=db, role=role, created_by=userDetails["userId"])
@@ -44,7 +44,7 @@ def delete_exisiting_role(token:str, roleId: int, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role
 
-@router.get("/roles/{role_name}/users")
+@router.get("/roles/{role_name}/users",response_model=RoleRead)
 def get_users_for_role(token:str, role_name: str, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     users = get_users_by_role(role_name, db)

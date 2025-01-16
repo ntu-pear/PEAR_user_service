@@ -13,7 +13,7 @@ class RoleUpdate(BaseModel):
     active: Optional[str] = None
 
 class RoleRead(RoleBase):
-    id: int
+    id: str
     active: str
     createdById: Optional[int]=None
     createdDate: datetime
