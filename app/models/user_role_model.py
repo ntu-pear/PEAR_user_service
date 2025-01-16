@@ -7,7 +7,7 @@ class UserRole(Base):
     __tablename__ = 'USER_ROLES'
 
     id = Column(Integer, primary_key=True)
-    userId = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=False)  # FK to User
+    userId = Column(String(255), ForeignKey('TABLE_USER.id'), nullable=False)  # FK to User
     roleId = Column(Integer, ForeignKey('TABLE_ROLES.id'), nullable=False)  # FK to Role
     # createdDate = Column(DateTime, server_default=func.now(), nullable=False)
     # modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)

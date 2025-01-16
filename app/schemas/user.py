@@ -4,6 +4,7 @@ from typing import Optional
 
 class UserBase(BaseModel):
     
+    id: Optional[str] = None
     nric_FullName: str
     nric_Address: str
     nric_DateOfBirth: date= Field("YYYY-MM-DD")

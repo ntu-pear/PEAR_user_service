@@ -14,8 +14,8 @@ class SecretQuestion(Base):
 
     # createdById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
     # modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'),nullable=False)
-    createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
-    modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
+    createdById = Column(String(255), ForeignKey('TABLE_USER.id'), nullable=True)
+    modifiedById = Column(String(255), ForeignKey('TABLE_USER.id'), nullable=True)
 
 
     # Use back_populates instead of backref

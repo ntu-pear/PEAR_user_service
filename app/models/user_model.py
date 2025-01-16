@@ -10,7 +10,7 @@ from .privacy_level_setting_model import PrivacyLevelSetting
 class User(Base):
     __tablename__ = 'TABLE_USER'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String(255), primary_key=True)
     active = Column(String(1),default='Y',nullable=False)
     nric_FullName = Column(String(255), nullable=False)
     nric = Column(String(9), unique=True, nullable=False)
@@ -48,8 +48,8 @@ class User(Base):
     captchaFailedCount = Column(BigInteger, default="0")
 
 
-    createdById = Column(Integer, nullable=False)
-    modifiedById = Column(Integer, nullable=False)
+    createdById = Column(String(255), nullable=True)
+    modifiedById = Column(String(255), nullable=True)
     #createdById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
     #modifiedById = Column(Integer, ForeignKey('TABLE_USER.id'), nullable=True)
 
