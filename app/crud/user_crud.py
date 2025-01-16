@@ -20,9 +20,11 @@ def get_user_by_email(db: Session, email: str):
 def get_users(db: Session, skip: int = 0, limit: int = 10):
     return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
 
-def update_user(db: Session, userId: int, user: UserUpdate):
+def update_user(db: Session, userId: int, user: UserUpdate, modified_by):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
+        #Update modified by Who
+        db_user.modifiedById = modified_by
         for key, value in user.dict().items():
             #check if value is not empty
             if value != "":
@@ -43,7 +45,12 @@ def delete_user(db: Session, userId: int):
 def verify_user(db: Session, user: UserCreate):
     #Verify Info with User DB
     db_user= db.query(User).filter(User.email == user.email).first()
-    if db_user.verified == "N":
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    if db_user.verified == "F":
         if not verify_userDetails(db_user, user):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -60,7 +67,7 @@ def verify_user(db: Session, user: UserCreate):
         #Check password format
         validate_password_format(user.password)
         # Hashes the password
-        db_user.passwordHash = user_auth_service.get_password_hash(user.passwordHash)
+        db_user.password = user_auth_service.get_password_hash(user.password)
         db_user.verified = "Y"
         
         # Begin transaction
@@ -77,7 +84,7 @@ def verify_user(db: Session, user: UserCreate):
 
     return db_user
 
-def create_user(db: Session, user: TempUserCreate):
+def create_user(db: Session, user: TempUserCreate, created_by: int):
     # Check NRIC Format
     if not validate_nric(user.nric):
         raise HTTPException(
@@ -100,8 +107,8 @@ def create_user(db: Session, user: TempUserCreate):
         )
     # Use a transaction to ensure rollback on error
     try:
-        db_user = User(**user.dict())
-        
+        db_user = User(**user.dict(), createdById = created_by, modifiedById= created_by)
+
         # Begin transaction
         db.add(db_user)
         db.commit()

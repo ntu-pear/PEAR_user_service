@@ -44,6 +44,7 @@ def decode_access_token(token: str):
 
         if userDetails is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        
         return userDetails
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate token")

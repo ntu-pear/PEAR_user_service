@@ -30,7 +30,7 @@ class User(Base):
     email = Column(String(255), unique=True,nullable=False)
     emailConfirmed = Column(String(1), default='F', nullable=False)
     password = Column(String(255))
-    verified = Column(String(1), default="N", nullable=False)
+    verified = Column(String(1), default="F", nullable=False)
 
     securityStamp = Column(String(255))
     concurrencyStamp = Column(String(255))

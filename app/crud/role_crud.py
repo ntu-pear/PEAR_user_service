@@ -10,26 +10,32 @@ def get_role(db: Session, roleId: int):
 def get_roles(db: Session, skip: int = 0, limit: int = 10):
     return db.query(Role).order_by(Role.id).offset(skip).limit(limit).all()
 
-def create_role(db: Session, role: RoleCreate):
+def create_role(db: Session, role: RoleCreate, created_by:int):
+    
     # Check if the role already exists
-    existing_role = db.query(Role).filter(Role.id == role.id).first()
+    existing_role = db.query(Role).filter(Role.roleName == role.roleName).first()
     if existing_role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            #etail="A role with this name already exists."
+            detail="A role with this name already exists."
         )
     
-    db_role = Role(**role.dict())
+    db_role = Role(**role.dict(),createdById=created_by,modifiedById=created_by)
     db.add(db_role)
     db.commit()
     db.refresh(db_role)
     return db_role
 
-def update_role(db: Session, roleId: int, role: RoleUpdate):
+def update_role(db: Session, roleId: int, role: RoleUpdate, modified_by:int):
     db_role = db.query(Role).filter(Role.id == roleId).first()
     if db_role:
+        #update modified by Who
+        db_role.modifiedById = modified_by
+        #update role fields
         for key, value in role.dict().items():
-            setattr(db_role, key, value)
+            #check if value is not empty
+            if value != "":
+                setattr(db_role, key, value)
         db.commit()
         db.refresh(db_role)
     return db_role
