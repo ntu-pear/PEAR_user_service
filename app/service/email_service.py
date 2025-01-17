@@ -9,23 +9,11 @@ from pathlib import Path
 from pydantic import EmailStr
 from itsdangerous import URLSafeTimedSerializer
 
-
-config = ConnectionConfig(
-    MAIL_USERNAME = os.getenv('MAIL_USERNAME'),
-    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD'),
-    MAIL_FROM = os.getenv('MAIL_FROM'),
-    MAIL_PORT = int(os.getenv('MAIL_PORT')),
-    MAIL_SERVER = os.getenv('MAIL_SERVER'),
-    MAIL_STARTTLS= True if os.getenv('MAIL_STARTTLS')=="True" else False,
-    MAIL_SSL_TLS= True if os.getenv('MAIL_SSL_TLS')=="True" else False,
-    MAIL_FROM_NAME=os.getenv('MAIL_FROM_NAME'),
-    USE_CREDENTIALS= True if os.getenv('USE_CREDENTIALS')=="True" else False,
-    VALIDATE_CERTS= True if os.getenv('VALIDATE_CERTS')=="True" else False
-)
-
+from mailjet_rest import Client
+api_key = os.getenv('MAILERJET_API_KEY')
+api_secret = os.getenv('MAILERJET_SECRET_KEY')
 SECRET_KEY = os.getenv('SECRET_KEY')
 SALT = os.getenv('SALT')
-
 
 def generate_email_token(email: str) -> str:
     serializer = URLSafeTimedSerializer(SECRET_KEY)
@@ -43,52 +31,100 @@ def confirm_token(token: str, expiration=3600):
 
 async def send_confirmation_email(email: str, token: str):
     confirmation_url = f"http://localhost:8000/confirm-email/{token}"
-    message = MessageSchema(
-        subject="Email Confirmation",
-        recipients=[email],  # List of recipients, as a list
-        body=f"Please click the following link to confirm your email: {confirmation_url}",
-        subtype="html"
-    )
-
-    fm = FastMail(config)
-    await fm.send_message(message)
+    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+    
+    data = {
+    'Messages': [
+                    {
+                            "From": {
+                                    "Email": "choozhenhui@gmail.com",
+                                    "Name": "FYP_PEAR"
+                            },
+                            "To": [
+                                    {
+                                            "Email": email
+                                    }
+                            ],
+                            "Subject": "Reset Password",
+                            "TextPart": f"Please click the following link to confirm your email: {confirmation_url}",
+                    }
+            ]
+    }
+    
+    mailjet.send.create(data=data)
 
 async def send_registration_email(email: str, token: str):
-    registration_url = f"http://localhost:8000/user/register_account/{token}"
-    message = MessageSchema(
-        subject="Account Registration",
-        recipients=[email],  # List of recipients, as a list
-        body=f"Please click the following link to register your account: {registration_url}",
-        subtype="html"
-    )
-
-    fm = FastMail(config)
-    await fm.send_message(message)
+    registration_url = f"http://localhost:8000/user/register_account/{token}" 
+    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+    
+    data = {
+    'Messages': [
+                    {
+                            "From": {
+                                    "Email": "choozhenhui@gmail.com",
+                                    "Name": "FYP_PEAR"
+                            },
+                            "To": [
+                                    {
+                                            "Email": email
+                                    }
+                            ],
+                            "Subject": "Reset Password",
+                            "TextPart": f"Please click the following link to register your account: {registration_url}",
+                    }
+            ]
+    }
+    
+    mailjet.send.create(data=data)
 
 ## Reset Password
 async def send_reset_password_email(email: str, token: str):
-    resetpassword_url = f"http://localhost:8000/forget-password/{token}"
-    message = MessageSchema(
-        subject="Reset Password",
-        recipients=[email],  # List of recipients, as a list
-        body=f"Please click the following link to reset your password: {resetpassword_url}",
-        subtype="html"
-    )
-
-    fm = FastMail(config)
-    await fm.send_message(message)
+    resetpassword_url = f"http://localhost:8000/forget-password/{token}"   
+    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+    
+    data = {
+    'Messages': [
+                    {
+                            "From": {
+                                    "Email": "choozhenhui@gmail.com",
+                                    "Name": "FYP_PEAR"
+                            },
+                            "To": [
+                                    {
+                                            "Email": email
+                                    }
+                            ],
+                            "Subject": "Reset Password",
+                            "TextPart": f"Please click the following link to reset your password: {resetpassword_url}",
+                    }
+            ]
+    }
+    
+    mailjet.send.create(data=data)
     
 ## Send 2FA email
 async def send_2fa_email(email: str, code: int):
-    message = MessageSchema(
-        subject="Verification Code",
-        recipients=[email],  # List of recipients, as a list
-        body=f"Your verification code is: {code}. Please note that the code will expire in 5 minutes.",
-        subtype="html"
-    )
-
-    fm = FastMail(config)
-    await fm.send_message(message)
+    mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+    data = {
+    'Messages': [
+                    {
+                            "From": {
+                                    "Email": "choozhenhui@gmail.com",
+                                    "Name": "FYP_PEAR"
+                            },
+                            "To": [
+                                    {
+                                            "Email": email
+                                    }
+                            ],
+                            "Subject": "Verify your new PEAR account",
+                            "TextPart": f"To verify your account, please use the following One Time Password (OTP): {code}",
+                            "HTMLPart": f"To verify your account, please use the following One Time Password (OTP): <b>{code}</b>",
+                    }
+            ]
+    }
+    
+    mailjet.send.create(data=data)
 
 #send email
 def send_email(email: email.EmailBase):

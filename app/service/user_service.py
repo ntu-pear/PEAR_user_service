@@ -1,9 +1,5 @@
-
-
 import re
 from fastapi import HTTPException, status
-
-
 
 ### Check new user details
 def verify_userDetails(db_user, user):
@@ -13,6 +9,7 @@ def verify_userDetails(db_user, user):
         if getattr(db_user, field) != getattr(user, field):
             return False
     return True
+
 #Check for valid password format
 def validate_password_format(password: str):
     """
