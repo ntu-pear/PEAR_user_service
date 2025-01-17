@@ -1,13 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer,Boolean, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
+
 
 class UserSecretQuestion(Base):
     __tablename__ = 'USER_SECRET_QUESTION'
 
     id = Column(String(255), primary_key=True)
-    active = Column(String(1),default='Y',nullable=False)
+    active = Column(Boolean,default=True,nullable=False)
     userId = Column(String(255), ForeignKey('TABLE_USER.id'))  # FK to User
     secretQuestionId = Column(Integer, ForeignKey('SECRET_QUESTION.id'))  # FK to SecretQuestion
     secretQuestionAnswer = Column(String(255), nullable=False)

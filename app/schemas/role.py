@@ -15,9 +15,9 @@ class RoleUpdate(BaseModel):
 class RoleRead(RoleBase):
     id: str
     active: str
-    createdById: Optional[int]=None
+    createdById: Optional[str]=None
     createdDate: datetime
-    modifiedById: Optional[int]=None
+    modifiedById: Optional[str]=None
     modifiedDate: datetime
     pass
 

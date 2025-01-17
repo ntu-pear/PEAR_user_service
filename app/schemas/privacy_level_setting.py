@@ -16,6 +16,8 @@ class PrivacyLevelSettingUpdate(PrivacyLevelSettingBase):
 
 class PrivacyLevelSetting(PrivacyLevelSettingBase):
     id: int
+    createdById: str
+    modifiedById: str
     createdDate: datetime
     modifiedDate: datetime
     active: str

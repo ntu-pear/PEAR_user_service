@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, date
 from typing import Optional
-
+from app.models.user_model import UserStatus
 class UserBase(BaseModel):
     
     nric_FullName: str
@@ -24,10 +24,10 @@ class UserUpdate(BaseModel):
     #nric_DateOfBirth: Optional[date] = None
     nric_Gender: Optional[str] = None
     contactNo: Optional[str] = None
-    allowNotification: Optional[str] = None
+    allowNotification: Optional[bool] = None
     profilePicture: Optional[str] = None
     lockoutReason: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[UserStatus] = None
     email: Optional[str] = None
 
 class UserRead(BaseModel):
@@ -39,19 +39,21 @@ class UserRead(BaseModel):
     nric_Gender: str
     roleName: str
     contactNo: str
-    allowNotification:str
+    allowNotification:bool
     profilePicture: Optional[str]=None
     lockoutReason: Optional[str]=None
     status:str
     email:str
-    emailConfirmed:str
+    emailConfirmed:bool
     password:Optional[str]=None
-    verified: str
-    twoFactorEnabled: str
-    createdById: Optional[int]=None
+    verified: bool
+    active: bool
+    twoFactorEnabled: bool
+    createdById: Optional[str]=None
     createdDate: datetime
-    modifiedById: Optional[int]=None
+    modifiedById: Optional[str]=None
     modifiedDate: datetime
+    
 
     class Config:
         orm_mode = True

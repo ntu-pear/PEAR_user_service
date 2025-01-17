@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Boolean, Integer, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -7,7 +7,7 @@ class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 
     id = Column(String(255), primary_key=True)
-    active = Column(String(1),default='Y', nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
     roleName = Column(String(255), unique=True, nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated

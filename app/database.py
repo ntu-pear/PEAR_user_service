@@ -27,24 +27,24 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 ##### Note that this connection is to the DEV environment ####
 # COMMMENT out this section when doing local development
-# connection_url = sa.URL.create(
-#     "mssql+pyodbc",
-#     username=DB_USERNAME_DEV,
-#     password=DB_PASSWORD_DEV,
-#     host=DB_SERVER_DEV,
-#     port=DB_DATABASE_PORT,
-#     database=DB_DATABASE_DEV,
-#     query={"driver": DB_DRIVER_DEV},
-# )
-###############################################################
-
-########## LOCAL DOCKER DEVELOPMENT ##########
 connection_url = sa.URL.create(
     "mssql+pyodbc",
+    username=DB_USERNAME_DEV,
+    password=DB_PASSWORD_DEV,
     host=DB_SERVER_DEV,
+    port=DB_DATABASE_PORT,
     database=DB_DATABASE_DEV,
     query={"driver": DB_DRIVER_DEV},
 )
+###############################################################
+
+########## LOCAL DOCKER DEVELOPMENT ##########
+# connection_url = sa.URL.create(
+#     "mssql+pyodbc",
+#     host=DB_SERVER_DEV,
+#     database=DB_DATABASE_DEV,
+#     query={"driver": DB_DRIVER_DEV},
+# )
 ##############################################
 print(connection_url)
 engine = sa.create_engine(connection_url)

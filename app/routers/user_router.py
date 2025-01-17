@@ -50,7 +50,7 @@ async def resend_registration_email(token: str, user: schemas_account.ResendEmai
     return {"Message":"Email Sent"}
 
 @router.get("/users/{userId}", response_model=schemas_user.UserRead)
-def read_user(token: str, userId: int, db: Session = Depends(get_db)):
+def read_user(token: str, userId: str, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
@@ -72,7 +72,7 @@ async def get_user_by_email(token:str, email: str, db: Session = Depends(get_db)
     return db_user
 
 @router.put("/users/{userId}", response_model=schemas_user.UserUpdate)
-def update_user(token:str, userId: int, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
+def update_user(token:str, userId: str, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=userDetails["userId"])
     if db_user is None:
@@ -80,7 +80,7 @@ def update_user(token:str, userId: int, user: schemas_user.UserUpdate, db: Sessi
     return db_user
 
 @router.delete("/users/{userId}", response_model=schemas_user.UserBase)
-def delete_user(token: str, userId: int, db: Session = Depends(get_db)):
+def delete_user(token: str, userId: str, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     if (userDetails["roleName"] != "ADMIN"):
         raise HTTPException(status_code=404, detail="User is not authorised")

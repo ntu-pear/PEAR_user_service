@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Boolean,Integer, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -7,7 +7,7 @@ class SecretQuestion(Base):
     __tablename__ = 'SECRET_QUESTION'
 
     id = Column(Integer, primary_key=True)
-    active = Column(String(1),default='Y',nullable=False)
+    active = Column(Boolean,default=True,nullable=False)
     value = Column(String(255))
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, BigInteger
+from sqlalchemy import Column, Boolean, Integer, String, DateTime, ForeignKey, BigInteger
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -7,7 +7,7 @@ class PrivacyLevelSetting(Base):
     __tablename__ = 'PRIVACY_LEVEL_SETTING'
 
     id = Column(String(255), primary_key=True)
-    active = Column(String(1),default='Y', nullable=False)
+    active = Column(Boolean, default=True, nullable=False)
     roleId = Column(String(255), ForeignKey('TABLE_ROLES.id'), nullable=False)  # FK to Role
     privacyLevelSensitive = Column(BigInteger, nullable=False )
     privacyLevelNonSensitive = Column(BigInteger, nullable=False)
