@@ -14,7 +14,7 @@ def read_user_secret_question(question_id: int, db: Session = Depends(get_db)):
     return db_question
 
 @router.get("/user_secret_questions", response_model=list[UserSecretQuestion])
-def read_user_secret_questions(userId: int, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_user_secret_questions(userId: str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     questions = get_user_secret_questions(db, userId=userId, skip=skip, limit=limit)
     return questions
 

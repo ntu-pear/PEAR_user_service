@@ -11,7 +11,7 @@ router = APIRouter()
 
 # Request Email Confirmation
 @router.post("/request-email-confirmation/")
-async def request_email_confirmation(user_id: int, db: Session = Depends(get_db)):
+async def request_email_confirmation(user_id: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

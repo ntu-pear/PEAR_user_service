@@ -14,8 +14,8 @@ def read_user_role(user_role_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User role not found")
     return db_user_role 
 @router.get("/user_roles_id/{user_id}", response_model=list[UserRoleRead])
-def read_user_id_role(user_Id: int, db: Session = Depends(get_db)):
-    db_user_role = crud_role_user.get_user_role_userId(db, user_Id=user_Id)
+def read_user_id_role(userId: str, db: Session = Depends(get_db)):
+    db_user_role = crud_role_user.get_user_role_userId(db, user_Id=userId)
     if db_user_role is None:
         raise HTTPException(status_code=404, detail="User role not found")
     return db_user_role 
@@ -44,7 +44,7 @@ def update_existing_user_role(user_role_id: int, user_role: UserRoleUpdate, db: 
     return db_user_role
 
 @router.delete("/user_roles_userID/{user_Id}", response_model=list[UserRoleRead])
-def delete_user_role(userId: int, db: Session = Depends(get_db)):
+def delete_user_role(userId: str, db: Session = Depends(get_db)):
     db_user_role = crud_role_user.delete_user_role_userId(db, userId=userId)
     if db_user_role is None:
         raise HTTPException(status_code=404, detail="User role not found")

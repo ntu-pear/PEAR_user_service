@@ -12,7 +12,7 @@ from app.service.user_service import verify_userDetails, validate_password_forma
 import uuid
 
 
-def get_user(db: Session, userId: int):
+def get_user(db: Session, userId: str):
     return db.query(User).filter(User.id == userId).first()
 
 def get_user_by_email(db: Session, email: str):
@@ -21,7 +21,7 @@ def get_user_by_email(db: Session, email: str):
 def get_users(db: Session, skip: int = 0, limit: int = 10):
     return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
 
-def update_user(db: Session, userId: int, user: UserUpdate, modified_by):
+def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
         #Update modified by Who
@@ -34,7 +34,7 @@ def update_user(db: Session, userId: int, user: UserUpdate, modified_by):
         db.refresh(db_user)
     return db_user
 
-def delete_user(db: Session, userId: int):
+def delete_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
         #delete all user role associated with user

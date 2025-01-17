@@ -5,7 +5,7 @@ from ..schemas.user_secret_question import UserSecretQuestionCreate, UserSecretQ
 def get_user_secret_question(db: Session, user_secret_question_id: int):
     return db.query(UserSecretQuestion).filter(UserSecretQuestion.id == user_secret_question_id).first()
 
-def get_user_secret_questions(db: Session, userId: int, skip: int = 0, limit: int = 10):
+def get_user_secret_questions(db: Session, userId: str, skip: int = 0, limit: int = 10):
     return db.query(UserSecretQuestion).filter(UserSecretQuestion.userId == userId).order_by(UserSecretQuestion.id).offset(skip).limit(limit).all()
 
 def create_user_secret_question(db: Session, user_secret_question: UserSecretQuestionCreate):
