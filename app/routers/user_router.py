@@ -18,7 +18,7 @@ router = APIRouter(
 async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
    
-    if (userDetails["roleName"] != "Admin"):
+    if (userDetails["roleName"] != "ADMIN"):
         raise HTTPException(status_code=404, detail="User is not authorised")
     db_user=crud_user.create_user(db=db, user=user, created_by=userDetails["userId"])
     if db_user:

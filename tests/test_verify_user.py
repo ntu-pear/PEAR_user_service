@@ -12,23 +12,22 @@ from tests.utils.mock_db import get_db_session_mock
 
 def test_verify_user_user_found_not_verified(db_session_mock, User_Create):
     """Test Case for user found but not verified"""
-
     # Simulate a user in the DB with 'verified' status as "F"
     mock_user = mock.MagicMock()
     mock_user.email = User_Create.email
-    mock_user.verified = "F"  # Account is not verified
+    mock_user.verified = False  # Account is not verified
   
     # Simulate that the user exists in the DB with the email provided
     db_session_mock.query(User).filter(User.email == User_Create.email).first.return_value = mock_user
 
     # Simulate verify_userDetails returning True (i.e., details match)
-    with mock.patch("app.crud.user_crud.verify_user", return_value=True):
-        # Call the function to verify the user
+    with mock.patch("app.crud.user_crud.verify_userDetails", return_value=True):
+           # Call the function to verify the user
         result = verify_user(db_session_mock, User_Create)
     
     # Assertions
-    # Ensure that the account's 'verified' status is updated to "Y"
-    assert result.verified == "Y"
+    # Ensure that the account's 'verified' status is updated to True
+    assert result.verified == True
     
     #Commit User with password
     db_session_mock.commit.assert_called_once()
@@ -40,7 +39,7 @@ def test_verify_user_user_already_verified(db_session_mock, User_Create):
     # Simulate a user in the DB with 'verified' status as "Y"
     mock_user = mock.MagicMock()
     mock_user.email = User_Create.email
-    mock_user.verified = "Y"  # Account is already verified
+    mock_user.verified = True  # Account is already verified
 
     # Simulate that the user exists in the DB with the email provided
     db_session_mock.query(User).filter(User.email == User_Create.email).first.return_value = mock_user
@@ -57,10 +56,10 @@ def test_verify_user_user_already_verified(db_session_mock, User_Create):
 def test_verify_user_details_do_not_match(db_session_mock, User_Create):
     """Test Case for user found, but details do not match"""
 
-    # Simulate a user in the DB with 'verified' status as "F" (Not Verified)
+    # Simulate a user in the DB with 'verified' status as False (Not Verified)
     mock_user = mock.MagicMock()
     mock_user.email = User_Create.email
-    mock_user.verified = "F"  # User is not verified yet
+    mock_user.verified = False  # User is not verified yet
     mock_user.nric_FullName = "John Doe"  # Different name for the mismatch
     mock_user.nric_Address = "123 Test St"  # Different address for the mismatch
     
@@ -93,3 +92,4 @@ def User_Create():
     roleName= "DOCTOR",
     nric= "S1234567D",
     password = "ILoVEFYP!123")
+

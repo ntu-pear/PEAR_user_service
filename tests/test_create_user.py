@@ -13,7 +13,6 @@ from tests.utils.mock_db import get_db_session_mock
 
 # Mocking the relevant models
 @mock.patch("app.models.user_model.User")
-
 def test_create_user(db_session_mock, Temp_User_Create):
     """Test Case for creating a User acc"""
 
@@ -38,11 +37,15 @@ def test_create_user_email_already_exists(db_session_mock, Temp_User_Create):
     """Test Case for existing user with the same email"""
 
     # Simulate an existing user with the same email
-    db_session_mock.query(User).filter(User.email == Temp_User_Create.email).first.return_value = mock.MagicMock()
+    mock_existing_user = mock.MagicMock()
+    mock_existing_user.email = Temp_User_Create.email
+    db_session_mock.query(User).filter(User.email == Temp_User_Create.email).first.return_value = mock_existing_user
 
     # Assert that an HTTPException is raised
-    with pytest.raises(HTTPException):
+    with pytest.raises(HTTPException) as exc_info:
         create_user(db_session_mock, Temp_User_Create, created_by=1)
+    # Assert that the correct HTTPException is raised
+    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
 
 def test_create_user_nric_already_exists(db_session_mock, Temp_User_Create):
     """Test Case for existing user with the same email"""

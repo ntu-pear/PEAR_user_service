@@ -51,7 +51,7 @@ def verify_user(db: Session, user: UserCreate):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
         )
-    if db_user.verified == "F":
+    if db_user.verified == False:
         if not verify_userDetails(db_user, user):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -69,7 +69,7 @@ def verify_user(db: Session, user: UserCreate):
         validate_password_format(user.password)
         # Hashes the password
         db_user.password = user_auth_service.get_password_hash(user.password)
-        db_user.verified = "Y"
+        db_user.verified = True
         
         # Begin transaction
         db.commit()
@@ -86,6 +86,22 @@ def verify_user(db: Session, user: UserCreate):
     return db_user
 
 def create_user(db: Session, user: TempUserCreate, created_by: int):
+    
+    # Check if the email is already registered
+    existing_user_email = db.query(User).filter(User.email == user.email).first()
+    if existing_user_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this email already exists."
+        )
+    # Check if the nric is already registered
+    existing_user_nric = db.query(User).filter(User.nric == user.nric).first()
+    if existing_user_nric:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A user with this nric already exists."
+        )
+    
     # Generate a unique ID with a fixed length of 11
     while True:
         unique_id = "U" + str(uuid.uuid4().hex[:10])
@@ -100,20 +116,6 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid NRIC Format."
-        )
-    # Check if the email is already registered
-    existing_user_email = db.query(User).filter(User.email == user.email).first()
-    if existing_user_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists."
-        )
-    # Check if the nric is already registered
-    existing_user_nric = db.query(User).filter(User.nric == user.nric).first()
-    if existing_user_nric:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this nric already exists."
         )
     # Use a transaction to ensure rollback on error
     try:
