@@ -1,15 +1,9 @@
-from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
-from fastapi_mail.email_utils import DefaultChecker
-from fastapi_mail.errors import ConnectionErrors
 from ..schemas import email as email
-
 import httpx
 import os
-from pathlib import Path
-from pydantic import EmailStr
 from itsdangerous import URLSafeTimedSerializer
-
 from mailjet_rest import Client
+
 api_key = os.getenv('MAILERJET_API_KEY')
 api_secret = os.getenv('MAILERJET_SECRET_KEY')
 SECRET_KEY = os.getenv('SECRET_KEY')
