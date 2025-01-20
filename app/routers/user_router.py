@@ -7,6 +7,14 @@ from ..schemas import account as schemas_account
 from ..service.email_service import send_registration_email,generate_email_token, confirm_token,send_confirmation_email
 from ..service.user_auth_service import decode_access_token
 from app.models.user_model import User
+import logging
+import sys
+
+# import rate limiter
+from ..rate_limiter import TokenBucket, rate_limit
+
+global_bucket = TokenBucket(rate=0, capacity=0)
+
 
 router = APIRouter(
     tags=["users"],
@@ -15,6 +23,7 @@ router = APIRouter(
 )
 #Create Acc, unverified
 @router.post("/users/create_account/", response_model=schemas_user.TempUserCreate)
+@rate_limit(global_bucket, tokens_required=1)
 async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
    
@@ -27,8 +36,10 @@ async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session
         await send_registration_email(user.email, token)
    
     return db_user
+
 #Verify Acc, add password
 @router.post("/users/verify_account/", response_model=schemas_user.UserBase)
+@rate_limit(global_bucket, tokens_required=1)
 async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
 
@@ -38,6 +49,7 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
 
 #Resend account confirmation email
 @router.post("/users/request/resend_registration_email", response_model=schemas_user.UserBase)
+@rate_limit(global_bucket, tokens_required=1)
 async def resend_registration_email(token: str, user: schemas_account.ResendEmail, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     if (userDetails.roleName != "ADMIN"):
@@ -58,12 +70,13 @@ def read_user(token: str, userId: str, db: Session = Depends(get_db)):
     return db_user
 
 @router.get("/users/", response_model=list[schemas_user.UserRead])
-def read_users(token:str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    userDetails= decode_access_token(token)
+@rate_limit(global_bucket, tokens_required=1)
+def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     users = crud_user.get_users(db=db, skip=skip, limit=limit)
     return users
 
 @router.get("/users/get_email/{email}", response_model=schemas_user.UserRead)
+@rate_limit(global_bucket, tokens_required=1)
 async def get_user_by_email(token:str, email: str, db: Session = Depends(get_db)):
     userDetails= decode_access_token(token)
     db_user = crud_user.get_user_by_email(db=db, email=email)

@@ -4,6 +4,9 @@ from .routers import user_auth_router, user_router,role_router,privacy_level_set
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
+# import rate limiter
+from .rate_limiter import TokenBucket, rate_limit
+
 
 app = FastAPI()
 load_dotenv()
@@ -15,6 +18,7 @@ origins = [
     # Add other origins if needed
 ]
 
+
 # middleware to connect to the frontend
 app.add_middleware(
     CORSMiddleware,
@@ -25,6 +29,14 @@ app.add_middleware(
 )
 
 Base.metadata.create_all(bind=engine)
+
+
+global_bucket = TokenBucket(rate=0, capacity=0)
+
+@app.get("/test-rate-limit")
+@rate_limit(global_bucket, tokens_required=1)
+async def test_rate_limit():
+    return {"message": "This should be rate limited"}
 
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
