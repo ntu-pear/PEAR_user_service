@@ -26,7 +26,7 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user_auth_service.verify_password(form_data.password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     
-    data={"userId":user.id,"roleName": user.roleName}
+    data={"userId":user.id,"email": user.email, "roleName": user.roleName}
     #Convert to JSON
     data=json.dumps(data)
     #Add data into access token
