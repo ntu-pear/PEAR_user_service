@@ -13,7 +13,7 @@ import sys
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
 
-global_bucket = TokenBucket(rate=0, capacity=0)
+global_bucket = TokenBucket(rate=5, capacity=10)
 
 
 router = APIRouter(
