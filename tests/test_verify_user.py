@@ -82,6 +82,9 @@ def db_session_mock():
 @pytest.fixture
 def User_Create():
     """Fixture to provide a mock User object. With Password"""
+    from app.models.role_model import Role
+    from app.models.privacy_level_setting_model import PrivacyLevelSetting
+    
     return UserCreate(
     nric_FullName="DANIEL ANG",
     nric_Address="112 Bedok #01-111",

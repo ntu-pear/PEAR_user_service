@@ -81,6 +81,9 @@ def db_session_mock():
 @pytest.fixture
 def Temp_User_Create():
     """Fixture to provide a mock User object. W/O Password"""
+    from app.models.role_model import Role
+    from app.models.user_model import User
+    
     return TempUserCreate(
     nric_FullName="DANIEL ANG",
     nric_Address="112 Bedok #01-111",
