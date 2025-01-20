@@ -71,4 +71,4 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
   
     if userDetails is None:
         raise credentials_exception
-    return {"userId":user.id, "email": user.email, "roleName":user.roleName}
+    return {"userId":user.id, "fullName": user.nric_FullName, "roleName":user.roleName}
