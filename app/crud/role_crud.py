@@ -30,7 +30,7 @@ def create_role(db: Session, role: RoleCreate, created_by:int):
             detail="A role with this name already exists."
         )
     
-    db_role = Role(**role.dict(),createdById=created_by,modifiedById=created_by,id=roleId)
+    db_role = Role(**role.model_dump(),createdById=created_by,modifiedById=created_by,id=roleId)
     db.add(db_role)
     db.commit()
     db.refresh(db_role)
@@ -42,10 +42,9 @@ def update_role(db: Session, roleId: int, role: RoleUpdate, modified_by:int):
         #update modified by Who
         db_role.modifiedById = modified_by
         #update role fields
-        for key, value in role.dict().items():
-            #check if value is not empty
-            if value != "":
-                setattr(db_role, key, value)
+            # Update only provided fields
+        for field, value in role.model_dump(exclude_unset=True).items():
+            setattr(db_role, field, value)
         db.commit()
         db.refresh(db_role)
     return db_role

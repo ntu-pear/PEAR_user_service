@@ -5,8 +5,7 @@ from ..crud import user_crud as crud_user
 from ..crud import user_role_crud as crud_role_user
 from ..crud import role_crud as role_crud
 from ..schemas import account as schemas_account
-from ..service.email_service import generate_email_token, confirm_token
-from ..service.account_service import send_resetpassword_email
+from ..service import email_service as EmailService
 from app.models.user_model import User
 from ..service.email_service import *
 
@@ -26,14 +25,14 @@ async def request_reset_confirmation(account: schemas_account.ResetPasswordBase,
             raise HTTPException(status_code=404, detail="Invalid Details")
         
     token = generate_email_token(user.email)
-    await send_resetpassword_email(user.email, token)
+    await EmailService.send_resetpassword_email(user.email, token)
   
     return {"msg": "Reset password email sent"}
 
 @router.post("/account/reset_password/{token}")
 async def reset_user_password(token: str, newPassword: str, confirmPassword: str, db: Session = Depends(get_db)):
     try:
-        userDetails = confirm_token(token) 
+        userDetails = EmailService.confirm_token(token) 
     except:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
     if (newPassword != confirmPassword):

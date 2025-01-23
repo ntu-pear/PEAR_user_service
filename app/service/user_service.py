@@ -28,3 +28,12 @@ def validate_password_format(password: str):
             )
         )
 
+#Check for valid NRIC format
+def validate_nric(nric):
+    # NRIC regex pattern
+    nric_pattern = r'^[STFG]\d{7}[A-Z]$'
+    if not re.match(nric_pattern, nric):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=("Invalid NRIC Format")
+            )

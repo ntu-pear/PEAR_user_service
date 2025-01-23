@@ -7,8 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
 from ..crud import user_role_crud as crud_role_user
-from app.service.common_service import validate_nric
-from app.service.user_service import verify_userDetails, validate_password_format
+from app.service import user_service as UserService
 import uuid
 
 
@@ -20,16 +19,19 @@ def get_user_by_email(db: Session, email: str):
 
 def get_users(db: Session, skip: int = 0, limit: int = 10):
     return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
+#get user by on field
+def get_user_by_field(db: Session, field:str, input: str):
+    return db.query(User).filter(User.field == input).first()
 
 def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
         #Update modified by Who
         db_user.modifiedById = modified_by
-        for key, value in user.dict().items():
-            #check if value is not empty
-            if value != "":
-                setattr(db_user, key, value)
+        # Update only provided fields
+        for field, value in user.model_dump(exclude_unset=True).items():
+            setattr(db_user, field, value)
+
         db.commit()
         db.refresh(db_user)
     return db_user
@@ -37,8 +39,6 @@ def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
 def delete_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
-        #delete all user role associated with user
-        crud_role_user.delete_user_role_userId(db, db_user.id)
         db.delete(db_user)
         db.commit()
     return db_user
@@ -52,7 +52,7 @@ def verify_user(db: Session, user: UserCreate):
             detail="User not found"
         )
     if db_user.verified == False:
-        if not verify_userDetails(db_user, user):
+        if not UserService.verify_userDetails(db_user, user):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Details do not match with pre-registered details"
@@ -66,9 +66,10 @@ def verify_user(db: Session, user: UserCreate):
     # Use a transaction to ensure rollback on error
     try:
         #Check password format
-        validate_password_format(user.password)
+        UserService.validate_password_format(user.password)
         # Hashes the password
         db_user.password = user_auth_service.get_password_hash(user.password)
+        #Set Account as Verified
         db_user.verified = True
         
         # Begin transaction
@@ -112,14 +113,11 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
             break
 
     # Check NRIC Format
-    if not validate_nric(user.nric):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid NRIC Format."
-        )
+    UserService.validate_nric(user.nric)
+    
     # Use a transaction to ensure rollback on error
     try:
-        db_user = User(**user.dict(), createdById = created_by, modifiedById= created_by, id=userId)
+        db_user = User(**user.model_dump(), createdById = created_by, modifiedById= created_by, id=userId)
 
         # Begin transaction
         db.add(db_user)
@@ -130,46 +128,6 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
         # Rollback transaction if any IntegrityError occurs
         db.rollback()
         print(e.orig)
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An error occurred: possibly a duplicate unique field."
-        )
-
-    return db_user
-
-def super_create_user(db: Session, user: TempUserCreate):
-    # Check NRIC Format
-    if not validate_nric(user.nric):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid NRIC Format."
-        )
-    # Check if the email is already registered
-    existing_user_email = db.query(User).filter(User.email == user.email).first()
-    if existing_user_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists."
-        )
-    # Check if the nric is already registered
-    existing_user_nric = db.query(User).filter(User.nric == user.nric).first()
-    if existing_user_nric:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this nric already exists."
-        )
-    # Use a transaction to ensure rollback on error
-    try:
-        db_user = User(**user.dict())
-        
-        # Begin transaction
-        db.add(db_user)
-        db.commit()
-        db.refresh(db_user)
-
-    except IntegrityError:
-        # Rollback transaction if any IntegrityError occurs
-        db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."

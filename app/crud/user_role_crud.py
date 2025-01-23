@@ -35,7 +35,7 @@ def get_user_by_roles(db: Session, role: str, skip: int = 0, limit: int = 10):
 # Create a new user role
 def create_user_role(db: Session, user_role: UserRoleCreate):
 
-    db_user_role = UserRole(**user_role.dict())
+    db_user_role = UserRole(**user_role.model_dump())
     # Check if the combination already exists
     existing_role = db.query(UserRole).filter(and_(UserRole.userId == db_user_role.userId, UserRole.roleId == db_user_role.roleId)).first()
     if existing_role:

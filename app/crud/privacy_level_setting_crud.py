@@ -9,7 +9,7 @@ def get_privacy_level_settings(db: Session, skip: int = 0, limit: int = 10):
     return db.query(PrivacyLevelSetting).order_by(PrivacyLevelSetting.id).offset(skip).limit(limit).all()
 
 def create_privacy_level_setting(db: Session, privacy_level_setting: PrivacyLevelSettingCreate):
-    db_privacy_level_setting = PrivacyLevelSetting(**privacy_level_setting.dict())
+    db_privacy_level_setting = PrivacyLevelSetting(**privacy_level_setting.model_dump())
     db.add(db_privacy_level_setting)
     db.commit()
     db.refresh(db_privacy_level_setting)
@@ -18,8 +18,9 @@ def create_privacy_level_setting(db: Session, privacy_level_setting: PrivacyLeve
 def update_privacy_level_setting(db: Session, privacy_setting_id: int, privacy_level_setting: PrivacyLevelSettingUpdate):
     db_privacy_level_setting = db.query(PrivacyLevelSetting).filter(PrivacyLevelSetting.id == privacy_setting_id).first()
     if db_privacy_level_setting:
-        for key, value in privacy_level_setting.dict().items():
-            setattr(db_privacy_level_setting, key, value)
+            # Update only provided fields
+        for field, value in privacy_level_setting.model_dump(exclude_unset=True).items():
+            setattr(db_privacy_level_setting, field, value)
         db.commit()
         db.refresh(db_privacy_level_setting)
     return db_privacy_level_setting

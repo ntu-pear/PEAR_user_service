@@ -20,8 +20,9 @@ class TempUserCreate(UserBase):
     nric: str
 
 class UserUpdate(BaseModel):
+    nric_FullName: Optional[str] = None
     nric_Address: Optional[str] = None
-    #nric_DateOfBirth: Optional[date] = None
+    nric_DateOfBirth: Optional[date] = None
     nric_Gender: Optional[str] = None
     contactNo: Optional[str] = None
     allowNotification: Optional[bool] = None

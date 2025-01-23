@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from ..service.email_service import generate_email_token, confirm_token,send_confirmation_email, send_email
+from ..service import email_service as EmailService
 
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -16,8 +16,8 @@ async def request_email_confirmation(user_id: str, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    token = generate_email_token(user.email)
-    await send_confirmation_email(user.email, token)
+    token = EmailService.generate_email_token(user.email)
+    await EmailService.send_confirmation_email(user.email, token)
     # await send_email("test1","test2",user.email)
     return {"msg": "Confirmation email sent"}
 
@@ -25,7 +25,7 @@ async def request_email_confirmation(user_id: str, db: Session = Depends(get_db)
 @router.get("/confirm-email/{token}")
 async def confirm_email(token: str, db: Session = Depends(get_db)):
     try:
-        userDetails = confirm_token(token)
+        userDetails = EmailService.confirm_token(token)
 
     except:
         raise HTTPException(status_code=400, detail="Invalid or expired token")
@@ -38,9 +38,3 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
     db.commit()
     
     return {"msg": "Email confirmed"}
-
-@router.post("/send_email/")
-async def sending_email(email: email.EmailBase):
-    hello =send_email(email)
-    # await send_email("test1","test2",user.email)
-    return hello

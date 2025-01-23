@@ -1,6 +1,6 @@
 import pytest
 from unittest import mock
-from app.crud.user_crud import create_user, verify_user
+from app.crud.user_crud import create_user
 from app.service import user_service
 from app.schemas.user import TempUserCreate, UserCreate
 from app.models.user_model import User
@@ -81,8 +81,6 @@ def db_session_mock():
 @pytest.fixture
 def Temp_User_Create():
     """Fixture to provide a mock User object. W/O Password"""
-    from app.models.role_model import Role
-    from app.models.user_model import User
     
     return TempUserCreate(
     nric_FullName="DANIEL ANG",

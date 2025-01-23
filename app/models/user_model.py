@@ -15,7 +15,7 @@ class UserStatus(enum.Enum):
 class User(Base):
     __tablename__ = 'TABLE_USER'
 
-    id = Column(String(255), primary_key=True)
+    id = Column(String(11), primary_key=True)
     active = Column(Boolean,default=True,nullable=False)
     nric_FullName = Column(String(255), nullable=False)
     nric = Column(String(9), unique=True, nullable=False)
