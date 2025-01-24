@@ -1,3 +1,4 @@
+from app.utils.utils import mask_nric
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -67,12 +68,33 @@ def read_user(token: str, userId: str, db: Session = Depends(get_db)):
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Mask NRIC if the token's user ID does not match the requested user's ID or requested user not admin
+    if userDetails["userId"] != userId or userDetails["roleName"] != "ADMIN":
+        db_user.nric = mask_nric(db_user.nric)
+   
     return db_user
 
 @router.get("/users/", response_model=list[schemas_user.UserRead])
 @rate_limit(global_bucket, tokens_required=1)
-def read_users(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def read_users(token: str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     users = crud_user.get_users(db=db, skip=skip, limit=limit)
+    # if token exists and user is admin, then do not need to mask NRICs
+    if token:
+        try:
+            userDetails = AuthService.decode_access_token(token)
+            is_admin = userDetails.get("roleName") == "ADMIN"
+        except Exception:
+            # If token is invalid, treat as no token
+            is_admin = False
+    else:
+        is_admin = False
+
+    # otherwise by default, mask all NRICs
+    if not is_admin:
+        for user in users:
+            user.nric = mask_nric(user.nric)
+
     return users
 
 @router.get("/users/get_email/{email}", response_model=schemas_user.UserRead)
