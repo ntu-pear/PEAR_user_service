@@ -1,4 +1,7 @@
+from venv import logger
 from sqlalchemy.orm import Session
+from sqlalchemy import update
+
 from ..models.user_model import User
 
 from ..schemas.user import UserCreate, UserUpdate, TempUserCreate
@@ -9,7 +12,6 @@ from sqlalchemy import text
 from ..crud import user_role_crud as crud_role_user
 from app.service import user_service as UserService
 import uuid
-
 
 def get_user(db: Session, userId: str):
     return db.query(User).filter(User.id == userId).first()
@@ -24,28 +26,30 @@ def get_user_by_field(db: Session, field:str, input: str):
     return db.query(User).filter(User.field == input).first()
 
 def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
+    stmt = update(User).where(User.id == userId)
+
+    # update modified by who
+    stmt = stmt.values(modifiedById=modified_by)
+
+    if user.email:
+        # Check for conflicting email before updating
+        existing_user_email = db.query(User).filter(User.email == user.email).first()
+        if existing_user_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email already exists."
+            )
+        stmt = stmt.values(email=user.email)
+
+    for field, value in user.model_dump(exclude_unset=True).items():
+        if field != "email":
+            stmt = stmt.values({field: value})
+
+    db.execute(stmt)
+    db.commit()
+    
+    # Fetch the updated user to return it
     db_user = db.query(User).filter(User.id == userId).first()
-    if db_user:
-        #Update modified by Who
-        db_user.modifiedById = modified_by
-
-        # Update only provided fields
-        # need to check for conflicting email with existing users
-        if user.email:
-            existing_user_email = db.query(User).filter(User.email == user.email).first()
-            if existing_user_email:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="A user with this email already exists."
-                )
-            db_user.email = user.email
-        
-        for field, value in user.model_dump(exclude_unset=True).items():
-            if field != "email":
-                setattr(db_user, field, value)
-
-        db.commit()
-        db.refresh(db_user)
     return db_user
 
 def delete_user(db: Session, userId: str):
@@ -54,6 +58,12 @@ def delete_user(db: Session, userId: str):
         db.delete(db_user)
         db.commit()
     return db_user
+
+def delete_users(db: Session, userIds: list):
+    users = db.query(User).filter(User.id.in_(userIds)).all()
+    for user in users:
+        db.delete(user)
+    db.commit()
 
 def verify_user(db: Session, user: UserCreate):
     #Verify Info with User DB
@@ -99,22 +109,25 @@ def verify_user(db: Session, user: UserCreate):
     return db_user
 
 def create_user(db: Session, user: TempUserCreate, created_by: int):
-    
-    # Check if the email is already registered
-    existing_user_email = db.query(User).filter(User.email == user.email).first()
-    if existing_user_email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this email already exists."
-        )
-    # Check if the nric is already registered
-    existing_user_nric = db.query(User).filter(User.nric == user.nric).first()
-    if existing_user_nric:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A user with this nric already exists."
-        )
-    
+    # Combine checks for email and NRIC into a single query
+    existing_user = db.query(User).filter(
+        (User.email == user.email) | (User.nric == user.nric)
+    ).first()
+
+    if existing_user:
+        if existing_user.email == user.email:
+            logger.error(f"Email conflict: {user.email} already exists.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email already exists."
+            )
+        if existing_user.nric == user.nric:
+            logger.error(f"NRIC conflict: {user.nric} already exists.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this nric already exists."
+            )
+
     # Generate a unique ID with a fixed length of 11
     while True:
         unique_id = "U" + str(uuid.uuid4().hex[:10])
@@ -144,6 +157,5 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."
         )
-
+    
     return db_user
-

@@ -22,6 +22,11 @@ router = APIRouter(
     dependencies=[Depends(get_db)],
     responses={404: {"description": "Not found"}},
 )
+
+# standardise successful responses
+def create_success_response(data: dict):
+    return {"status": "success", "data": data}
+
 #Create Acc, unverified
 @router.post("/users/create_account/", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
