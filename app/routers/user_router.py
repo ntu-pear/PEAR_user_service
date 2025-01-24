@@ -129,3 +129,41 @@ def delete_user(token: str, userId: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+
+@router.put("/users/{userId}/deactivate", response_model=schemas_user.UserRead)
+async def deactivate_user(
+    token: str,
+    userId: str,
+    lockout_reason: str,  # Adding lockout reason to deactivate user
+    db: Session = Depends(get_db)
+):
+    # Verify if the current user is an admin
+    userDetails = AuthService.decode_access_token(token)
+    if userDetails["roleName"] != "ADMIN":
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    
+    # Deactivate the user and set the lockout reason
+    db_user = crud_user.deactivate_user(db=db, userId=userId, lockout_reason=lockout_reason, modified_by=userDetails["userId"])
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return db_user
+
+
+@router.put("/users/{userId}/activate", response_model=schemas_user.UserRead)
+async def activate_user(
+    token: str,
+    userId: str,
+    db: Session = Depends(get_db)
+):
+    # Verify if the current user is an admin
+    userDetails = AuthService.decode_access_token(token)
+    if userDetails["roleName"] != "ADMIN":
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    
+    # Activate the user
+    db_user = crud_user.activate_user(db=db, userId=userId, modified_by=userDetails["userId"])
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return db_user
