@@ -28,9 +28,21 @@ def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
     if db_user:
         #Update modified by Who
         db_user.modifiedById = modified_by
+
         # Update only provided fields
+        # need to check for conflicting email with existing users
+        if user.email:
+            existing_user_email = db.query(User).filter(User.email == user.email).first()
+            if existing_user_email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A user with this email already exists."
+                )
+            db_user.email = user.email
+        
         for field, value in user.model_dump(exclude_unset=True).items():
-            setattr(db_user, field, value)
+            if field != "email":
+                setattr(db_user, field, value)
 
         db.commit()
         db.refresh(db_user)
