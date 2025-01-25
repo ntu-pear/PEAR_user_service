@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends, HTTPException,status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 import json
-from app.crud.user_role_crud import get_user_role_by_user
 from ..database import get_db
 from ..schemas import user_auth
 from ..schemas.user import UserRead,UserBase

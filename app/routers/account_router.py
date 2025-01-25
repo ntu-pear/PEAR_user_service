@@ -2,7 +2,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user
-from ..crud import user_role_crud as crud_role_user
 from ..crud import role_crud as role_crud
 from ..schemas import account as schemas_account
 from ..service import email_service as EmailService

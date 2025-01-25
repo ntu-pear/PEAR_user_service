@@ -8,8 +8,6 @@ from ..schemas.user import UserCreate, UserUpdate, TempUserCreate
 from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text
-from ..crud import user_role_crud as crud_role_user
 from app.service import user_service as UserService
 import uuid
 
