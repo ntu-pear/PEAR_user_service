@@ -45,7 +45,7 @@ def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
 
     db.execute(stmt)
     db.commit()
-    
+
     # Fetch the updated user to return it
     db_user = db.query(User).filter(User.id == userId).first()
     return db_user
@@ -156,4 +156,48 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
             detail="An error occurred: possibly a duplicate unique field."
         )
     
+    return db_user
+
+def reset_password(db: Session, userId: str, new_password: str):
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    db_user.password = user_auth_service.get_password_hash(new_password)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def activate_user(db: Session, userId: str):
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    
+    db_user.active = True
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: str):
+    # Fetch the user from the database
+    db_user = db.query(User).filter(User.id == userId).first()
+    
+    if db_user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Set the status to inactive and add the lockout reason
+    stmt = update(User).where(User.id == userId).values(
+        status="inactive",
+        lockoutReason=lockout_reason,
+        modifiedById=modified_by
+    )
+
+    db.execute(stmt)
+    db.commit()
+
+    # Fetch and return the updated user
+    db_user = db.query(User).filter(User.id == userId).first()
     return db_user
