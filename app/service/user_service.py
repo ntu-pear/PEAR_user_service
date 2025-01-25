@@ -37,3 +37,12 @@ def validate_nric(nric):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=("Invalid NRIC Format")
             )
+#Check for contact No format
+def validate_contactNo(contactNo):
+    #Contact No regex pattern
+    contactNo_pattern = r'^[89]\d{7}$'
+    if not re.match(contactNo_pattern, contactNo):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Contact No. Format. Contact No. must start with 8 or 9 and contain 8 digits."
+        )

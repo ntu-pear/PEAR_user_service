@@ -137,6 +137,8 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
 
     # Check NRIC Format
     UserService.validate_nric(user.nric)
+    # Check ContactNo Format
+    UserService.validate_contactNo(user.contactNo)
     
     # Use a transaction to ensure rollback on error
     try:
