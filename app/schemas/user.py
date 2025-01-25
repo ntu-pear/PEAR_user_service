@@ -20,19 +20,24 @@ class TempUserCreate(UserBase):
     nric: str
 
 class UserUpdate(BaseModel):
+    preferredName: Optional[str] = None
+    contactNo: Optional[str] = None
+class UserUpdate_Admin(UserUpdate):
+    nric:Optional[str] = None
     nric_FullName: Optional[str] = None
     nric_Address: Optional[str] = None
     nric_DateOfBirth: Optional[date] = None
     nric_Gender: Optional[str] = None
-    contactNo: Optional[str] = None
-    allowNotification: Optional[bool] = None
-    profilePicture: Optional[str] = None
     lockoutReason: Optional[str] = None
+    lockoutEnabled: Optional[bool]= None
+    active: Optional[bool]=None
     status: Optional[UserStatus] = None
     email: Optional[str] = None
+    roleName: Optional[str] = None
 
 class UserRead(BaseModel):
     id:str
+    preferredName: Optional[str]=None
     nric_FullName: str
     nric: str
     nric_Address: str

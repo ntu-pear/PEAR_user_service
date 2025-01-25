@@ -27,24 +27,8 @@ router = APIRouter(
 def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
-#Create Acc, unverified
-@router.post("/users/create_account/", response_model=schemas_user.UserRead)
-@rate_limit(global_bucket, tokens_required=1)
-async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-   
-    if (userDetails["roleName"] != "ADMIN"):
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user=crud_user.create_user(db=db, user=user, created_by=userDetails["userId"])
-    if db_user:
-        #Send registration email
-        token = EmailService.generate_email_token(user.email)
-        await EmailService.send_registration_email(user.email, token)
-   
-    return db_user
-
 #Verify Acc, add password
-@router.post("/users/verify_account/", response_model=schemas_user.UserRead)
+@router.post("/user/verify_account/", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
     userDetails= EmailService.decode_access_token(token)
@@ -54,7 +38,7 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     return db_user
 
 #Resend account confirmation email
-@router.post("/users/request/resend_registration_email", response_model=schemas_user.UserBase)
+@router.post("/user/request/resend_registration_email", response_model=schemas_user.UserBase)
 @rate_limit(global_bucket, tokens_required=1)
 async def resend_registration_email(token: str, user: schemas_account.ResendEmail, db: Session = Depends(get_db)):
     userDetails= AuthService.decode_access_token(token)
@@ -67,103 +51,50 @@ async def resend_registration_email(token: str, user: schemas_account.ResendEmai
 
     return {"Message":"Email Sent"}
 
-@router.get("/users/{userId}", response_model=schemas_user.UserRead)
-def read_user(token: str, userId: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    db_user = crud_user.get_user(db=db, userId=userId)
-    if db_user is None:
+
+# Request password reset
+@router.post("/user/request-reset-password/")
+async def request_reset_confirmation(account: schemas_account.ResetPasswordBase, db: Session = Depends(get_db)):
+
+    user = crud_user.get_user_by_email(db=db, email=account.email)
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Mask NRIC if the token's user ID does not match the requested user's ID or requested user not admin
-    if userDetails["userId"] != userId or userDetails["roleName"] != "ADMIN":
-        db_user.nric = mask_nric(db_user.nric)
-   
-    return db_user
+    fields_to_check = ["nric", "nric_DateOfBirth","roleName"]
+    for field in fields_to_check:
+        if getattr(user, field) != getattr(account, field):
+            raise HTTPException(status_code=404, detail="Invalid Details")
+        
+    token = EmailService.generate_email_token(user.email)
+    await EmailService.send_resetpassword_email(user.email, token)
+  
+    return {"msg": "Reset password email sent"}
 
-@router.get("/users/", response_model=list[schemas_user.UserRead])
-@rate_limit(global_bucket, tokens_required=1)
-def read_users(token: str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    users = crud_user.get_users(db=db, skip=skip, limit=limit)
-    # if token exists and user is admin, then do not need to mask NRICs
-    if token:
-        try:
-            userDetails = AuthService.decode_access_token(token)
-            is_admin = userDetails.get("roleName") == "ADMIN"
-        except Exception:
-            # If token is invalid, treat as no token
-            is_admin = False
-    else:
-        is_admin = False
-
-    # otherwise by default, mask all NRICs
-    if not is_admin:
-        for user in users:
-            user.nric = mask_nric(user.nric)
-
-    return users
-
-@router.get("/users/get_email/{email}", response_model=schemas_user.UserRead)
-@rate_limit(global_bucket, tokens_required=1)
-async def get_user_by_email(token:str, email: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    db_user = crud_user.get_user_by_email(db=db, email=email)
-    if db_user is None:
+@router.post("/user/reset_password/{token}")
+async def reset_user_password(token: str, newPassword: str, confirmPassword: str, db: Session = Depends(get_db)):
+    try:
+        userDetails = EmailService.confirm_token(token) 
+    except:
+        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    if (newPassword != confirmPassword):
+        raise HTTPException(status_code=404, detail="Password do not match")
+    
+    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+    #return user
+    if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return db_user
+    
+    user.password = newPassword
+    db.commit()
+    
+    return {"Password Updated"}
 
-@router.put("/users/{userId}", response_model=schemas_user.UserUpdate)
+
+
+@router.put("/user/{userId}", response_model=schemas_user.UserUpdate)
 def update_user(token:str, userId: str, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
     userDetails= AuthService.decode_access_token(token)
     db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=userDetails["userId"])
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    return db_user
-
-@router.delete("/users/{userId}", response_model=schemas_user.UserBase)
-def delete_user(token: str, userId: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    if (userDetails["roleName"] != "ADMIN"):
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user = crud_user.delete_user(db=db, userId=userId)
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
-
-
-@router.put("/users/{userId}/deactivate", response_model=schemas_user.UserRead)
-async def deactivate_user(
-    token: str,
-    userId: str,
-    lockout_reason: str,  # Adding lockout reason to deactivate user
-    db: Session = Depends(get_db)
-):
-    # Verify if the current user is an admin
-    userDetails = AuthService.decode_access_token(token)
-    if userDetails["roleName"] != "ADMIN":
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    
-    # Deactivate the user and set the lockout reason
-    db_user = crud_user.deactivate_user(db=db, userId=userId, lockout_reason=lockout_reason, modified_by=userDetails["userId"])
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return db_user
-
-
-@router.put("/users/{userId}/activate", response_model=schemas_user.UserRead)
-async def activate_user(
-    token: str,
-    userId: str,
-    db: Session = Depends(get_db)
-):
-    # Verify if the current user is an admin
-    userDetails = AuthService.decode_access_token(token)
-    if userDetails["roleName"] != "ADMIN":
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    
-    # Activate the user
-    db_user = crud_user.activate_user(db=db, userId=userId, modified_by=userDetails["userId"])
-    if db_user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    
     return db_user

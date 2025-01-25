@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from .database import engine, Base
-from .routers import user_auth_router, user_router,role_router,privacy_level_setting_router,email_router,verification_router,account_router
+from .routers import admin_router,user_auth_router, user_router,role_router,privacy_level_setting_router,email_router,verification_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -38,15 +38,12 @@ global_bucket = TokenBucket(rate=0, capacity=0)
 async def test_rate_limit():
     return {"message": "This should be rate limited"}
 
+app.include_router(admin_router.router, prefix="/api/v1", tags=["admin"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
-#app.include_router(user_role_router.router, prefix="/api/v1", tags=["user_role"])
 app.include_router(privacy_level_setting_router.router, prefix="/api/v1", tags=["privacy_level"])
-#app.include_router(secret_question_router.router, prefix="/api/v1", tags=["secret_question"])
-#app.include_router(user_secret_question_router.router, prefix="/api/v1", tags=["user_secret_question"])
 app.include_router(user_auth_router.router, prefix="/api/v1", tags=["auth"])
 app.include_router(email_router.router, prefix="/api/v1", tags=["email"])
-app.include_router(account_router.router, prefix="/api/v1", tags=["account"])
 app.include_router(verification_router.router, prefix="/api/v1", tags=["2FA"])
 @app.get("/")
 def read_root():
