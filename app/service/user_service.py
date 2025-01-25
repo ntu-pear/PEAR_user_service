@@ -1,6 +1,6 @@
 import re
 from fastapi import HTTPException, status
-
+from datetime import date,datetime, timedelta
 ### Check new user details
 def verify_userDetails(db_user, user):
     # Define the fields to compare
@@ -45,4 +45,24 @@ def validate_contactNo(contactNo):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Contact No. Format. Contact No. must start with 8 or 9 and contain 8 digits."
+        )
+    
+# Check for Date of Birth format and constraints
+def validate_dob(DOB: date):
+        
+    # Calculate age constraints
+    today = date.today()
+    min_date = today - timedelta(days=15 * 365.25)  # 15 years ago
+    max_date = today - timedelta(days=150 * 365.25)  # 150 years ago
+
+    if DOB > min_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Date of Birth indicates the person is younger than 15 years old."
+        )
+    
+    if DOB < max_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Date of Birth indicates the person is older than 150 years old."
         )
