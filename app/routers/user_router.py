@@ -12,9 +12,6 @@ from app.models.user_model import User
 from PIL import Image
 from io import BytesIO
 import logging
-import aiofiles
-import shutil
-import sys
 import os
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
