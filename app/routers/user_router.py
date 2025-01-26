@@ -1,5 +1,4 @@
 from app.utils.utils import mask_nric
-from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException,UploadFile, File,status
 from fastapi.responses import FileResponse 
 from sqlalchemy.orm import Session
@@ -30,7 +29,7 @@ router = APIRouter(
 
 
 # Directory to store uploaded files
-UPLOAD_DIR = Path("uploads/profile_pictures")  # Define upload directory using pathlib
+UPLOAD_DIR = "uploads/profile_pictures"
 
 
 # standardise successful responses
@@ -125,7 +124,8 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
     # Define the file path
     file_extension = file.filename.split(".")[-1]
     file_name = f"user_{userId}_profile_picture.{file_extension}"
-    file_path = UPLOAD_DIR / file_name  # Use pathlib for platform-independent paths
+    # Replace backslashes with forward slashes
+    file_path = os.path.join(UPLOAD_DIR, file_name).replace("\\", "/")
 
     try:
         # Read the file into memory
