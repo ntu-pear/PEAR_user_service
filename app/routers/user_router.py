@@ -1,5 +1,6 @@
 from app.utils.utils import mask_nric
 from fastapi import APIRouter, Depends, HTTPException,UploadFile, File,status
+from fastapi.responses import FileResponse 
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user
@@ -125,7 +126,8 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
     # Define the file path
     file_extension = file.filename.split(".")[-1]
     file_name = f"user_{userId}_profile_picture.{file_extension}"
-    file_path = os.path.join(UPLOAD_DIR, file_name)
+    # Replace backslashes with forward slashes
+    file_path = os.path.join(UPLOAD_DIR, file_name).replace("\\", "/")
 
     try:
         # Read the file into memory
@@ -148,13 +150,48 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
             detail=f"Failed to process the image: {e}",
         )
     # Update the user's profile picture path in the database
-    db_user.profilePicture = file_path
+    db_user.profilePicture = str(file_path)
     db.commit()
     db.refresh(db_user)
 
     return {"message": "Profile picture uploaded successfully", "file_path": file_path}
 
-@router.delete("/users/{userId}/delete_profile_pic/")
+@router.get("/users/profile_pic/{token}")
+async def fetch_profile_picture(token: str, db: Session = Depends(get_db)):
+    userDetails= AuthService.decode_access_token(token)
+    userId= userDetails["userId"]
+    # Fetch the user from the database
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found.",
+        )
+
+    # Check if the user has a profile picture
+    if not db_user.profilePicture:
+        raise HTTPException(
+            status_code=404,
+            detail="No profile picture found for this user.",
+        )
+
+    file_path = db_user.profilePicture
+
+    # Verify the file exists
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Profile picture file not found on the server.",
+        )
+
+    # Return the file as a response
+    return FileResponse(
+        path=file_path,
+        media_type="image/jpeg",  # Adjust based on your supported file types
+        filename=os.path.basename(file_path),
+    )
+
+@router.delete("/users/delete_profile_pic/{token}")
 async def delete_profile_picture(token: str, db: Session = Depends(get_db)):
     userDetails= AuthService.decode_access_token(token)
     userId= userDetails["userId"]
