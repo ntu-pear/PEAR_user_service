@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 # import rate limiter
 from .rate_limiter import TokenBucket, rate_limit
-
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 load_dotenv()
@@ -37,6 +37,8 @@ global_bucket = TokenBucket(rate=0, capacity=0)
 @rate_limit(global_bucket, tokens_required=1)
 async def test_rate_limit():
     return {"message": "This should be rate limited"}
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(admin_router.router, prefix="/api/v1", tags=["admin"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])

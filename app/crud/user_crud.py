@@ -4,7 +4,7 @@ from sqlalchemy import update
 
 from ..models.user_model import User
 
-from ..schemas.user import UserCreate, UserUpdate, TempUserCreate
+from ..schemas.user import UserCreate, UserUpdate, UserUpdate_Admin, TempUserCreate
 from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -22,8 +22,25 @@ def get_users(db: Session, skip: int = 0, limit: int = 10):
 #get user by on field
 def get_user_by_field(db: Session, field:str, input: str):
     return db.query(User).filter(User.field == input).first()
+#Update User
+def update_user_User(db: Session, userId: str, user: UserUpdate, modified_by):
+    stmt = update(User).where(User.id == userId)
 
-def update_user(db: Session, userId: str, user: UserUpdate, modified_by):
+    # update modified by who
+    stmt = stmt.values(modifiedById=modified_by)
+    for field, value in user.model_dump(exclude_unset=True).items():
+        if field != "email":
+            stmt = stmt.values({field: value})
+
+    db.execute(stmt)
+    db.commit()
+
+    # Fetch the updated user to return it
+    db_user = db.query(User).filter(User.id == userId).first()
+    return db_user
+
+#Admin update other user's account
+def update_user_Admin(db: Session, userId: str, user: UserUpdate_Admin, modified_by):
     stmt = update(User).where(User.id == userId)
 
     # update modified by who
@@ -141,7 +158,7 @@ def create_user(db: Session, user: TempUserCreate, created_by: int):
     UserService.validate_contactNo(user.contactNo)
     # Check DOB Format
     UserService.validate_dob(user.nric_DateOfBirth)
-    
+
     # Use a transaction to ensure rollback on error
     try:
         db_user = User(**user.model_dump(), createdById = created_by, modifiedById= created_by, id=userId)

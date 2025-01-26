@@ -1,5 +1,5 @@
 import re
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, File
 from datetime import date,datetime, timedelta
 ### Check new user details
 def verify_userDetails(db_user, user):
@@ -65,4 +65,26 @@ def validate_dob(DOB: date):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Date of Birth indicates the person is older than 150 years old."
+        )
+    
+#Check for profile file format
+def validate_profile_picture_format(file: File):
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Uploaded file is not an image")
+    
+    # Validate file type
+    ALLOWED_FILE_TYPES = ["image/jpeg", "image/png"]
+    if file.content_type not in ALLOWED_FILE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Only JPG and PNG images are allowed."
+        )
+    
+    # Validate file extension
+    file_extension = file.filename.split(".")[-1].lower()
+    if file_extension not in ["jpg", "jpeg", "png"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file extension. Only JPG and PNG images are allowed."
         )
