@@ -3,7 +3,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import ProgrammingError
 from app.database import Base
 from dotenv import load_dotenv
-from app.models import privacy_level_setting_model,role_model,secret_question_model,user_model,user_role_model,user_secret_question_model
 
 
 # Load environment variables from .env file
