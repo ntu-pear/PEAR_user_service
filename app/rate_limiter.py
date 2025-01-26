@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from inspect import iscoroutinefunction
 from functools import wraps
 import threading
+from collections import defaultdict
 
 class TokenBucket:
     def __init__(self, rate, capacity):
@@ -46,7 +47,7 @@ class TokenBucket:
 
 def rate_limit(bucket: TokenBucket, tokens_required=1):
     """
-    A decorator to apply rate limiting to FastAPI routes.
+    A normal decorator to apply rate limiting to FastAPI routes.
 
     :param bucket: TokenBucket instance to use for rate limiting.
     :param tokens_required: Number of tokens required to process the request.
@@ -60,6 +61,45 @@ def rate_limit(bucket: TokenBucket, tokens_required=1):
 
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
+            if not bucket.allow_request(tokens_required):
+                raise HTTPException(status_code=429, detail="Too Many Requests")
+            return func(*args, **kwargs)
+
+        # Choose the correct wrapper based on whether the function is async
+        return async_wrapper if iscoroutinefunction(func) else sync_wrapper
+
+    return decorator
+
+
+# Dictionary to store TokenBucket per IP address
+# key => ip address
+# value => TokenBucket
+# lambda is used so that a new Token Bucket instance is created for each IP and not reused
+ip_rate_limiter_dict = defaultdict(lambda: TokenBucket(rate=1, capacity=10))
+
+# token bucket does not need to be passed in the decorator as its tracked by the dictionary
+def rate_limit_by_ip(tokens_required=1):
+    """
+    Rate limiter decorator that applies rate limits per IP address.
+    :param tokens_required: Tokens required to process the request.
+    """
+
+    def decorator(func):
+        # explicitly declare request, so that we can extract ip address
+        @wraps(func)
+        async def async_wrapper(*args, **kwargs, request: Request):
+            client_ip = request.client.host
+            bucket = ip_rate_limiter_dict[client_ip]
+
+            if not bucket.allow_request(tokens_required):
+                raise HTTPException(status_code=429, detail="Too Many Requests")
+            return await func(*args, **kwargs)
+
+        @wraps(func)
+        def sync_wrapper(*args, **kwargs, request: Request):
+            client_ip = request.client.host
+            bucket = rate_limiter_buckets[client_ip]
+
             if not bucket.allow_request(tokens_required):
                 raise HTTPException(status_code=429, detail="Too Many Requests")
             return func(*args, **kwargs)

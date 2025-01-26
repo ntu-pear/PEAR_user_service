@@ -13,8 +13,11 @@ from PIL import Image
 from io import BytesIO
 import logging
 import os
+
 # import rate limiter
-from ..rate_limiter import TokenBucket, rate_limit
+from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
+from fastapi import Request
+
 
 global_bucket = TokenBucket(rate=5, capacity=10)
 
@@ -24,7 +27,6 @@ router = APIRouter(
     dependencies=[Depends(get_db)],
     responses={404: {"description": "Not found"}},
 )
-
 
 
 # Directory to store uploaded files
