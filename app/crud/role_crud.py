@@ -51,7 +51,7 @@ def update_role(db: Session, roleId: int, role: RoleUpdate, modified_by:int):
 
 def delete_role(db: Session, roleId: int):
     db_role = db.query(Role).filter(Role.id == roleId).first()
-    if db_role:
+    if db_role & (db_role.roleName != "ADMIN"):
         db.delete(db_role)
         db.commit()
     return db_role

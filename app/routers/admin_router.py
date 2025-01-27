@@ -103,6 +103,9 @@ def delete_user(token: str, userId: str, db: Session = Depends(get_db)):
     userDetails= AuthService.decode_access_token(token)
     if (userDetails["roleName"] != "ADMIN"):
         raise HTTPException(status_code=404, detail="User is not authorised")
+    if (userDetails["userId"] == userId):
+        raise HTTPException(status_code=404, detail="Cannot delete yourself")
+    
     db_user = crud_user.delete_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
