@@ -1,5 +1,5 @@
 import time
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from inspect import iscoroutinefunction
 from functools import wraps
 import threading
@@ -87,7 +87,7 @@ def rate_limit_by_ip(tokens_required=1):
     def decorator(func):
         # explicitly declare request, so that we can extract ip address
         @wraps(func)
-        async def async_wrapper(*args, **kwargs, request: Request):
+        async def async_wrapper(request: Request, *args, **kwargs):
             client_ip = request.client.host
             bucket = ip_rate_limiter_dict[client_ip]
 
@@ -96,7 +96,7 @@ def rate_limit_by_ip(tokens_required=1):
             return await func(*args, **kwargs)
 
         @wraps(func)
-        def sync_wrapper(*args, **kwargs, request: Request):
+        def sync_wrapper(request: Request, *args, **kwargs):
             client_ip = request.client.host
             bucket = rate_limiter_buckets[client_ip]
 
