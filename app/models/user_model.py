@@ -9,8 +9,7 @@ from .privacy_level_setting_model import PrivacyLevelSetting
 # Define an Enum for status
 class UserStatus(enum.Enum):
     ACTIVE = "ACTIVE"
-    MEDICAL_LEAVE = "MC"
-    ANNUAL_LEAVE = "AL"
+    INACTIVE= "INACTIVE"
 
 class User(Base):
     __tablename__ = 'TABLE_USER'
