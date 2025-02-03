@@ -3,8 +3,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
-from .role_model import Role
-from .privacy_level_setting_model import PrivacyLevelSetting
  
 # Define an Enum for status
 class UserStatus(enum.Enum):
@@ -26,7 +24,7 @@ class User(Base):
     contactNo = Column(String(32),nullable=False)
     contactNoConfirmed = Column(Boolean, default=False, nullable=False)
     allowNotification = Column(Boolean, default=False, nullable=False)
-    profilePicture = Column(String(255))
+    profilePicture = Column(String(32))
     lockoutReason = Column(String(255))
     loginTimeStamp = Column(DateTime)#,nullable=False)
     lastPasswordChanged = Column(DateTime)#,nullable=False)

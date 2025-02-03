@@ -21,5 +21,4 @@ google-auth-httplib2
 google-api-python-client
 pyotp
 captcha
-httpx
-mailjet_rest
+pysendpulse
