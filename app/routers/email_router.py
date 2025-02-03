@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user_model import User
 from ..schemas import email as email
-import httpx
 
 router = APIRouter()
 
@@ -18,7 +17,6 @@ async def request_email_confirmation(user_id: str, db: Session = Depends(get_db)
     
     token = EmailService.generate_email_token(user.email)
     await EmailService.send_confirmation_email(user.email, token)
-    # await send_email("test1","test2",user.email)
     return {"msg": "Confirmation email sent"}
 
 # Confirm Email
