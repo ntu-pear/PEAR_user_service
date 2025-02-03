@@ -129,6 +129,14 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
     # Replace backslashes with forward slashes
     file_path = os.path.join(UPLOAD_DIR, file_name).replace("\\", "/")
 
+    # Check if the user has a profile picture
+    if db_user.profilePicture:
+        # Get the file path
+        file_path = db_user.profilePicture
+        # Delete the file if it exists
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
     try:
         # Read the file into memory
         contents = await file.read()

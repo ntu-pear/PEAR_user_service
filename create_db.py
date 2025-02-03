@@ -50,8 +50,6 @@ password = os.getenv("DB_PASSWORD")
 # SQL command to create the database (change the db name if required)
 create_db_query = f"IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '{DB_DATABASE}') CREATE DATABASE [{DB_DATABASE}];"
 
-# SQL command to create the database (change the db name if required)
-create_db_query = "IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'user_service_dev') CREATE DATABASE user_service_dev;"
 connection_string = (
     f"DRIVER={{{driver}}};"
     f"SERVER={server};"
