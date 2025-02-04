@@ -58,7 +58,7 @@ async def resend_registration_email(token: str, user: schemas_account.ResendEmai
   
     #Send registration Email
     token = EmailService.generate_email_token(user.email)
-    await EmailService.send_confirmation_email(user.email, token)
+    await EmailService.send_registration_email(user.email, token)
 
     return {"Message":"Email Sent"}
 

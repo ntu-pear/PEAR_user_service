@@ -70,6 +70,9 @@ def update_user_Admin(db: Session, userId: str, user: UserUpdate_Admin, modified
 def delete_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
+        #delete profile pic
+        if db_user.profilePicture:
+            UserService.delete_Profile_Pic(db_user.profilePicture)
         db.delete(db_user)
         db.commit()
     return db_user
@@ -77,6 +80,8 @@ def delete_user(db: Session, userId: str):
 def delete_users(db: Session, userIds: list):
     users = db.query(User).filter(User.id.in_(userIds)).all()
     for user in users:
+        if user.profilePicture:
+            UserService.delete_Profile_Pic(user.profilePicture)
         db.delete(user)
     db.commit()
 
