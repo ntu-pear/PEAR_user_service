@@ -16,7 +16,7 @@ from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 router = APIRouter()
 
 @router.post("/login/")#, response_model=user_auth.Token)
-@rate_limit_by_ip(tokens_required=1)
+#@rate_limit_by_ip(tokens_required=1)
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db),):
     # Get User
     user = db.query(User).filter(User.email == form_data.username).first()
