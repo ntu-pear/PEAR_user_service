@@ -65,7 +65,7 @@ async def resend_registration_email(token: str, user: schemas_account.ResendEmai
 
 # Request password reset
 @router.post("/user/request-reset-password/")
-async def request_reset_confirmation(account: schemas_account.ResetPasswordBase, db: Session = Depends(get_db)):
+async def request_reset_password(account: schemas_account.ResetPasswordBase, db: Session = Depends(get_db)):
 
     user = crud_user.get_user_by_email(db=db, email=account.email)
     if not user:
