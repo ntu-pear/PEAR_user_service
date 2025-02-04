@@ -43,6 +43,11 @@ async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session
    
     return db_user
 
+@router.get("/Test_send_email/")
+async def test_send_email(email:str):
+    await EmailService.send_registration_email(email,"213gt13g")
+    return {"Email Sent"}
+    
 
 
 @router.get("/admin/{userId}", response_model=schemas_user.UserRead)

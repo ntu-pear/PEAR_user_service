@@ -27,7 +27,7 @@ async def send_confirmation_email(email: str, token: str):
     
     email = {
         'subject': 'Confirm Email',
-        'text': f"Please click the following link to confirm your email: {confirmation_url}",
+        'html': f"Please click the following link to confirm your email: {confirmation_url}",
         'from': {'name': 'FYP_PEAR', 'email': 'fyp_pear@techdevglobal.com'},
         'to': [
             {'email': email}
@@ -41,7 +41,7 @@ async def send_registration_email(email: str, token: str):
     
     email = {
         'subject': 'Register Account',
-        'text': f"Please click the following link to register your account: {registration_url}",
+        'html': f"Please click the following link to register your account: {registration_url}",
         'from': {'name': 'FYP_PEAR', 'email': 'fyp_pear@techdevglobal.com'},
         'to': [
             {'email': email}
@@ -55,7 +55,7 @@ async def send_reset_password_email(email: str, token: str):
     resetpassword_url = f"http://localhost:8000/forget-password/{token}"   
     email = {
         'subject': 'Reset Password',
-        'text': f"Please click the following link to reset your password: {resetpassword_url}",
+        'html': f"Please click the following link to reset your password: {resetpassword_url}",
         'from': {'name': 'FYP_PEAR', 'email': 'fyp_pear@techdevglobal.com'},
         'to': [
             {'email': email}
