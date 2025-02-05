@@ -10,6 +10,7 @@ OTP_EMAIL = os.getenv('OTP_EMAIL')
 SECRET_KEY = os.getenv('SECRET_KEY')
 SALT = os.getenv('SALT')
 SPApiProxy = PySendPulse(os.getenv('SENDPULSE_API_KEY'), os.getenv('SENDPULSE_SECRET_KEY'))
+EMAIL_LINK_BASEURL = os.getenv('EMAIL_LINK_BASEURL')
 
 def generate_email_token(email: str) -> str:
     serializer = URLSafeTimedSerializer(SECRET_KEY)
@@ -58,7 +59,7 @@ async def send_registration_email(email: str, token: str):
 ## Reset Password
 async def send_reset_password_email(email: str, token: str):
     validate_email_format(email)
-    resetpassword_url = f"http://localhost:8000/forget-password/{token}"   
+    resetpassword_url = f"{EMAIL_LINK_BASEURL}/forget-password/{token}"   
     email = {
         'subject': 'Reset Password',
         'html': f"Please click the following link to reset your password: {resetpassword_url}",

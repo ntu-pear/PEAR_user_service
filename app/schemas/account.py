@@ -10,8 +10,12 @@ class AccountBase(BaseModel):
     roleName: str
 
 
-class ResetPasswordBase(AccountBase):
+class RequestResetPasswordBase(AccountBase):
     pass
 
 class ResendEmail(AccountBase):
     pass
+
+class UserResetPassword(BaseModel):
+    newPassword: str
+    confirmPassword: str
