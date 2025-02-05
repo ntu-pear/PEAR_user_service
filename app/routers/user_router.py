@@ -85,7 +85,7 @@ async def request_reset_password(account: schemas_account.ResetPasswordBase, db:
             raise HTTPException(status_code=404, detail="Invalid Details")
         
     token = EmailService.generate_email_token(user.email)
-    await EmailService.send_resetpassword_email(user.email, token)
+    await EmailService.send_reset_password_email(user.email, token)
   
     return {"msg": "Reset password email sent"}
 
