@@ -37,7 +37,7 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
     
     return {"msg": "Email confirmed"}
 
-
+#test send email
 @router.get("/Test_send_email/")
 async def test_send_email(email:str):
     await EmailService.send_registration_email(email,"213gt13g")

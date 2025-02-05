@@ -1,14 +1,23 @@
-from sqlalchemy import Column, Boolean, Integer, String, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Boolean, Integer, Enum, String, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
+import enum
+
+class Role_Names(enum.Enum):
+    ADMIN= "ADMIN"
+    DOCTOR= "DOCTOR"
+    GAME_THERAPIST = "GAME THERAPIST"
+    CAREGIVER = "CAREGIVER"
+    SUPERVISOR = "SUPERVISOR"
+    GUARDIAN = "GUARDIAN"
 
 class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 
     id = Column(String(255), primary_key=True)
     active = Column(Boolean, default=True, nullable=False)
-    roleName = Column(String(255), unique=True, nullable=False)
+    roleName = Column(Enum(Role_Names), unique=True, nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     

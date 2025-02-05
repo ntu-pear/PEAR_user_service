@@ -1,4 +1,5 @@
 from ..schemas import email as email
+from fastapi import HTTPException
 import os
 from itsdangerous import URLSafeTimedSerializer
 from pysendpulse.pysendpulse import PySendPulse
@@ -19,7 +20,7 @@ def confirm_token(token: str, expiration=3600):
         userDetails = serializer.loads(token, salt=SALT, max_age=expiration)
         
     except Exception as e:      
-        return False
+        raise HTTPException(status_code=404, detail="Invalid Token")
     return userDetails
 
 async def send_confirmation_email(email: str, token: str):

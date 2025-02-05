@@ -42,36 +42,44 @@ def create_success_response(data: dict):
 @router.post("/user/verify_account/", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
-    userDetails= EmailService.decode_access_token(token)
-
+    EmailService.confirm_token(token)
+    
     db_user = crud_user.verify_user(db=db, user=user)
 
     return db_user
 
 #Resend account confirmation email
-@router.post("/user/request/resend_registration_email", response_model=schemas_user.UserBase)
+@router.post("/user/request/resend_registration_email") 
 @rate_limit(global_bucket, tokens_required=1)
-async def resend_registration_email(token: str, user: schemas_account.ResendEmail, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    if (userDetails.roleName != "ADMIN"):
-         raise HTTPException(status_code=404, detail="User is not authorised")
+async def resend_registration_email(account: schemas_account.ResendEmail, db: Session = Depends(get_db)):
+    user = crud_user.get_user_by_email(db=db, email=account.email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    #check if user is already verified
+    if user.verified:
+        raise HTTPException(status_code=404, detail="User is already verified")
+    
+    fields_to_check = ["nric", "nric_DateOfBirth","email", "roleName"]
+    for field in fields_to_check:
+        if getattr(user, field) != getattr(account, field):
+            raise HTTPException(status_code=404, detail="Invalid Details")
   
     #Send registration Email
     token = EmailService.generate_email_token(user.email)
     await EmailService.send_registration_email(user.email, token)
 
-    return {"Message":"Email Sent"}
+    return {"Message":"Registration Email Sent"}
 
 
 # Request password reset
-@router.post("/user/request-reset-password/")
+@router.post("/user/request_reset_password/")
 async def request_reset_password(account: schemas_account.ResetPasswordBase, db: Session = Depends(get_db)):
 
     user = crud_user.get_user_by_email(db=db, email=account.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    fields_to_check = ["nric", "nric_DateOfBirth","roleName"]
+    fields_to_check = ["nric", "nric_DateOfBirth","email,", "roleName"]
     for field in fields_to_check:
         if getattr(user, field) != getattr(account, field):
             raise HTTPException(status_code=404, detail="Invalid Details")
@@ -81,7 +89,7 @@ async def request_reset_password(account: schemas_account.ResetPasswordBase, db:
   
     return {"msg": "Reset password email sent"}
 
-@router.post("/user/reset_password/{token}")
+@router.post("/user/reset_user_password/{token}")
 async def reset_user_password(token: str, newPassword: str, confirmPassword: str, db: Session = Depends(get_db)):
     try:
         userDetails = EmailService.confirm_token(token) 

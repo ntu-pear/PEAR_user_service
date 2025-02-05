@@ -59,17 +59,7 @@ INSERT INTO [user_service_dev].[dbo].[TABLE_USER](
  'SUPERVISOR', 'T0048674B',
  1, 1,
  'ACTIVE', 1,
- 0,1,1),{
-  "id": "string",
-  "nric_FullName": "Choo Zhen Hui",
-  "nric_Address": "Gangsa Road",
-  "nric_DateOfBirth": "2000-02-02",
-  "nric_Gender": "M",
-  "contactNo": "84286816",
-  "email": "choozhenhui@gmail.com",
-  "roleName": "Admin",
-  "nric": "T0003972H"
-}
+ 0,1,1),
 ('U01d447fkcfe', 'ADELINE TAN', '1999-04-30',
  'F', '123 Ang Mo Kio Ave 1 #04-332 Singapore 550123', 
  'uploads/profile_pictures/user_U01d447fkcfe_profile_picture.jpg',
