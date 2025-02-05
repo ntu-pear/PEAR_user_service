@@ -15,6 +15,7 @@ async def request_email_confirmation(user_id: str, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    EmailService.validate_email_format(user.email)
     token = EmailService.generate_email_token(user.email)
     await EmailService.send_confirmation_email(user.email, token)
     return {"msg": "Confirmation email sent"}
@@ -40,5 +41,5 @@ async def confirm_email(token: str, db: Session = Depends(get_db)):
 
 @router.get("/Test_send_email/")
 async def test_send_email(email:str):
-    await EmailService.send_registration_email(email,"213gt13g")
+    EmailService.send_registration_email(email,"213gt13g")
     return {"Email Sent"}
