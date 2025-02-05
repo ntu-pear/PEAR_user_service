@@ -9,6 +9,10 @@ class UserStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     INACTIVE= "INACTIVE"
 
+class Gender(enum.Enum):
+    MALE = "M"
+    FEMALE = "F"
+
 class User(Base):
     __tablename__ = 'TABLE_USER'
 
@@ -18,7 +22,7 @@ class User(Base):
     nric = Column(String(9), unique=True, nullable=False)
     nric_Address = Column(String(255),nullable=False)
     nric_DateOfBirth = Column(Date,nullable=False)
-    nric_Gender = Column(String(1), nullable=False)
+    nric_Gender = Column(Enum(Gender), nullable=False)
     preferredName= Column(String(255), nullable=True)
     contactNo = Column(String(32),nullable=False)
     contactNoConfirmed = Column(Boolean, default=False, nullable=False)
