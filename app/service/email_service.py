@@ -1,6 +1,8 @@
 from ..schemas import email as email
 from fastapi import HTTPException
 import os
+import re
+from fastapi import HTTPException, status
 from itsdangerous import URLSafeTimedSerializer
 from pysendpulse.pysendpulse import PySendPulse
 
@@ -24,6 +26,7 @@ def confirm_token(token: str, expiration=3600):
     return userDetails
 
 async def send_confirmation_email(email: str, token: str):
+    validate_email_format(email)
     confirmation_url = f"http://localhost:8000/confirm-email/{token}"
     
     email = {
@@ -38,6 +41,7 @@ async def send_confirmation_email(email: str, token: str):
     SPApiProxy.smtp_send_mail(email)
 
 async def send_registration_email(email: str, token: str):
+    validate_email_format(email)
     registration_url = f"http://localhost:8000/user/register_account/{token}" 
     
     email = {
@@ -53,6 +57,7 @@ async def send_registration_email(email: str, token: str):
 
 ## Reset Password
 async def send_reset_password_email(email: str, token: str):
+    validate_email_format(email)
     resetpassword_url = f"http://localhost:8000/forget-password/{token}"   
     email = {
         'subject': 'Reset Password',
@@ -67,6 +72,7 @@ async def send_reset_password_email(email: str, token: str):
     
 ## Send 2FA email
 async def send_2fa_email(email: str, code: int):
+    validate_email_format(email)
     email = {
         'subject': 'Verify your new PEAR account',
         'html': f"To verify your account, please use the following One Time Password (OTP): <b>{code}</b>",
@@ -78,3 +84,19 @@ async def send_2fa_email(email: str, code: int):
     }
     
     SPApiProxy.smtp_send_mail(email)
+    
+#Check for valid email format
+def validate_email_format(email: str):
+    """
+    Validate email with the following rules:
+    - A valid email username
+    - @
+    - A valid domain name
+    """
+    if not re.match(r"^[-\w\.]+@([\w-]+\.)+[\w-]{2,4}$", email):
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Invalid email format"
+            )
+        )
