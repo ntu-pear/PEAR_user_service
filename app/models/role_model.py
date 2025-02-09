@@ -32,4 +32,4 @@ class Role(Base):
     privacyLevelSettings = relationship('PrivacyLevelSetting', back_populates='role')
 
     # Back-reference to users
-    users = relationship('User', back_populates='role')  # One-to-Many relationship
+    users = relationship('Users', back_populates='role')  # One-to-Many relationship
