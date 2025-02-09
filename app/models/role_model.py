@@ -3,11 +3,13 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
-
+class RoleStatus(enum.Enum):
+    ACTIVE = "ACTIVE"
+    INACTIVE= "INACTIVE"
 class Role_Names(enum.Enum):
     ADMIN= "ADMIN"
     DOCTOR= "DOCTOR"
-    GAME_THERAPIST = "GAME THERAPIST"
+    GAME_THERAPIST = "GAME_THERAPIST"
     CAREGIVER = "CAREGIVER"
     SUPERVISOR = "SUPERVISOR"
     GUARDIAN = "GUARDIAN"

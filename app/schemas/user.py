@@ -1,13 +1,13 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, date
 from typing import Optional
-from app.models.user_model import UserStatus
+from app.models.user_model import UserStatus, GenderStatus
 class UserBase(BaseModel):
     
     nric_FullName: str
     nric_Address: str
     nric_DateOfBirth: date= Field("YYYY-MM-DD")
-    nric_Gender: str
+    nric_Gender: GenderStatus
     contactNo: str
     email: str
     roleName: str 
@@ -27,7 +27,7 @@ class UserUpdate_Admin(UserUpdate):
     nric_FullName: Optional[str] = None
     nric_Address: Optional[str] = None
     nric_DateOfBirth: Optional[date] = None
-    nric_Gender: Optional[str] = None
+    nric_Gender: Optional[GenderStatus] = None
     lockoutReason: Optional[str] = None
     lockoutEnabled: Optional[bool]= None
     active: Optional[bool]=None
@@ -42,7 +42,7 @@ class UserRead(BaseModel):
     nric: str
     nric_Address: str
     nric_DateOfBirth: date
-    nric_Gender: str
+    nric_Gender: GenderStatus
     roleName: str
     contactNo: str
     allowNotification:bool

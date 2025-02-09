@@ -9,7 +9,7 @@ class UserStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     INACTIVE= "INACTIVE"
 
-class Gender(enum.Enum):
+class GenderStatus(enum.Enum):
     MALE = "M"
     FEMALE = "F"
 
@@ -22,7 +22,7 @@ class User(Base):
     nric = Column(String(9), unique=True, nullable=False)
     nric_Address = Column(String(255),nullable=False)
     nric_DateOfBirth = Column(Date,nullable=False)
-    nric_Gender = Column(SqlEnum(Gender, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    nric_Gender = Column(SqlEnum(GenderStatus, values_callable=lambda x: [e.value for e in x]), nullable=False)
     preferredName= Column(String(255), nullable=True)
     contactNo = Column(String(32),nullable=False)
     contactNoConfirmed = Column(Boolean, default=False, nullable=False)
