@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
-from app.models.role_model import RoleStatus
+
 class RoleBase(BaseModel):
     roleName: str
 
@@ -10,11 +10,11 @@ class RoleCreate(RoleBase):
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
-    active: Optional[RoleStatus] = None
+    active: Optional[bool] = None
 
 class RoleRead(RoleBase):
     id: str
-    active: RoleStatus
+    active: bool
     createdById: Optional[str]=None
     createdDate: datetime
     modifiedById: Optional[str]=None

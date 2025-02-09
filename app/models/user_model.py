@@ -5,8 +5,10 @@ from app.database import Base
 import enum
 # Define an Enum for status
 class UserStatus(enum.Enum):
-    ACTIVE = "ACTIVE"
-    INACTIVE= "INACTIVE"
+    ANNUAL_LEAVE = "AL"
+    MEDICAL_LEAVE= "MC"
+    ACTIVE="ACTIVE"
+
 
 class GenderStatus(enum.Enum):
     MALE = "M"

@@ -3,10 +3,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
-class RoleStatus(enum.Enum):
-    ACTIVE = "ACTIVE"
-    INACTIVE= "INACTIVE"
-
 class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 

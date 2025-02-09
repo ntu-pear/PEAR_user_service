@@ -48,7 +48,7 @@ class UserRead(BaseModel):
     allowNotification:bool
     profilePicture: Optional[str]=None
     lockoutReason: Optional[str]=None
-    status:str
+    status:UserStatus
     email:str
     emailConfirmed:bool
     password:Optional[str]=None
