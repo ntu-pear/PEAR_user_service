@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger,Boolean, Column,Enum, Integer, String, Date,DateTime, ForeignKey
+from sqlalchemy import BigInteger,Boolean, Column,Enum as SqlEnum, Integer, String, Date,DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -22,7 +22,7 @@ class User(Base):
     nric = Column(String(9), unique=True, nullable=False)
     nric_Address = Column(String(255),nullable=False)
     nric_DateOfBirth = Column(Date,nullable=False)
-    nric_Gender = Column(Enum(Gender), nullable=False)
+    nric_Gender = Column(SqlEnum(Gender, values_callable=lambda x: [e.value for e in x]), nullable=False)
     preferredName= Column(String(255), nullable=True)
     contactNo = Column(String(32),nullable=False)
     contactNoConfirmed = Column(Boolean, default=False, nullable=False)
@@ -31,7 +31,7 @@ class User(Base):
     lockoutReason = Column(String(255))
     loginTimeStamp = Column(DateTime)#,nullable=False)
     lastPasswordChanged = Column(DateTime)#,nullable=False)
-    status = Column(Enum(UserStatus), default=UserStatus.ACTIVE, nullable=False)  # Enum for status
+    status = Column(SqlEnum(UserStatus), default=UserStatus.ACTIVE, nullable=False)  # Enum for status
  
     email = Column(String(255), unique=True,nullable=False)
     emailConfirmed = Column(Boolean, default=False, nullable=False)
