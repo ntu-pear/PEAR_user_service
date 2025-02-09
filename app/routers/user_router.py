@@ -40,7 +40,7 @@ def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
 #Verify Acc, add password
-@router.post("/user/verify_account/", response_model=schemas_user.UserRead)
+@router.post("/user/verify_account/{token}", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
     EmailService.confirm_token(token)
@@ -90,8 +90,8 @@ async def request_reset_password(account: schemas_account.RequestResetPasswordBa
   
     return {"msg": "Reset password email sent"}
 
-@router.post("/user/reset_user_password/")
-async def reset_user_password(userResetPassword: schemas_account.UserResetPassword ,token: str = Security(AuthService.oauth2_scheme), db: Session = Depends(get_db)):
+@router.post("/user/reset_user_password/{token}")
+async def reset_user_password(token: str, userResetPassword: schemas_account.UserResetPassword , db: Session = Depends(get_db)):
     try:
         userDetails = EmailService.confirm_token(token) 
     except:
@@ -111,19 +111,18 @@ async def reset_user_password(userResetPassword: schemas_account.UserResetPasswo
 
 
 
-@router.put("/user/{userId}", response_model=schemas_user.UserUpdate)
-def update_user(token:str, userId: str, user: schemas_user.UserUpdate, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-
-    db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=userDetails["userId"])
+@router.put("/user/", response_model=schemas_user.UserUpdate)
+def update_user(user: schemas_user.UserUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    userId = current_user["userId"]
+    db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.post("/users/upload_profile_pic/{token}")
-async def upload_profile_picture(token: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    userId= userDetails["userId"]
+@router.post("/users/upload_profile_pic/")
+async def upload_profile_picture(file: UploadFile = File(...), current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+
+    userId= current_user["userId"]
     # Get the user from the database
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
@@ -173,10 +172,9 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
 
     return {"message": "Profile picture uploaded successfully", "file_path": file_path}
 
-@router.get("/users/profile_pic/{token}")
-async def fetch_profile_picture(token: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    userId= userDetails["userId"]
+@router.get("/users/profile_pic/")
+async def fetch_profile_picture(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    userId= current_user["userId"]
     # Fetch the user from the database
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
@@ -208,10 +206,9 @@ async def fetch_profile_picture(token: str, db: Session = Depends(get_db)):
         filename=os.path.basename(file_path),
     )
 
-@router.delete("/users/delete_profile_pic/{token}")
-async def delete_profile_picture(token: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    userId= userDetails["userId"]
+@router.delete("/users/delete_profile_pic/")
+async def delete_profile_picture(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    userId= current_user["userId"]
     # Fetch the user from the database
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:

@@ -5,6 +5,7 @@ from ..database import get_db
 from ..crud import user_crud as crud_user
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
+from ..schemas import user_auth
 from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
 from app.models.user_model import User
@@ -30,12 +31,11 @@ def create_success_response(data: dict):
 #Create Acc, unverified
 @router.post("/admin/create_account/", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
-async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-   
-    if (userDetails["roleName"] != "ADMIN"):
+async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user=crud_user.create_user(db=db, user=user, created_by=userDetails["userId"])
+    db_user=crud_user.create_user(db=db, user=user, created_by=current_user["userId"])
     if db_user:
         #Send registration email
         token = EmailService.generate_email_token(user.email)
@@ -43,73 +43,58 @@ async def create_user(token: str, user: schemas_user.TempUserCreate, db: Session
    
     return db_user
 
-@router.get("/Test_send_email/")
-async def test_send_email(email:str):
-    await EmailService.send_registration_email(email,"213gt13g")
-    return {"Email Sent"}
-    
-
-
 @router.get("/admin/{userId}", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
-def read_user(token: str, userId: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
+def read_user(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Mask NRIC if the token's user ID does not match the requested user's ID or requested user not admin
-    if userDetails["userId"] != userId or userDetails["roleName"] != "ADMIN":
-        db_user.nric = mask_nric(db_user.nric)
-   
     return db_user
 
 @router.get("/admin/", response_model=list[schemas_user.UserRead])
 @rate_limit(global_bucket, tokens_required=1)
-def read_users(token: str, skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
-    users = crud_user.get_users(db=db, skip=skip, limit=limit)
-    # if token exists and user is admin, then do not need to mask NRICs
-    if token:
-        try:
-            userDetails = AuthService.decode_access_token(token)
-            is_admin = userDetails.get("roleName") == "ADMIN"
-        except Exception:
-            # If token is invalid, treat as no token
-            is_admin = False
-    else:
-        is_admin = False
-
-    # otherwise by default, mask all NRICs
+def read_users(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+    
+    is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        for user in users:
-            user.nric = mask_nric(user.nric)
-
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    #Only Admin can read all users
+    users = crud_user.get_users(db=db, skip=skip, limit=limit)
+    
     return users
 
 @router.get("/admin/get_email/{email}", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
-async def get_user_by_email(token:str, email: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
+async def get_user_by_email(email: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
     db_user = crud_user.get_user_by_email(db=db, email=email)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @router.put("/admin/{userId}", response_model=schemas_user.UserUpdate)
-def update_user_by_admin(token:str, userId: str, user: schemas_user.UserUpdate_Admin, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=userDetails["userId"])
+def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=current_user["userId"])
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
 @router.delete("/admin/{userId}", response_model=schemas_user.UserBase)
-def delete_user(token: str, userId: str, db: Session = Depends(get_db)):
-    userDetails= AuthService.decode_access_token(token)
-    if (userDetails["roleName"] != "ADMIN"):
+def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
-    if (userDetails["userId"] == userId):
-        raise HTTPException(status_code=404, detail="Cannot delete yourself")
+    if (current_user["userId"] == userId):
+        raise HTTPException(status_code=404, detail="No self delete")
     
     db_user = crud_user.delete_user(db=db, userId=userId)
     if db_user is None:
