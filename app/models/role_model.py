@@ -6,20 +6,13 @@ import enum
 class RoleStatus(enum.Enum):
     ACTIVE = "ACTIVE"
     INACTIVE= "INACTIVE"
-class Role_Names(enum.Enum):
-    ADMIN= "ADMIN"
-    DOCTOR= "DOCTOR"
-    GAME_THERAPIST = "GAME_THERAPIST"
-    CAREGIVER = "CAREGIVER"
-    SUPERVISOR = "SUPERVISOR"
-    GUARDIAN = "GUARDIAN"
 
 class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 
     id = Column(String(255), primary_key=True)
     active = Column(Boolean, default=True, nullable=False)
-    roleName = Column(SqlEnum(Role_Names), unique=True, nullable=False)
+    roleName = Column(String(255), unique=True, nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     

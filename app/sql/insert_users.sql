@@ -46,7 +46,7 @@ INSERT INTO [user_service_dev].[dbo].[TABLE_USER](
  '$2b$12$/Q9Qa2OQauodJEI6z4VP..Lekly0Do5R1tUmKKG.rjkn8vrhhFydm', '+65 88881223',
 1, 1,
  'alan@gmail.com', 1,
- 'GAME_THERAPIST', 'T0341345E',
+ 'GAME THERAPIST', 'T0341345E',
  1, 1,
  'ACTIVE', 1,
  0,1,1),

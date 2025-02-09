@@ -3,7 +3,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
-from app.models.role_model import Role_Names
 # Define an Enum for status
 class UserStatus(enum.Enum):
     ACTIVE = "ACTIVE"
@@ -63,6 +62,6 @@ class User(Base):
     # createdPrivacySettings = relationship('PrivacyLevelSetting', foreign_keys=[PrivacyLevelSetting.createdById])
 
     # Foreign key to Role table
-    roleName = Column(SqlEnum(Role_Names), ForeignKey('TABLE_ROLES.roleName'), nullable=False)
+    roleName = Column(String(255), ForeignKey('TABLE_ROLES.roleName'), nullable=False)
     # Relationship to Role table
     role = relationship('Role', back_populates='users')  # Many-to-One relationship

@@ -1,15 +1,15 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
-from app.models.role_model import Role_Names, RoleStatus
+from app.models.role_model import RoleStatus
 class RoleBase(BaseModel):
-    roleName: Role_Names
+    roleName: str
 
 class RoleCreate(RoleBase):
     pass
 
 class RoleUpdate(BaseModel):
-    roleName: Optional[Role_Names] = None
+    roleName: Optional[str] = None
     active: Optional[RoleStatus] = None
 
 class RoleRead(RoleBase):
