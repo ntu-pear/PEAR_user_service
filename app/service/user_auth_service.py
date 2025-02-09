@@ -18,10 +18,16 @@ if not SECRET_KEY:
     SECRET_KEY = "FakeKey"
     logging.warning("SECRET_KEY environment variable not set. Using an insecure fallback for development.")
     # raise ValueError("SECRET_KEY environment variable not set.")
+REFRESH_SECRET_KEY=os.getenv('REFRESH_SECRET_KEY')
+if not REFRESH_SECRET_KEY:
+    SECRET_KEY = "FakeKey2"
+    logging.warning("REFRESH_SECRET_KEY environment variable not set. Using an insecure fallback for development.")
+    # raise ValueError("SECRET_KEY environment variable not set.")
+
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)) # Token validity period
-
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")) # Token validity period
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")) # Token validity period
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
@@ -73,10 +79,37 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def create_refresh_token(data: dict) -> str:
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire})
+    
+    encoded_jwt = jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
 def decode_access_token(token: str):
     # extracts user details from jwt token
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_details = json.loads(payload.get("sub"))
+        if not user_details:
+            raise missing_field_exception
+        return user_details
+    # deal with invalid token/expired token
+    except JWTError as e:
+        if "Signature has expired" in str(e):
+            raise expired_token_exception
+        else:
+            raise invalid_token_exception
+    # deal with else case for errors
+    except Exception as e:
+        logging.error(f"Unexpected token decoding error: {e}")
+        raise unknown_token_exception
+
+def decode_refresh_token(token: str):
+    # extracts user details from jwt token
+    try:
+        payload = jwt.decode(token, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
         user_details = json.loads(payload.get("sub"))
         if not user_details:
             raise missing_field_exception

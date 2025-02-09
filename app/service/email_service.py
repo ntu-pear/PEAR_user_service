@@ -17,7 +17,8 @@ def generate_email_token(email: str) -> str:
     payload = {"email": email}#, "userName": userName}
     return serializer.dumps(payload, salt=SALT)
 
-def confirm_token(token: str, expiration=3600):
+
+def confirm_token(token: str, expiration=600): #600 sec 10min expiry
     serializer = URLSafeTimedSerializer(SECRET_KEY)
     try:
         userDetails = serializer.loads(token, salt=SALT, max_age=expiration)
