@@ -9,7 +9,7 @@ from ..service import user_auth_service as AuthService
 router = APIRouter()
 
 @router.get("/roles/{roleId}", response_model=RoleRead)
-def read_role(roleId: int,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+def read_role(roleId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
@@ -34,7 +34,7 @@ def create_new_role(role: RoleCreate,current_user: user_auth.TokenData = Depends
     return create_role(db=db, role=role, created_by=current_user["userId"])
 
 @router.put("/roles/{roleId}", response_model=RoleRead)
-def update_existing_role(roleId: int, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
@@ -44,7 +44,7 @@ def update_existing_role(roleId: int, role: RoleUpdate, current_user: user_auth.
     return db_role
 
 @router.delete("/roles/{roleId}", response_model=RoleRead)
-def delete_exisiting_role(roleId: int,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+def delete_exisiting_role(roleId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
