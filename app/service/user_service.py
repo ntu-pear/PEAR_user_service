@@ -89,17 +89,3 @@ def validate_profile_picture_format(file: File):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file extension. Only JPG and PNG images are allowed."
         )
-    
-#Delete profile Pic
-def delete_Profile_Pic(file_path):# Get the file path
-
-    try:
-        # Delete the file if it exists
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while deleting the profile picture: {e}",
-        )

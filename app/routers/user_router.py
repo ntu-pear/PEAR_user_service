@@ -11,10 +11,10 @@ from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
 from app.service import user_service as UserService
 from app.models.user_model import User
+import cloudinary
+import cloudinary.uploader
 from PIL import Image
 from io import BytesIO
-import logging
-import os
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
@@ -31,8 +31,8 @@ router = APIRouter(
 )
 
 
-# Directory to store uploaded files
-UPLOAD_DIR = "uploads/profile_pictures"
+# Profile Picture Max Size
+MAX_SIZE = (300, 300)  # Max image size (300x300)
 
 
 # standardise successful responses
@@ -120,131 +120,93 @@ def update_user(user: schemas_user.UserUpdate, current_user: user_auth.TokenData
     return db_user
 
 @router.post("/users/upload_profile_pic/")
-async def upload_profile_picture(file: UploadFile = File(...), current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
-
-    userId= current_user["userId"]
-    # Get the user from the database
-    db_user = db.query(User).filter(User.id == userId).first()
+async def upload_profile_picture(token: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # Decode the access token
+    user_details = AuthService.decode_access_token(token)
+    user_id = user_details["userId"]
+    #Fetch user
+    db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    #Validate File Format
-    UserService.validate_profile_picture_format(file)
-
-    # Define the file path
-    file_extension = file.filename.split(".")[-1]
-    file_name = f"user_{userId}_profile_picture.{file_extension}"
-    # Replace backslashes with forward slashes
-    file_path = os.path.join(UPLOAD_DIR, file_name).replace("\\", "/")
-
-    # Check if the user has a profile picture
-    if db_user.profilePicture:
-        # Get the file path
-        file_path = db_user.profilePicture
-        # Delete the file if it exists
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        raise HTTPException(status_code=404, detail="User not found.")
+    # Validate file type
+    allowed_formats = ["image/jpeg", "image/png"]
+    if file.content_type not in allowed_formats:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPG and PNG are allowed.")
 
     try:
-        # Read the file into memory
-        contents = await file.read()
+        # # Delete old profile picture from Cloudinary**
+        if db_user.profilePicture:
+            old_public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extract public ID
+            cloudinary.uploader.destroy(f"profile_pictures/{old_public_id}")
 
-        # Open the image using Pillow
-        image = Image.open(BytesIO(contents))
+        # Open the image
+        image = Image.open(BytesIO(await file.read()))
 
-        # Resize the image (maintaining aspect ratio)
-        max_size = (300, 300)  # Maximum width and height
-        image.thumbnail(max_size)
+        # Resize the image (maintains aspect ratio)
+        image.thumbnail(MAX_SIZE)
 
-        # Save the resized image to the target directory
-        with open(file_path, "wb") as out_file:
-            image.save(out_file, format=image.format)
+        # Save to a BytesIO buffer
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG")
+        buffer.seek(0)
+
+        # Upload to Cloudinary
+        upload_response = cloudinary.uploader.upload(
+            buffer,
+            folder="profile_pictures",
+            public_id=f"user_{user_id}_profile_picture",
+            overwrite=True
+        )
+
+        # Get the uploaded image URL
+        image_url = upload_response.get("secure_url")
+
+        # Update the user's profile picture in the database
+        db_user = db.query(User).filter(User.id == user_id).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found.")
+        
+        db_user.profilePicture = image_url
+        db.commit()
+        db.refresh(db_user)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process the image: {e}",
-        )
-    # Update the user's profile picture path in the database
-    db_user.profilePicture = str(file_path)
-    db.commit()
-    db.refresh(db_user)
+        raise HTTPException(status_code=500, detail=f"Failed to upload profile picture: {str(e)}")
 
-    return {"message": "Profile picture uploaded successfully", "file_path": file_path}
+    return {"message": "Profile picture uploaded successfully", "file_url": db_user.profilePicture}
 
 @router.get("/users/profile_pic/")
-async def fetch_profile_picture(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
-    userId= current_user["userId"]
-    # Fetch the user from the database
-    db_user = db.query(User).filter(User.id == userId).first()
-    if not db_user:
-        raise HTTPException(
-            status_code=404,
-            detail="User not found.",
-        )
+async def get_profile_picture(token: str, db: Session = Depends(get_db)):
+    user_details = AuthService.decode_access_token(token)
+    user_id = user_details["userId"]
 
-    # Check if the user has a profile picture
-    if not db_user.profilePicture:
-        raise HTTPException(
-            status_code=404,
-            detail="No profile picture found for this user.",
-        )
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user or not db_user.profilePicture:
+        raise HTTPException(status_code=404, detail="Profile picture not found")
 
-    file_path = db_user.profilePicture
-
-    # Verify the file exists
-    if not os.path.exists(file_path):
-        raise HTTPException(
-            status_code=404,
-            detail="Profile picture file not found on the server.",
-        )
-
-    # Return the file as a response
-    return FileResponse(
-        path=file_path,
-        media_type="image/jpeg",  # Adjust based on your supported file types
-        filename=os.path.basename(file_path),
-    )
+    return {"image_url": db_user.profilePicture}
 
 @router.delete("/users/delete_profile_pic/")
-async def delete_profile_picture(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
-    userId= current_user["userId"]
-    # Fetch the user from the database
-    db_user = db.query(User).filter(User.id == userId).first()
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found.",
-        )
+async def delete_profile_picture(token: str, db: Session = Depends(get_db)):
+    # Decode access token
+    user_details = AuthService.decode_access_token(token)
+    user_id = user_details["userId"]
 
-    # Check if the user has a profile picture
-    if not db_user.profilePicture:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No profile picture found for this user.",
-        )
+    # Fetch user from DB
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user or not db_user.profilePicture:
+        raise HTTPException(status_code=404, detail="No profile picture found.")
 
-    # Get the file path
-    file_path = db_user.profilePicture
-
+    # Extract Cloudinary public_id from image URL
     try:
-        # Delete the file if it exists
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Profile picture file not found on the server.",
-            )
+        public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
+        cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
 
-        # Update the database
+        # Remove profile picture reference from DB
         db_user.profilePicture = None
         db.commit()
-
-        return {"message": "Profile picture deleted successfully."}
-
+        db.refresh(db_user)
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while deleting the profile picture: {e}",
-        )
+        raise HTTPException(status_code=500, detail=f"Error deleting profile picture: {str(e)}")
+
+    return {"message": "Profile picture deleted successfully"}

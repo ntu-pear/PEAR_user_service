@@ -11,7 +11,8 @@ from ..service import user_auth_service as AuthService
 from app.models.user_model import User
 import logging
 import sys
-
+import cloudinary
+import cloudinary.uploader
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
@@ -95,8 +96,12 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
         raise HTTPException(status_code=404, detail="User is not authorised")
     if (current_user["userId"] == userId):
         raise HTTPException(status_code=404, detail="No self delete")
-    
+    #delete user pic id from cloudinary
+    public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
+    cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
+    #delete user from db
     db_user = crud_user.delete_user(db=db, userId=userId)
+     
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
