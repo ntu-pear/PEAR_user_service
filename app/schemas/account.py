@@ -19,3 +19,6 @@ class ResendEmail(AccountBase):
 class UserResetPassword(BaseModel):
     newPassword: str
     confirmPassword: str
+
+class UserChangePassword(UserResetPassword):
+    currentPassword: str

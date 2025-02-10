@@ -6,7 +6,6 @@ import os
 from dotenv import load_dotenv
 # import rate limiter
 from .rate_limiter import TokenBucket, rate_limit
-from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 load_dotenv()

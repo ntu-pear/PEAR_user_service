@@ -43,11 +43,68 @@ def create_success_response(data: dict):
 @router.post("/user/verify_account/{token}", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
-    EmailService.confirm_token(token)
+    try:
+        userDetails = EmailService.confirm_token(token) 
+    except:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+    #return user
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
     
     db_user = crud_user.verify_user(db=db, user=user)
-
     return db_user
+
+#fetch user details
+@router.get("/user/get_user/", response_model=schemas_user.UserRead)
+@rate_limit(global_bucket, tokens_required=1)
+def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    userId = current_user["userId"]
+    db_user = crud_user.get_user(db=db, userId=userId)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return db_user
+
+#Change Password
+@router.put("/user/change_password/")
+@rate_limit(global_bucket, tokens_required=1)
+def user_change_password(password:schemas_account.UserChangePassword,current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    userId = current_user["userId"]
+    # Get User
+    user = db.query(User).filter(User.id == userId).first()
+    # verify current password
+    if not AuthService.verify_password(password.currentPassword, user.password):
+        raise AuthService.user_credentials_exception
+    if (password.newPassword != password.confirmPassword):
+        raise HTTPException(status_code=404, detail="Password do not match")
+    #Check password format
+    UserService.validate_password_format(user.password)
+    #Hash password
+    user.password = AuthService.get_password_hash(password.newPassword)
+    db.commit()
+    return {"Password Updated"}
+
+#Change Email
+@router.put("/user/confirm_email/{token}")
+@rate_limit(global_bucket, tokens_required=1)
+def user_change_email(token: str, db: Session = Depends(get_db)):
+    try:
+        userDetails = EmailService.confirm_token(token) 
+    except:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    user = db.query(User).filter(User.id == userDetails.get("userId")).first()
+    #return user
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    #Change to new email
+    user.email = userDetails.get("email")
+    db.commit()
+    return {"Email Updated"}
+
 
 #Resend account confirmation email
 @router.post("/user/request/resend_registration_email") 
@@ -66,7 +123,7 @@ async def resend_registration_email(account: schemas_account.ResendEmail, db: Se
             raise HTTPException(status_code=404, detail="Invalid Details")
   
     #Send registration Email
-    token = EmailService.generate_email_token(user.email)
+    token = EmailService.generate_email_token(user.id, user.email)
     await EmailService.send_registration_email(user.email, token)
 
     return {"Message":"Registration Email Sent"}
@@ -85,12 +142,12 @@ async def request_reset_password(account: schemas_account.RequestResetPasswordBa
         if getattr(user, field) != getattr(account, field):
             raise HTTPException(status_code=404, detail="Invalid Details")
         
-    token = EmailService.generate_email_token(user.email)
+    token = EmailService.generate_email_token(user.id, user.email)
     await EmailService.send_reset_password_email(user.email, token)
   
     return {"msg": "Reset password email sent"}
 
-@router.post("/user/reset_user_password/{token}")
+@router.put("/user/reset_user_password/{token}")
 async def reset_user_password(token: str, userResetPassword: schemas_account.UserResetPassword , db: Session = Depends(get_db)):
     try:
         userDetails = EmailService.confirm_token(token) 
@@ -103,18 +160,19 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
     #return user
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+    #Check password format
+    UserService.validate_password_format(user.password)
+    #Hash password
     user.password = AuthService.get_password_hash(userResetPassword.newPassword)
     db.commit()
     
     return {"Password Updated"}
 
-
-
-@router.put("/user/", response_model=schemas_user.UserUpdate)
-def update_user(user: schemas_user.UserUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+#update user
+@router.put("/user/update_user/", response_model=schemas_user.UserRead)
+async def update_user(user: schemas_user.UserUpdate_User, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     userId = current_user["userId"]
-    db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=userId)
+    db_user = await crud_user.update_user_User(db=db, userId=userId, user=user,modified_by=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user

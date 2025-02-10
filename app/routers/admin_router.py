@@ -39,7 +39,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
     db_user=crud_user.create_user(db=db, user=user, created_by=current_user["userId"])
     if db_user:
         #Send registration email
-        token = EmailService.generate_email_token(user.email)
+        token = EmailService.generate_email_token(user.id, user.email)
         await EmailService.send_registration_email(user.email, token)
    
     return db_user

@@ -4,11 +4,12 @@ from sqlalchemy import update
 
 from ..models.user_model import User
 
-from ..schemas.user import UserCreate, UserUpdate, UserUpdate_Admin, TempUserCreate
+from ..schemas import user as schemas_User
 from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.service import user_service as UserService
+from app.service import email_service as EmailService
 import uuid
 
 def get_user(db: Session, userId: str):
@@ -19,11 +20,9 @@ def get_user_by_email(db: Session, email: str):
 
 def get_users(db: Session, skip: int = 0, limit: int = 10):
     return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
-#get user by on field
-def get_user_by_field(db: Session, field:str, input: str):
-    return db.query(User).filter(User.field == input).first()
+
 #Update User
-def update_user_User(db: Session, userId: str, user: UserUpdate, modified_by):
+async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpdate_User, modified_by):
     stmt = update(User).where(User.id == userId)
 
     # update modified by who
@@ -31,16 +30,20 @@ def update_user_User(db: Session, userId: str, user: UserUpdate, modified_by):
     for field, value in user.model_dump(exclude_unset=True).items():
         if field != "email":
             stmt = stmt.values({field: value})
+        if field == "email":
+            #Send confirmation email if email is changed
+            email_Token = EmailService.generate_email_token(userId, value)
+            await EmailService.send_confirmation_email(value, email_Token)
+           
 
     db.execute(stmt)
     db.commit()
-
     # Fetch the updated user to return it
     db_user = db.query(User).filter(User.id == userId).first()
     return db_user
 
 #Admin update other user's account
-def update_user_Admin(db: Session, userId: str, user: UserUpdate_Admin, modified_by):
+def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Admin, modified_by):
     stmt = update(User).where(User.id == userId)
 
     # update modified by who
@@ -85,7 +88,7 @@ def delete_users(db: Session, userIds: list):
         db.delete(user)
     db.commit()
 
-def verify_user(db: Session, user: UserCreate):
+def verify_user(db: Session, user: schemas_User.UserCreate):
     #Verify Info with User DB
     db_user= db.query(User).filter(User.email == user.email).first()
     if db_user is None:
@@ -128,7 +131,7 @@ def verify_user(db: Session, user: UserCreate):
 
     return db_user
 
-def create_user(db: Session, user: TempUserCreate, created_by: int):
+def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
     # Combine checks for email and NRIC into a single query
     existing_user = db.query(User).filter(
         (User.email == user.email) | (User.nric == user.nric)

@@ -12,9 +12,9 @@ SALT = os.getenv('SALT')
 SPApiProxy = PySendPulse(os.getenv('SENDPULSE_API_KEY'), os.getenv('SENDPULSE_SECRET_KEY'))
 EMAIL_LINK_BASEURL = os.getenv('EMAIL_LINK_BASEURL')
 
-def generate_email_token(email: str) -> str:
+def generate_email_token(userId: str, email: str) -> str:
     serializer = URLSafeTimedSerializer(SECRET_KEY)
-    payload = {"email": email}#, "userName": userName}
+    payload = {"userId": userId,"email": email}#, "userName": userName}
     return serializer.dumps(payload, salt=SALT)
 
 

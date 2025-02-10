@@ -22,6 +22,7 @@ class TempUserCreate(UserBase):
 class UserUpdate(BaseModel):
     preferredName: Optional[str] = None
     contactNo: Optional[str] = None
+    email: Optional[str] = None
 class UserUpdate_Admin(UserUpdate):
     nric:Optional[str] = None
     nric_FullName: Optional[str] = None
@@ -35,6 +36,8 @@ class UserUpdate_Admin(UserUpdate):
     email: Optional[str] = None
     roleName: Optional[str] = None
 
+class UserUpdate_User(UserUpdate):
+    twoFactorEnabled: Optional[str]= None
 class UserRead(BaseModel):
     id:str
     preferredName: Optional[str]=None
