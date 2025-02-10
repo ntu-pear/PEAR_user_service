@@ -38,8 +38,6 @@ global_bucket = TokenBucket(rate=0, capacity=0)
 async def test_rate_limit():
     return {"message": "This should be rate limited"}
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-
 app.include_router(admin_router.router, prefix="/api/v1", tags=["admin"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
