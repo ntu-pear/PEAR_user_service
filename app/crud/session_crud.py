@@ -36,7 +36,7 @@ def create_session(user, db:Session = Depends(get_db)):
     #test
     expiry_timestamp = datetime.now() + timedelta(minutes=10)
     try:
-        db_session = User_Session(id=sessionId, status = SessionStatus.ACTIVE, access_Token=userTokens["access_token"], refresh_Token=userTokens["refresh_token"], expired_at=expiry_timestamp)
+        db_session = User_Session(id=sessionId, access_Token=userTokens["access_token"], refresh_Token=userTokens["refresh_token"], expired_at=expiry_timestamp)
         # Begin transaction
         db.add(db_session)
         db.commit()
