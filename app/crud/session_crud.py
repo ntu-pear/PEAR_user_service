@@ -4,7 +4,7 @@ from sqlalchemy import update, DateTime
 from datetime import datetime, timedelta
 from sqlalchemy.sql import func
 from ..models.user_model import User
-from ..models.session_model import User_Session, SessionStatus
+from ..models.session_model import User_Session
 import json
 from ..schemas import user as schemas_User
 from ..service import user_auth_service
