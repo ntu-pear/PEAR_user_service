@@ -21,7 +21,7 @@ async def request_otp(user_email: str, db: Session = Depends(get_db)):
        raise HTTPException(status_code=404, detail="User not found")
     
     totp = pyotp.TOTP(pyotp.random_base32(), interval=900)
-    user.OTP = totp.now()
+    user.otp = totp.now()
     db.commit()
     try:
         await send_2fa_email(user_email, totp.now())
