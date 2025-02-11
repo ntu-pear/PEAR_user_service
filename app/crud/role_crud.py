@@ -6,13 +6,13 @@ from fastapi import HTTPException, status
 import uuid
 
 
-def get_role(db: Session, roleId: int):
+def get_role(db: Session, roleId: str):
     return db.query(Role).filter(Role.id == roleId).first()
 
 def get_roles(db: Session, skip: int = 0, limit: int = 10):
     return db.query(Role).order_by(Role.id).offset(skip).limit(limit).all()
 
-def create_role(db: Session, role: RoleCreate, created_by:int):
+def create_role(db: Session, role: RoleCreate, created_by:str):
     # Generate a unique ID with a fixed length of 8
     while True:
         unique_id = role.roleName[0] + str(uuid.uuid4().hex[:7])
@@ -36,7 +36,7 @@ def create_role(db: Session, role: RoleCreate, created_by:int):
     db.refresh(db_role)
     return db_role
 
-def update_role(db: Session, roleId: int, role: RoleUpdate, modified_by:int):
+def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):
     db_role = db.query(Role).filter(Role.id == roleId).first()
     if db_role:
         #update modified by Who
@@ -49,11 +49,15 @@ def update_role(db: Session, roleId: int, role: RoleUpdate, modified_by:int):
         db.refresh(db_role)
     return db_role
 
-def delete_role(db: Session, roleId: int):
+def delete_role(db: Session, roleId: str):
     db_role = db.query(Role).filter(Role.id == roleId).first()
-    if db_role & (db_role.roleName != "ADMIN"):
-        db.delete(db_role)
-        db.commit()
+    if not db_role:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Role not found."
+        )
+    db.delete(db_role)
+    db.commit()
     return db_role
 
 def get_users_by_role(role_name: str, db: Session):
