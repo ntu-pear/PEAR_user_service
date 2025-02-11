@@ -53,7 +53,7 @@ def delete_exisiting_role(roleId: str,current_user: user_auth.TokenData = Depend
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role
 
-@router.get("/roles/{role_name}/users",response_model=RoleRead)
+@router.get("/roles/{role_name}/users")
 def get_users_for_role(role_name: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:

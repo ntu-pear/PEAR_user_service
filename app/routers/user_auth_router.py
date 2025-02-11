@@ -58,9 +58,12 @@ async def refresh_access_token(request: Request):
         data={
             "userId": payload["userId"], 
             "fullName": payload["fullName"], 
-            "roleName": payload["roleName"]
+            "roleName": payload["roleName"],
+            "sessionId": payload["sessionId"]
         }
     )
+    #update session
+    user_Session.update_session(payload["sessionId"], new_access_token)
     
     return {"access_token": new_access_token, "data":payload}
 

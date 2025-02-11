@@ -147,6 +147,7 @@ async def request_reset_password(account: schemas_account.RequestResetPasswordBa
   
     return {"msg": "Reset password email sent"}
 
+#Change password
 @router.put("/user/reset_user_password/{token}")
 async def reset_user_password(token: str, userResetPassword: schemas_account.UserResetPassword , db: Session = Depends(get_db)):
     try:

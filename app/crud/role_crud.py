@@ -68,4 +68,5 @@ def get_users_by_role(role_name: str, db: Session):
     
     # Get all users associated with this role
     users = db.query(User).filter(User.roleName == role.roleName).all()
+     # Convert the users to UserRead model
     return [{"id": user.id, "FullName": user.nric_FullName, "Role": user.roleName} for user in users]

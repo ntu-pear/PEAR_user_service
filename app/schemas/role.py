@@ -19,8 +19,6 @@ class RoleRead(RoleBase):
     createdDate: datetime
     modifiedById: Optional[str]=None
     modifiedDate: datetime
-    pass
-
     class Config:
         orm_mode = True
         json_encoders = {

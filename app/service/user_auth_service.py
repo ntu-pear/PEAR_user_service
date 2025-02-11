@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-
+from app.crud import session_crud as user_Session
 from app.crud.role_crud import get_role
 from ..models.user_model import User
 from ..database import get_db
@@ -72,16 +72,16 @@ def verify_password(plain_password, hashed_password):
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire})
     
     encoded_jwt = jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
@@ -124,10 +124,24 @@ def decode_refresh_token(token: str):
     except Exception as e:
         logging.error(f"Unexpected token decoding error: {e}")
         raise unknown_token_exception
+    
+def check_token(session_id:str, token:str, db: Session = Depends(get_db)):
+    #get Session
+    db_session=user_Session.get_session(db=db, session_id=session_id)
+    #Check if token and session's token matches
+    if not (db_session.access_Token == token): 
+        raise HTTPException(status_code=404, detail="Invalid Token or Session")
+    #get if session has expired
+    expired= user_Session.check_session_expiry(db=db, session_id=session_id)
+    if expired:
+        raise HTTPException(status_code=404, detail="Session expired")
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     # get user details from access token
     userDetails = decode_access_token(token)
+    #check if token has a valid session
+    check_token(session_id=userDetails["sessionId"], token=token, db=db)
+
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
 
     if not user:
@@ -135,12 +149,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     return {"userId": user.id, "fullName": user.nric_FullName, "roleName": user.roleName}
 
-def return_tokens(user):
+def create_tokens(user, sessionId:str):
     #Create tokens
     data = {
         "userId": user.id,
         "fullName": user.nric_FullName,
         "roleName": user.roleName,
+        "sessionId": sessionId
     }
 
     # Serialize payload and generate access token

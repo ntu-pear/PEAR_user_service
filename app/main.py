@@ -6,8 +6,10 @@ import os
 from dotenv import load_dotenv
 # import rate limiter
 from .rate_limiter import TokenBucket, rate_limit
+from fastapi import FastAPI
+from .routers.__init__ import scheduler, lifespan  # Import the scheduler and lifespan from your __init__.py
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 load_dotenv()
 origins = [
     "http://localhost",
@@ -36,7 +38,6 @@ global_bucket = TokenBucket(rate=0, capacity=0)
 @rate_limit(global_bucket, tokens_required=1)
 async def test_rate_limit():
     return {"message": "This should be rate limited"}
-
 app.include_router(admin_router.router, prefix="/api/v1", tags=["admin"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
