@@ -47,7 +47,7 @@ async def verify_otp(user_email: str, code: str, db: Session = Depends(get_db)):
     
     if user.otpFailedCount > 4:
         user.otpFailedCount == 0
-        user.secretKey = None
+        user.OTP = None
         db.commit()
         raise HTTPException(status_code=404, detail="Exceeded number of tries possible. Please request for a new OTP")
     
