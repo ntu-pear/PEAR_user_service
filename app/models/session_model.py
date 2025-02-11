@@ -3,9 +3,6 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
-import enum
-
-
 class User_Session(Base):
     __tablename__ = 'TABLE_SESSIONS'
 
