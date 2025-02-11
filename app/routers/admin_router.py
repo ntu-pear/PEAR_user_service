@@ -39,8 +39,8 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
     db_user=crud_user.create_user(db=db, user=user, created_by=current_user["userId"])
     if db_user:
         #Send registration email
-        token = EmailService.generate_email_token(user.id, user.email)
-        await EmailService.send_registration_email(user.email, token)
+        token = EmailService.generate_email_token(db_user.id, db_user.email)
+        await EmailService.send_registration_email(db_user.email, token)
    
     return db_user
 
@@ -96,9 +96,7 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
         raise HTTPException(status_code=404, detail="User is not authorised")
     if (current_user["userId"] == userId):
         raise HTTPException(status_code=404, detail="No self delete")
-    #delete user pic id from cloudinary
-    public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
-    cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
+
     #delete user from db
     db_user = crud_user.delete_user(db=db, userId=userId)
      

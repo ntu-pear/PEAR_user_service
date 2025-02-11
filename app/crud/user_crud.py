@@ -11,6 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from app.service import user_service as UserService
 from app.service import email_service as EmailService
 import uuid
+import cloudinary
+import cloudinary.uploader
 
 def get_user(db: Session, userId: str):
     return db.query(User).filter(User.id == userId).first()
@@ -73,20 +75,14 @@ def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Ad
 def delete_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:
-        #delete profile pic
+
+        #delete user pic id from cloudinary
         if db_user.profilePicture:
-            UserService.delete_Profile_Pic(db_user.profilePicture)
+            public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
+            cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
         db.delete(db_user)
         db.commit()
     return db_user
-
-def delete_users(db: Session, userIds: list):
-    users = db.query(User).filter(User.id.in_(userIds)).all()
-    for user in users:
-        if user.profilePicture:
-            UserService.delete_Profile_Pic(user.profilePicture)
-        db.delete(user)
-    db.commit()
 
 def verify_user(db: Session, user: schemas_User.UserCreate):
     #Verify Info with User DB

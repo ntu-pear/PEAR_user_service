@@ -9,7 +9,8 @@ from ..schemas.user import UserRead,UserBase
 from ..models.user_model import User
 from ..service import user_auth_service
 from ..schemas import user_auth
-
+from ..routers import verification_router as verification
+from ..crud import session_crud as user_Session
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 
@@ -17,7 +18,7 @@ router = APIRouter()
 
 @router.post("/login/")#, response_model=user_auth.Token)
 #@rate_limit_by_ip(tokens_required=1)
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # Get User
     user = db.query(User).filter(User.email == form_data.username).first()
     
@@ -27,27 +28,14 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if not user_auth_service.verify_password(form_data.password, user.password):
         raise user_auth_service.user_credentials_exception
     
-    # Prepare token payload
-    data = {
-        "userId": user.id,
-        "fullName": user.nric_FullName,
-        "roleName": user.roleName,
-    }
+    #check is user enabled 2FA
+    if user.twoFactorEnabled:
+        await verification.request_otp(user.email, db)  # Send OTP email
+        return {"msg": "2FA required", "email": user.email}  # Prompt to enter OTP
+   
+    # If 2FA is not enabled, proceed to create session, generate and return tokens
+    return user_Session.create_session(user, db)
 
-    # Serialize payload and generate access token
-    serialized_data = json.dumps(data)
-    access_token = user_auth_service.create_access_token(data={"sub": serialized_data})
-    refresh_token = user_auth_service.create_refresh_token(data={"sub": serialized_data})
-    # Return response
-    return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
-        "token_type": "bearer",
-        # Include token expiry information in the response for the client to handle reauthentication.
-        "access_token_expires_in": user_auth_service.ACCESS_TOKEN_EXPIRE_MINUTES,
-        "refresh_token_expires_in": user_auth_service.REFRESH_TOKEN_EXPIRE_DAYS,
-        "data": data,  # Avoid sensitive data
-    }
 @router.post("/refresh/")
 async def refresh_access_token(request: Request):
     """

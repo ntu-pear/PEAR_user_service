@@ -37,7 +37,7 @@ class UserUpdate_Admin(UserUpdate):
     roleName: Optional[str] = None
 
 class UserUpdate_User(UserUpdate):
-    twoFactorEnabled: Optional[str]= None
+    twoFactorEnabled: Optional[bool]= None
 class UserRead(BaseModel):
     id:str
     preferredName: Optional[str]=None
@@ -63,7 +63,6 @@ class UserRead(BaseModel):
     modifiedById: Optional[str]=None
     modifiedDate: datetime
     
-
     class Config:
         orm_mode = True
         json_encoders = {

@@ -7,6 +7,8 @@ from ..service.email_service import send_2fa_email
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user_model import User
+from app.service import user_auth_service as AuthService
+from ..crud import session_crud as user_Session
 import time
 
 router = APIRouter()
@@ -19,7 +21,7 @@ async def request_otp(user_email: str, db: Session = Depends(get_db)):
        raise HTTPException(status_code=404, detail="User not found")
     
     totp = pyotp.TOTP(pyotp.random_base32(), interval=900)
-    user.secretKey = totp.now()
+    user.OTP = totp.now()
     db.commit()
     try:
         await send_2fa_email(user_email, totp.now())
@@ -34,11 +36,11 @@ async def verify_otp(user_email: str, code: str, db: Session = Depends(get_db)):
     if not user:
        raise HTTPException(status_code=404, detail="User not found")
     
-    if code == user.secretKey:
-        user.secretKey = None
+    if code == user.OTP:
+        user.OTP = None
         user.otpFailedCount = 0
         db.commit()
-        return {"msg": "OTP confirmed"}
+        return user_Session.create_session(user, db)
     
     user.otpFailedCount += 1
     db.commit()
@@ -49,7 +51,7 @@ async def verify_otp(user_email: str, code: str, db: Session = Depends(get_db)):
         db.commit()
         raise HTTPException(status_code=404, detail="Exceeded number of tries possible. Please request for a new OTP")
     
-    return {"msg": "Wrong OTP"}
+    return {"msg": "Invalid OTP"}
 
 # Request Captcha
 @router.post("/request-captcha/")

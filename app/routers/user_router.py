@@ -48,9 +48,9 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+    db_user = db.query(User).filter(User.email == userDetails.get("email")).first()
     #return user
-    if not user:
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
     db_user = crud_user.verify_user(db=db, user=user)

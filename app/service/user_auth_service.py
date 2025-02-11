@@ -134,3 +134,26 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise user_credentials_exception
 
     return {"userId": user.id, "fullName": user.nric_FullName, "roleName": user.roleName}
+
+def return_tokens(user):
+    #Create tokens
+    data = {
+        "userId": user.id,
+        "fullName": user.nric_FullName,
+        "roleName": user.roleName,
+    }
+
+    # Serialize payload and generate access token
+    serialized_data = json.dumps(data)
+    access_token = create_access_token(data={"sub": serialized_data})
+    refresh_token = create_refresh_token(data={"sub": serialized_data})
+    # Return response
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        # Include token expiry information in the response for the client to handle reauthentication.
+        "access_token_expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,
+        "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS,
+        "data": data,  # Avoid sensitive data
+    }
