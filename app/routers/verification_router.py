@@ -29,15 +29,15 @@ async def request_otp(user_email: str, db: Session = Depends(get_db)):
     except:
         raise HTTPException(status_code=404, detail="Failed to send email")
 
-# Verify OTP
+# Verify otp
 @router.get("/verify-otp/")
 async def verify_otp(user_email: str, code: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == user_email).first()
     if not user:
        raise HTTPException(status_code=404, detail="User not found")
     
-    if code == user.OTP:
-        user.OTP = None
+    if code == user.otp:
+        user.otp = None
         user.otpFailedCount = 0
         db.commit()
         return user_Session.create_session(user, db)
@@ -47,7 +47,7 @@ async def verify_otp(user_email: str, code: str, db: Session = Depends(get_db)):
     
     if user.otpFailedCount > 4:
         user.otpFailedCount == 0
-        user.OTP = None
+        user.otp = None
         db.commit()
         raise HTTPException(status_code=404, detail="Exceeded number of tries possible. Please request for a new OTP")
     

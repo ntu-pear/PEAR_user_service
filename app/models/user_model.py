@@ -49,7 +49,7 @@ class User(Base):
     accessFailedCount = Column(BigInteger)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
-    OTP = Column(String(6),nullable=True)
+    otp = Column(String(6),nullable=True)
     otpFailedCount = Column(BigInteger, default="0")
     captchaKey = Column(String(6),nullable=True)
     captchaFailedCount = Column(BigInteger, default="0")
