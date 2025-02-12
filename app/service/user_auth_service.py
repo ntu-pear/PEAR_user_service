@@ -166,7 +166,7 @@ def create_tokens(user, sessionId:str):
         "userId": user.id,
         "fullName": user.nric_FullName,
         "roleName": user.roleName,
-        "sessionId": sessionId
+       # "sessionId": sessionId
     }
 
     # Serialize payload and generate access token
