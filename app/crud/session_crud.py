@@ -85,7 +85,7 @@ def delete_sessions(db: Session = Depends(get_db)):
 #Delete 1 session
 def delete_session(session_id: str, db: Session = Depends(get_db)):
     # Find session in DB
-    db_session = db.query(User_Session).filter(User_Session.id == session_id).all()
+    db_session = db.query(User_Session).filter(User_Session.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
     
@@ -114,6 +114,5 @@ def check_session_expiry(session_id: str, db: Session = Depends(get_db)):
         db.delete(db_session)
         db.commit()
         return True
-        #raise HTTPException(status_code=401, detail="Session expired")
     
     return False

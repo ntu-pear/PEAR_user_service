@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException,status, Request
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 import json
+from fastapi.security import OAuth2PasswordBearer
 from ..database import get_db
 from ..schemas import user_auth
 from ..schemas.user import UserRead,UserBase
@@ -15,6 +16,8 @@ from ..crud import session_crud as user_Session
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 
 router = APIRouter()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
 @router.post("/login/")#, response_model=user_auth.Token)
 #@rate_limit_by_ip(tokens_required=1)
@@ -66,6 +69,16 @@ async def refresh_access_token(request: Request):
     user_Session.update_session(payload["sessionId"], new_access_token)
     
     return {"access_token": new_access_token, "data":payload}
+
+@router.delete("/logout/")
+def logout_user(access_token: str = Depends(oauth2_scheme),db: Session = Depends(get_db)):
+    token = user_auth_service.decode_access_token(access_token)
+    session_Id = token["sessionId"]
+    
+    user_Session.delete_session(session_id=session_Id, db=db)
+
+    return {"msg":"Successful Log Out"}
+    
 
 @router.get("/current_user/", response_model=user_auth.TokenData)
 def read_current_user(current_access: user_auth.TokenData = Depends(user_auth_service.get_current_user)):
