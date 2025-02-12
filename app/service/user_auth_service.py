@@ -150,7 +150,6 @@ def check_access_token(session_id:str, token:str, db: Session = Depends(get_db))
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     # get user details from access token
     userDetails = decode_access_token(token)
-    return userDetails
     #check if token has a valid session
     check_access_token(session_id=userDetails["sessionId"], token=token, db=db)
 
