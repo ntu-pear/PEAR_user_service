@@ -61,10 +61,9 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     data={
             "userId": payload["userId"], 
             "fullName": payload["fullName"], 
-            "roleName": payload["roleName"],
-            "sessionId": payload["sessionId"]
+            "roleName": payload["roleName"]
         }
-    serialized_data = json.dumps(data)
+    serialized_data = json.dumps({**data, "sessionId": payload["sessionId"]})
     # Generate a new access token
     new_access_token = user_auth_service.create_access_token(data={"sub": serialized_data})
     #check if refresh mapped to session

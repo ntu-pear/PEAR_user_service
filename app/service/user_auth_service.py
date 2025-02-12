@@ -166,11 +166,12 @@ def create_tokens(user, sessionId:str):
         "userId": user.id,
         "fullName": user.nric_FullName,
         "roleName": user.roleName,
-       # "sessionId": sessionId
     }
 
     # Serialize payload and generate access token
-    serialized_data = json.dumps(data)
+
+    # Include sessionId inside the token (hidden from direct response)
+    serialized_data = json.dumps({**data, "sessionId": sessionId})
     access_token = create_access_token(data={"sub": serialized_data})
     refresh_token = create_refresh_token(data={"sub": serialized_data})
     # Return response
