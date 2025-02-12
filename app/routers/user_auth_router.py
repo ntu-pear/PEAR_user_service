@@ -73,9 +73,8 @@ async def refresh_access_token(request: Request):
 @router.delete("/logout/")
 def logout_user(access_token: str = Depends(oauth2_scheme),db: Session = Depends(get_db)):
     token = user_auth_service.decode_access_token(access_token)
-    session_Id = token["sessionId"]
-    
-    user_Session.delete_session(session_id=session_Id, db=db)
+    user_id = token["userId"]
+    user_Session.delete_user_sessions(userId=user_id, db=db)
 
     return {"msg":"Successful Log Out"}
     

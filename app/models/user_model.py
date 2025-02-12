@@ -67,3 +67,6 @@ class User(Base):
     roleName = Column(String(255), ForeignKey('TABLE_ROLES.roleName'), nullable=False)
     # Relationship to Role table
     role = relationship('Role', back_populates='users')  # Many-to-One relationship
+
+    #relationship to Session Table
+    user_session = relationship('User_Session', back_populates='users')

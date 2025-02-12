@@ -35,8 +35,12 @@ def create_session(user, db:Session = Depends(get_db)):
     #expiry_timestamp = datetime.now() + timedelta(days=2)
     #test
     expiry_timestamp = datetime.now() + timedelta(minutes=10)
+
+    #Check for any other sessions, if yes delete them
+    delete_user_sessions(userId=user.id, db=db)
+    
     try:
-        db_session = User_Session(id=sessionId, access_Token=userTokens["access_token"], refresh_Token=userTokens["refresh_token"], expired_at=expiry_timestamp)
+        db_session = User_Session(id=sessionId,user_id=user.id, access_Token=userTokens["access_token"], refresh_Token=userTokens["refresh_token"], expired_at=expiry_timestamp)
         # Begin transaction
         db.add(db_session)
         db.commit()
@@ -72,6 +76,12 @@ def update_session(session_id: str,access_Token:str, db: Session = Depends(get_d
     #update new access_token
     db_session.access_Token=access_Token
     db.commit()
+
+#Delete Sessions associated to User
+def delete_user_sessions(userId: str, db:Session=Depends(get_db)):
+    db_user_sessions = db.query(User_Session).filter(User_Session.user_id==userId).all()
+    for session in db_user_sessions:
+        delete_session(session_id=session.id, db=db)
 
 #Delete sessions
 def delete_sessions(db: Session = Depends(get_db)):
