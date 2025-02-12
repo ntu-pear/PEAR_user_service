@@ -12,11 +12,13 @@ from ..service import user_auth_service
 from ..schemas import user_auth
 from ..routers import verification_router as verification
 from ..crud import session_crud as user_Session
+import os
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 
 router = APIRouter()
-
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")) # Token validity period
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")) # Token validity period
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
 @router.post("/login/")#, response_model=user_auth.Token)
@@ -55,22 +57,30 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     payload = user_auth_service.decode_refresh_token(refresh_token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
-
-    # Generate a new access token
-    new_access_token = user_auth_service.create_access_token(
-        data={
+    
+    data={
             "userId": payload["userId"], 
             "fullName": payload["fullName"], 
             "roleName": payload["roleName"],
             "sessionId": payload["sessionId"]
         }
-    )
+    serialized_data = json.dumps(data)
+    # Generate a new access token
+    new_access_token = user_auth_service.create_access_token(data={"sub": serialized_data})
     #check if refresh mapped to session
     user_auth_service.check_refresh_token(session_id=payload["sessionId"], token=refresh_token, db=db)
     #update session
-    user_Session.update_session(payload["sessionId"], new_access_token)
+    user_Session.update_session(session_id=payload["sessionId"],access_Token= new_access_token,db=db)
     
-    return {"access_token": new_access_token, "data":payload}
+    return {
+        "access_token": new_access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        # Include token expiry information in the response for the client to handle reauthentication.
+        "access_token_expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,
+        "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS,
+        "data": data,  # Avoid sensitive data
+    }
 
 @router.delete("/logout/")
 def logout_user(access_token: str = Depends(oauth2_scheme),db: Session = Depends(get_db)):

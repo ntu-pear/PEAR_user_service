@@ -68,7 +68,7 @@ def update_session(session_id: str,access_Token:str, db: Session = Depends(get_d
     # Get current timestamp using datetime.now()
     current_timestamp = datetime.now()
     #Check if session is expired
-    if db_session.expires_at < current_timestamp:
+    if db_session.expired_at < current_timestamp:
         db.delete(db_session)
         db.commit()
         raise HTTPException(status_code=401, detail="Session expired")
