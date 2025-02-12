@@ -40,7 +40,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return user_Session.create_session(user, db)
 
 @router.post("/refresh/")
-async def refresh_access_token(request: Request):
+async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     """
     Refreshes the access token using a valid refresh token.
     The refresh token should be sent in the request body as JSON.
@@ -65,6 +65,8 @@ async def refresh_access_token(request: Request):
             "sessionId": payload["sessionId"]
         }
     )
+    #check if refresh mapped to session
+    user_auth_service.check_refresh_token(session_id=payload["sessionId"], token=refresh_token, db=db)
     #update session
     user_Session.update_session(payload["sessionId"], new_access_token)
     
@@ -74,9 +76,10 @@ async def refresh_access_token(request: Request):
 def logout_user(access_token: str = Depends(oauth2_scheme),db: Session = Depends(get_db)):
     token = user_auth_service.decode_access_token(access_token)
     user_id = token["userId"]
-    user_Session.delete_user_sessions(userId=user_id, db=db)
-
-    return {"msg":"Successful Log Out"}
+    logout= user_Session.delete_user_sessions(userId=user_id, db=db)
+    if logout:
+        return {"msg":"Successful Log Out"}
+    return{"msg":"Invalid User"}
     
 
 @router.get("/current_user/", response_model=user_auth.TokenData)

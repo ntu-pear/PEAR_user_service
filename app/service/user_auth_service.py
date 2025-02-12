@@ -124,8 +124,19 @@ def decode_refresh_token(token: str):
     except Exception as e:
         logging.error(f"Unexpected token decoding error: {e}")
         raise unknown_token_exception
+
+def check_refresh_token(session_id:str, token:str, db: Session = Depends(get_db)):
+    #get Session
+    db_session=user_Session.get_session(db=db, session_id=session_id)
+    #Check if refresh token and session's token matches
+    if not (db_session.refresh_Token == token): 
+        raise HTTPException(status_code=404, detail="Invalid Token or Session")
+    #get if session has expired
+    expired= user_Session.check_session_expiry(db=db, session_id=session_id)
+    if expired:
+        raise HTTPException(status_code=404, detail="Session expired")
     
-def check_token(session_id:str, token:str, db: Session = Depends(get_db)):
+def check_access_token(session_id:str, token:str, db: Session = Depends(get_db)):
     #get Session
     db_session=user_Session.get_session(db=db, session_id=session_id)
     #Check if token and session's token matches
@@ -140,7 +151,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     # get user details from access token
     userDetails = decode_access_token(token)
     #check if token has a valid session
-    check_token(session_id=userDetails["sessionId"], token=token, db=db)
+    check_access_token(session_id=userDetails["sessionId"], token=token, db=db)
 
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
 

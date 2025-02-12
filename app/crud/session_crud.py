@@ -38,7 +38,7 @@ def create_session(user, db:Session = Depends(get_db)):
 
     #Check for any other sessions, if yes delete them
     delete_user_sessions(userId=user.id, db=db)
-    
+
     try:
         db_session = User_Session(id=sessionId,user_id=user.id, access_Token=userTokens["access_token"], refresh_Token=userTokens["refresh_token"], expired_at=expiry_timestamp)
         # Begin transaction
@@ -80,8 +80,11 @@ def update_session(session_id: str,access_Token:str, db: Session = Depends(get_d
 #Delete Sessions associated to User
 def delete_user_sessions(userId: str, db:Session=Depends(get_db)):
     db_user_sessions = db.query(User_Session).filter(User_Session.user_id==userId).all()
-    for session in db_user_sessions:
-        delete_session(session_id=session.id, db=db)
+    if db_user_sessions:
+        for session in db_user_sessions:
+            delete_session(session_id=session.id, db=db)
+        return True
+    return False
 
 #Delete sessions
 def delete_sessions(db: Session = Depends(get_db)):
