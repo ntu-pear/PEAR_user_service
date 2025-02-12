@@ -38,6 +38,7 @@ class UserUpdate_Admin(UserUpdate):
 
 class UserUpdate_User(UserUpdate):
     twoFactorEnabled: Optional[bool]= None
+
 class UserRead(BaseModel):
     id:str
     preferredName: Optional[str]=None
@@ -50,14 +51,16 @@ class UserRead(BaseModel):
     contactNo: str
     allowNotification:bool
     profilePicture: Optional[str]=None
-    lockoutReason: Optional[str]=None
     status:UserStatus
     email:str
     emailConfirmed:bool
-    password:Optional[str]=None
     verified: bool
     active: bool
     twoFactorEnabled: bool
+class AdminRead(UserRead):
+    lockOutEnabled: Optional[bool]=None
+    lockoutReason: Optional[str]=None
+    password:Optional[str]=None
     createdById: Optional[str]=None
     createdDate: datetime
     modifiedById: Optional[str]=None

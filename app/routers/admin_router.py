@@ -30,7 +30,7 @@ def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
 #Create Acc, unverified
-@router.post("/admin/create_account/", response_model=schemas_user.UserRead)
+@router.post("/admin/create_account/", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
@@ -44,7 +44,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
    
     return db_user
 
-@router.get("/admin/{userId}", response_model=schemas_user.UserRead)
+@router.get("/admin/{userId}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
 def read_user(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
@@ -56,7 +56,7 @@ def read_user(userId: str, current_user: user_auth.TokenData = Depends(AuthServi
     
     return db_user
 
-@router.get("/admin/", response_model=list[schemas_user.UserRead])
+@router.get("/admin/", response_model=list[schemas_user.AdminRead])
 @rate_limit(global_bucket, tokens_required=1)
 def read_users(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     
@@ -68,7 +68,7 @@ def read_users(current_user: user_auth.TokenData = Depends(AuthService.get_curre
     
     return users
 
-@router.get("/admin/get_email/{email}", response_model=schemas_user.UserRead)
+@router.get("/admin/get_email/{email}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def get_user_by_email(email: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
