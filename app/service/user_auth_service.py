@@ -154,7 +154,9 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     check_access_token(session_id=userDetails["sessionId"], token=token, db=db)
 
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
-
+    #Check if token's roleName matches with user's rolename in DB
+    if not (userDetails["roleName"]==user.roleName):
+        raise HTTPException(status_code=404, detail="Token value does not match with database")
     if not user:
         raise user_credentials_exception
 

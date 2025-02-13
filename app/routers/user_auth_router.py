@@ -63,6 +63,7 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
             "fullName": payload["fullName"], 
             "roleName": payload["roleName"]
         }
+    #hide session id from frontend
     serialized_data = json.dumps({**data, "sessionId": payload["sessionId"]})
     # Generate a new access token
     new_access_token = user_auth_service.create_access_token(data={"sub": serialized_data})
