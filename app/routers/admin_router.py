@@ -84,7 +84,7 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user = crud_user.update_user(db=db, userId=userId, user=user,modified_by=current_user["userId"])
+    db_user = crud_user.update_user_Admin(db=db, userId=userId, user=user,modified_by=current_user["userId"])
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
