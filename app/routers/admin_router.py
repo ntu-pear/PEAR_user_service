@@ -89,6 +89,22 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
+@router.put("/admin/update_users_role/")
+def users_by_admin(request: schemas_user.UpdateUsersRoleRequest,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    updated_users = []
+    failed_updates=[]
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    for userId in request.users_Id:
+        db_user=crud_user.update_users_Admin(db=db, userId=userId, roleName=request.role,modified_by=current_user["userId"])
+        if db_user:
+            updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
+        if db_user is None:
+            failed_updates.append({"users_id": userId, "error": "User not found"})
+    return {"Updated Users": updated_users, "Failed Updates":failed_updates}
+
+
 @router.delete("/admin/{userId}", response_model=schemas_user.UserBase)
 def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"

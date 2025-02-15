@@ -20,23 +20,23 @@ async def request_email_confirmation(user_id: str, db: Session = Depends(get_db)
     await EmailService.send_confirmation_email(user.email, token)
     return {"msg": "Confirmation email sent"}
 
-# Confirm Email
-@router.get("/confirm-email/{token}")
-async def confirm_email(token: str, db: Session = Depends(get_db)):
-    try:
-        userDetails = EmailService.confirm_token(token)
+# # Confirm Email
+# @router.get("/confirm-email/{token}")
+# async def confirm_email(token: str, db: Session = Depends(get_db)):
+#     try:
+#         userDetails = EmailService.confirm_token(token)
 
-    except:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
-    user = db.query(User).filter(User.email == userDetails.get("email")).first()
+#     except:
+#         raise HTTPException(status_code=400, detail="Invalid or expired token")
+#     user = db.query(User).filter(User.email == userDetails.get("email")).first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+#     if not user:
+#         raise HTTPException(status_code=404, detail="User not found")
     
-    user.emailConfirmed = True
-    db.commit()
+#     user.emailConfirmed = True
+#     db.commit()
     
-    return {"msg": "Email confirmed"}
+#     return {"msg": "Email confirmed"}
 
 #test send email
 @router.get("/Test_send_email/")

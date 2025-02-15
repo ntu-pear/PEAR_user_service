@@ -72,6 +72,19 @@ def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Ad
     db_user = db.query(User).filter(User.id == userId).first()
     return db_user
 
+#Admin update selected users role
+def update_users_Admin(db: Session, userId: str, roleName: str, modified_by):
+    stmt = update(User).where(User.id == userId)
+    # update roleName and modified by who
+    stmt = stmt.values(roleName=roleName, modifiedById=modified_by)
+
+    db.execute(stmt)
+    db.commit()
+
+    # Fetch the updated user to return it
+    db_user = db.query(User).filter(User.id == userId).first()
+    return db_user
+
 def delete_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if db_user:

@@ -29,7 +29,7 @@ class User(Base):
     contactNoConfirmed = Column(Boolean, default=False, nullable=False)
     allowNotification = Column(Boolean, default=False, nullable=False)
     profilePicture = Column(String(255))
-    lockoutReason = Column(String(255))
+    lockOutReason = Column(String(255))
     loginTimeStamp = Column(DateTime)#,nullable=False)
     lastPasswordChanged = Column(DateTime)#,nullable=False)
     status = Column(SqlEnum(UserStatus), default=UserStatus.ACTIVE, nullable=False)  # Enum for status

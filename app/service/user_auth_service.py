@@ -124,7 +124,7 @@ def decode_refresh_token(token: str):
     except Exception as e:
         logging.error(f"Unexpected token decoding error: {e}")
         raise unknown_token_exception
-
+#Check if refresh token matches the session's refresh token
 def check_refresh_token(session_id:str, token:str, db: Session = Depends(get_db)):
     #get Session
     db_session=user_Session.get_session(db=db, session_id=session_id)
@@ -135,7 +135,7 @@ def check_refresh_token(session_id:str, token:str, db: Session = Depends(get_db)
     expired= user_Session.check_session_expiry(db=db, session_id=session_id)
     if expired:
         raise HTTPException(status_code=404, detail="Session expired")
-    
+#Check if access token matches the session's access token    
 def check_access_token(session_id:str, token:str, db: Session = Depends(get_db)):
     #get Session
     db_session=user_Session.get_session(db=db, session_id=session_id)
@@ -147,6 +147,7 @@ def check_access_token(session_id:str, token:str, db: Session = Depends(get_db))
     if expired:
         raise HTTPException(status_code=404, detail="Session expired")
 
+#Get token from bearer and check if user is in DB
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     # get user details from access token
     userDetails = decode_access_token(token)
@@ -162,6 +163,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     return {"userId": user.id, "fullName": user.nric_FullName, "roleName": user.roleName}
 
+#Create access and refresh tokens
 def create_tokens(user, sessionId:str):
     #Create tokens
     data = {
