@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime, date
 from typing import Optional
 from app.models.user_model import UserStatus, GenderStatus
+from typing import List
 
 class UserBase(BaseModel):
     
