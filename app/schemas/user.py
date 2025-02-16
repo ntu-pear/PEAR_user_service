@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     nric_Gender: GenderStatus
     contactNo: str
     email: str
-    roleName: str 
+    roleName: Optional[str] = None
 
 class UserCreate(UserBase):
     nric: str
