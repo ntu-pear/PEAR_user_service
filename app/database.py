@@ -39,7 +39,6 @@ DB_PASSWORD = os.getenv("DB_PASSWORD")
 ###############################################################
 
 ########## LOCAL DOCKER DEVELOPMENT ##########
-print("WOIWOI")
 connection_url = sa.URL.create(
     "mssql+pyodbc",
     host=DB_SERVER_DEV,
