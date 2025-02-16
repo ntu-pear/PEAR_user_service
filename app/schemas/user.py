@@ -53,7 +53,7 @@ class UserRead(BaseModel):
     nric_Address: str
     nric_DateOfBirth: date
     nric_Gender: GenderStatus
-    roleName: str
+    roleName: Optional[str]=None
     contactNo: str
     allowNotification:bool
     profilePicture: Optional[str]=None

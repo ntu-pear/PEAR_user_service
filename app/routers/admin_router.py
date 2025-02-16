@@ -2,7 +2,8 @@ from app.utils.utils import mask_nric
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..crud import user_crud as crud_user
+from ..crud import user_crud as crud_user 
+from ..crud import role_crud as crud_role
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..schemas import user_auth
@@ -90,14 +91,29 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
     return db_user
 
 @router.put("/admin/update_users_role/")
-def users_by_admin(request: schemas_user.UpdateUsersRoleRequest,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+def update_users_role_admin(request: schemas_user.UpdateUsersRoleRequest,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
-    updated_users = []
-    failed_updates=[]
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
-    for userId in request.users_Id:
-        db_user=crud_user.update_users_Admin(db=db, userId=userId, roleName=request.role,modified_by=current_user["userId"])
+    updated_users = []
+    failed_updates=[]
+    update_list = request.users_Id
+    db_users= crud_role.get_users_by_role(role_name=request.role, db=db)
+    #Compare both list
+    for user in db_users:
+        if user["id"] in update_list:
+            #remove user from update list
+            update_list.remove(user["id"])
+        else:
+            #cannot remove admin
+            if request.role != "ADMIN":
+                #remove user's role
+                db_user=crud_user.update_users_role_admin(db=db, userId = user["id"], roleName= None,modified_by=current_user["userId"])
+                if db_user:
+                    updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
+
+    for userId in update_list:
+        db_user=crud_user.update_users_role_admin(db=db, userId=userId, roleName=request.role,modified_by=current_user["userId"])
         if db_user:
             updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
         if db_user is None:

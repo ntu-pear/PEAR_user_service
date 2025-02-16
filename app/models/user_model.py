@@ -64,7 +64,7 @@ class User(Base):
     # createdPrivacySettings = relationship('PrivacyLevelSetting', foreign_keys=[PrivacyLevelSetting.createdById])
 
     # Foreign key to Role table
-    roleName = Column(String(255), ForeignKey('TABLE_ROLES.roleName'), nullable=False)
+    roleName = Column(String(255), ForeignKey('TABLE_ROLES.roleName'), nullable=True)
     # Relationship to Role table
     role = relationship('Role', back_populates='users')  # Many-to-One relationship
 
