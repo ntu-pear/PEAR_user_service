@@ -73,7 +73,7 @@ def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Ad
     return db_user
 
 #Admin update selected users role
-def update_users_Admin(db: Session, userId: str, roleName: str, modified_by):
+def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by):
     stmt = update(User).where(User.id == userId)
     # update roleName and modified by who
     stmt = stmt.values(roleName=roleName, modifiedById=modified_by)
