@@ -20,8 +20,13 @@ from io import BytesIO
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 from fastapi import Request
 
+# import cache
+from cachetools import TTLCache
 
 global_bucket = TokenBucket(rate=5, capacity=10)
+
+# Create a cache for user details (maxsize=100, TTL=300 seconds)
+user_cache = TTLCache(maxsize=100, ttl=300)
 
 
 router = APIRouter(
@@ -34,6 +39,16 @@ router = APIRouter(
 # Profile Picture Max Size
 MAX_SIZE = (300, 300)  # Max image size (300x300)
 
+# Retrieve User from cache
+def get_cached_user(user_id: int, db: Session):
+    if user_id in user_cache:
+        return user_cache[user_id]
+    
+    # otherwise fetch from DB
+    db_user = crud_user.get_user(db=db, userId=user_id)
+    if db_user:
+        user_cache[user_id] = db_user
+    return db_user
 
 # standardise successful responses
 def create_success_response(data: dict):
@@ -56,12 +71,13 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     db_user = crud_user.verify_user(db=db, user=user)
     return db_user
 
-#fetch user details
+#fetch user details (Cached)
 @router.get("/user/get_user/", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
 def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     userId = current_user["userId"]
-    db_user = crud_user.get_user(db=db, userId=userId)
+    db_user = get_cached_user(db=db, user_id=userId)
+    db_user = crud_user.get_user()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     

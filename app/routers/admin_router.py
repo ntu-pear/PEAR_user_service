@@ -90,8 +90,8 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.put("/admin/update_users_role/")
-def update_users_role_admin(request: schemas_user.UpdateUsersRoleRequest,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+@router.put("/admin/reset_and_update_users_role/")
+def reset_and_update_users_role(request: schemas_user.UpdateUsersRoleRequest,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
@@ -99,27 +99,27 @@ def update_users_role_admin(request: schemas_user.UpdateUsersRoleRequest,current
     failed_updates=[]
     update_list = request.users_Id
     db_users= crud_role.get_users_by_role(role_name=request.role, db=db)
-    #Compare both list
-    for user in db_users:
-        if user["id"] in update_list:
-            #remove user from update list
-            update_list.remove(user["id"])
-        else:
-            #cannot remove admin
-            if request.role != "ADMIN":
-                #remove user's role
-                db_user=crud_user.update_users_role_admin(db=db, userId = user["id"], roleName= None,modified_by=current_user["userId"])
-                if db_user:
-                    updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
+    #No updates for admin role
+    if request.role != "ADMIN":
+        for user in db_users:
+            if user["id"] in update_list:
+                #remove user from update list
+                update_list.remove(user["id"])
+            else:
+                #cannot remove admin
+                if request.role != "ADMIN":
+                    #remove user's role
+                    db_user=crud_user.update_users_role_admin(db=db, userId = user["id"], roleName= None,modified_by=current_user["userId"])
+                    if db_user:
+                        updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
 
-    for userId in update_list:
-        db_user=crud_user.update_users_role_admin(db=db, userId=userId, roleName=request.role,modified_by=current_user["userId"])
-        if db_user:
-            updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
-        if db_user is None:
-            failed_updates.append({"users_id": userId, "error": "User not found"})
+        for userId in update_list:
+            db_user=crud_user.update_users_role_admin(db=db, userId=userId, roleName=request.role,modified_by=current_user["userId"])
+            if db_user:
+                updated_users.append({"users_id": db_user.id, "FullName":db_user.nric_FullName, "role": db_user.roleName})
+            if db_user is None:
+                failed_updates.append({"users_id": userId, "error": "User not found"})
     return {"Updated Users": updated_users, "Failed Updates":failed_updates}
-
 
 @router.delete("/admin/{userId}", response_model=schemas_user.UserBase)
 def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
