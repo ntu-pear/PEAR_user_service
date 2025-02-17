@@ -20,7 +20,8 @@ from io import BytesIO
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 from fastapi import Request
 
-# import cache
+# import cache and event listener
+from sqlalchemy import event
 from cachetools import TTLCache
 
 global_bucket = TokenBucket(rate=5, capacity=10)
@@ -50,6 +51,31 @@ def get_cached_user(user_id: int, db: Session):
         user_cache[user_id] = db_user
     return db_user
 
+# invalidate cache and update it with latest data
+def update_user_cache(user_id: int, updated_user_data):
+    user_cache[user_id] = updated_user_data
+
+# Remove user from cache when deleted
+def remove_user_from_cache(user_id: int):
+    user_cache.pop(user_id, None)
+
+# **🔵 SQLAlchemy Event Listeners for Auto Cache Refresh**
+# mapper: Represents the ORM mapping of the model class (User in this case).
+# connection: Represents the active database connection, allowing direct execution of SQL queries if necessary.
+# target: The actual instance of the model being modified.
+def refresh_cache(_mapper, _connection, target):
+    """Auto-refresh cache when a user is modified."""
+    update_user_cache(target.id, target)
+
+def remove_cache(_mapper, _connection, target):
+    """Remove user from cache when deleted."""
+    remove_user_from_cache(target.id)
+
+# **Attach event listeners to User model**
+event.listen(User, "after_update", refresh_cache)  # Update cache on change
+event.listen(User, "after_insert", refresh_cache)  # Insert user into cache
+event.listen(User, "after_delete", remove_cache)   # Remove from cache on delete
+
 # standardise successful responses
 def create_success_response(data: dict):
     return {"status": "success", "data": data}
@@ -77,7 +103,6 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
 def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     userId = current_user["userId"]
     db_user = get_cached_user(db=db, user_id=userId)
-    db_user = crud_user.get_user()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
