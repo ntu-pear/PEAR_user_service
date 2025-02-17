@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
+import pytz
 # Define an Enum for status
 class UserStatus(enum.Enum):
     ANNUAL_LEAVE = "AL"
@@ -70,3 +71,11 @@ class User(Base):
 
     #relationship to Session Table
     user_session = relationship('User_Session', back_populates='users')
+
+    def get_created_date_sgt(self):
+        """Convert createdDate to Singapore Time (SGT)"""
+        return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
+
+    def get_modified_date_sgt(self):
+        """Convert modifiedDate to Singapore Time (SGT)"""
+        return self.modifiedDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))

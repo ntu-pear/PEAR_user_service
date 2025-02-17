@@ -2,6 +2,10 @@ import re
 import os
 from fastapi import HTTPException, status, File
 from datetime import date,datetime, timedelta
+import pytz
+
+# Set timezone to Singapore Time (SGT)
+sgt_tz = pytz.timezone("Asia/Singapore")
 ### Check new user details
 def verify_userDetails(db_user, user):
     # Define the fields to compare
@@ -52,7 +56,7 @@ def validate_contactNo(contactNo):
 def validate_dob(DOB: date):
         
     # Calculate age constraints
-    today = date.today()
+    today = date.today(sgt_tz)
     min_date = today - timedelta(days=15 * 365.25)  # 15 years ago
     max_date = today - timedelta(days=150 * 365.25)  # 150 years ago
 

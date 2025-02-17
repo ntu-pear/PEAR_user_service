@@ -2,7 +2,7 @@ from sqlalchemy import Column, Boolean, Integer, String, DateTime, ForeignKey, B
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
-
+import pytz
 class PrivacyLevelSetting(Base):
     __tablename__ = 'PRIVACY_LEVEL_SETTING'
 
@@ -21,3 +21,11 @@ class PrivacyLevelSetting(Base):
 
     # Relationship with Role
     role = relationship('Role', foreign_keys=[roleId], back_populates='privacyLevelSettings')
+
+    def get_created_date_sgt(self):
+        """Convert createdDate to Singapore Time (SGT)"""
+        return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
+
+    def get_modified_date_sgt(self):
+        """Convert modifiedDate to Singapore Time (SGT)"""
+        return self.modifiedDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))

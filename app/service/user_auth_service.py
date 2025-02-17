@@ -11,7 +11,10 @@ from ..database import get_db
 import os
 import logging
 import json
+import pytz
 
+# Set timezone to Singapore Time (SGT)
+sgt_tz = pytz.timezone("Asia/Singapore")
 # Setup Variables
 SECRET_KEY=os.getenv('SECRET_KEY')
 if not SECRET_KEY:
@@ -27,7 +30,8 @@ if not REFRESH_SECRET_KEY:
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")) # Token validity period
-REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")) # Token validity period
+REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")) # Token validity period
+SESSION_EXPIRY_MINUTES=int(os.getenv('SESSION_EXPIRE_MINUTES')) #session validity period
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
@@ -71,20 +75,20 @@ def verify_password(plain_password, hashed_password):
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.now() + expires_delta
+        expire = datetime.now(sgt_tz) + expires_delta
     else:
-        expire = datetime.now() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(sgt_tz) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return {"token": encoded_jwt, "expires_at": expire}
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.now() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(sgt_tz) + timedelta(minutes=REFRESH_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     
     encoded_jwt = jwt.encode(to_encode, REFRESH_SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return {"token": encoded_jwt, "expires_at": expire}
 
 def decode_access_token(token: str):
     # extracts user details from jwt token
@@ -179,11 +183,12 @@ def create_tokens(user, sessionId:str):
     refresh_token = create_refresh_token(data={"sub": serialized_data})
     # Return response
     return {
-        "access_token": access_token,
-        "refresh_token": refresh_token,
+        "access_token": access_token["token"],
+        "refresh_token": refresh_token["token"],
         "token_type": "bearer",
         # Include token expiry information in the response for the client to handle reauthentication.
-        "access_token_expires_in": ACCESS_TOKEN_EXPIRE_MINUTES,
-        "refresh_token_expires_in": REFRESH_TOKEN_EXPIRE_DAYS,
+        "access_token_expires_at": access_token["expires_at"],
+        "refresh_token_expires_at": refresh_token["expires_at"],
+        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES), 
         "data": data,  # Avoid sensitive data
     }

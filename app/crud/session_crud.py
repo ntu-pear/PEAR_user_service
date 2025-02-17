@@ -1,5 +1,6 @@
 from venv import logger
 from sqlalchemy.orm import Session
+import pytz  # Import pytz for timezone conversion
 from sqlalchemy import update, DateTime
 from datetime import datetime, timedelta
 from sqlalchemy.sql import func
@@ -15,6 +16,11 @@ from app.service import user_service as UserService
 from app.service import email_service as EmailService
 from app.service import user_auth_service as AuthService
 import uuid
+import os
+# Setup Variables
+SESSION_EXPIRY_MINUTES=int(os.getenv('SESSION_EXPIRE_MINUTES'))
+# Set timezone to Singapore Time (SGT)
+sgt_tz = pytz.timezone("Asia/Singapore")
 
 #create session and return access & refresh token
 def create_session(user, db:Session = Depends(get_db)):
@@ -33,8 +39,9 @@ def create_session(user, db:Session = Depends(get_db)):
     # Use a transaction to ensure rollback on error
     # Add 2 days to the current timestamp for expiry
     #expiry_timestamp = datetime.now() + timedelta(days=2)
-    #test
-    expiry_timestamp = datetime.now() + timedelta(minutes=10)
+
+    # Set timezone to Singapore (SGT = UTC+8)
+    expiry_timestamp = datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)  # Expire in 10 min
 
     #Check for any other sessions, if yes delete them
     delete_user_sessions(userId=user.id, db=db)
@@ -66,7 +73,7 @@ def update_session(session_id: str,access_Token:str, db: Session = Depends(get_d
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
     # Get current timestamp using datetime.now()
-    current_timestamp = datetime.now()
+    current_timestamp = datetime.now(sgt_tz)  # Get current time in SGT
     #Check if session is expired
     if db_session.expired_at < current_timestamp:
         db.delete(db_session)
@@ -121,9 +128,15 @@ def check_session_expiry(session_id: str, db: Session = Depends(get_db)):
     db_session = db.query(User_Session).filter(User_Session.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
-    current_timestamp = datetime.now()
+    # Ensure `expired_at` is timezone-aware
+    if db_session.expired_at.tzinfo is None:
+        expired_at_aware = db_session.expired_at.replace(tzinfo=pytz.utc)  # Assume stored in UTC
+    else:
+        expired_at_aware = db_session.expired_at
+    # Set timezone to Singapore Time (SGT)
+    current_timestamp = datetime.now(sgt_tz)  # Get current time in SGT
     #Check if session is expired
-    if db_session.expired_at < current_timestamp:
+    if expired_at_aware < current_timestamp:
         db.delete(db_session)
         db.commit()
         return True

@@ -19,8 +19,10 @@ google-auth
 google-auth-oauthlib == 1.0.0
 google-auth-httplib2
 google-api-python-client
+bcrypt
 pyotp
 captcha
 pysendpulse
 cloudinary
 apscheduler
+pytz

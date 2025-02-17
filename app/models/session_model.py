@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
+import pytz
 class User_Session(Base):
     __tablename__ = 'TABLE_SESSIONS'
 
@@ -15,3 +16,12 @@ class User_Session(Base):
 
     #Relationship to User table
     users = relationship('User', back_populates='user_session')
+
+    def get_created_date_sgt(self):
+        """Convert createdDate to Singapore Time (SGT)"""
+        return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
+    def get_expired_at_sgt(self):
+        """Convert expired_at to Singapore Time (SGT)"""
+        if self.expired_at.tzinfo is None:
+            return self.expired_at.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
+        return self.expired_at.astimezone(pytz.timezone("Asia/Singapore"))

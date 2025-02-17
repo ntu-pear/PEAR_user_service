@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
+import pytz
 class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 
@@ -22,3 +23,10 @@ class Role(Base):
 
     # Back-reference to users
     users = relationship('User', back_populates='role')  # One-to-Many relationship
+    def get_created_date_sgt(self):
+        """Convert createdDate to Singapore Time (SGT)"""
+        return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
+
+    def get_modified_date_sgt(self):
+        """Convert modifiedDate to Singapore Time (SGT)"""
+        return self.modifiedDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
