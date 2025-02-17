@@ -45,6 +45,51 @@ router = APIRouter(
 # Profile Picture Max Size
 MAX_SIZE = (300, 300)  # Max image size (300x300)
 
+# Retrieve User from cache
+def get_cached_user(user_id: int, db: Session):
+    if user_id in user_cache:
+        return user_cache[user_id]
+    
+    # otherwise fetch from DB
+    db_user = crud_user.get_user(db=db, userId=user_id)
+    if db_user:
+        user_cache[user_id] = db_user
+    return db_user
+# Retrieve User from cache
+def get_cached_user(user_id: int, db: Session):
+    if user_id in user_cache:
+        return user_cache[user_id]
+    
+    # otherwise fetch from DB
+    db_user = crud_user.get_user(db=db, userId=user_id)
+    if db_user:
+        user_cache[user_id] = db_user
+    return db_user
+
+# invalidate cache and update it with latest data
+def update_user_cache(user_id: int, updated_user_data):
+    user_cache[user_id] = updated_user_data
+
+# Remove user from cache when deleted
+def remove_user_from_cache(user_id: int):
+    user_cache.pop(user_id, None)
+
+# **🔵 SQLAlchemy Event Listeners for Auto Cache Refresh**
+# mapper: Represents the ORM mapping of the model class (User in this case).
+# connection: Represents the active database connection, allowing direct execution of SQL queries if necessary.
+# target: The actual instance of the model being modified.
+def refresh_cache(_mapper, _connection, target):
+    """Auto-refresh cache when a user is modified."""
+    update_user_cache(target.id, target)
+
+def remove_cache(_mapper, _connection, target):
+    """Remove user from cache when deleted."""
+    remove_user_from_cache(target.id)
+
+# **Attach event listeners to User model**
+event.listen(User, "after_update", refresh_cache)  # Update cache on change
+event.listen(User, "after_insert", refresh_cache)  # Insert user into cache
+event.listen(User, "after_delete", remove_cache)   # Remove from cache on delete
 
 # standardise successful responses
 def create_success_response(data: dict):
@@ -67,7 +112,7 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     db_user = crud_user.verify_user(db=db, user=user)
     return db_user
 
-#fetch user details (Cached)
+#fetch user details (Cached) (Cached)
 @router.get("/user/get_user/", response_model=schemas_user.UserRead)
 @rate_limit(global_bucket, tokens_required=1)
 def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
