@@ -90,7 +90,7 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.put("/admin/reset_and_update_users_role")
+@router.put("/admin/reset_and_update_users_role/")
 def reset_and_update_users_role(request: schemas_user.UpdateUsersRoleRequest,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
