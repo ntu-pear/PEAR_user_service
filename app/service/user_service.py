@@ -56,7 +56,7 @@ def validate_contactNo(contactNo):
 def validate_dob(DOB: date):
         
     # Calculate age constraints
-    today = date.today(sgt_tz)
+    today = datetime.now(sgt_tz)
     min_date = today - timedelta(days=15 * 365.25)  # 15 years ago
     max_date = today - timedelta(days=150 * 365.25)  # 150 years ago
 
