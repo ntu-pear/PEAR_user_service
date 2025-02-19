@@ -29,7 +29,7 @@ def confirm_token(token: str, expiration=600): #600 sec 10min expiry
 
 async def send_confirmation_email(email: str, token: str):
     validate_email_format(email)
-    confirmation_url = f"http://localhost:8000/confirm-email/{token}"
+    confirmation_url = f"{EMAIL_LINK_BASEURL}/confirm-email/{token}"
     
     email = {
         'subject': 'Confirm Email',
@@ -44,7 +44,7 @@ async def send_confirmation_email(email: str, token: str):
 
 async def send_registration_email(email: str, token: str):
     validate_email_format(email)
-    registration_url = f"http://localhost:8000/user/register_account/{token}" 
+    registration_url = f"{EMAIL_LINK_BASEURL}/user/register_account/{token}" 
     
     email = {
         'subject': 'Register Account',
