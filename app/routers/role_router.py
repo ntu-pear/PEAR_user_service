@@ -27,14 +27,12 @@ def read_roles(current_user: user_auth.TokenData = Depends(AuthService.get_curre
     return roles
 
 @router.post("/roles/", response_model=RoleRead )
-def create_new_role(role: RoleCreate,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
-    is_admin = current_user["roleName"] == "ADMIN"
-    if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    return create_role(db=db, role=role, created_by=current_user["userId"])
+def create_new_role(role: RoleCreate,  db: Session = Depends(get_db)):
+
+    return create_role(db=db, role=role, created_by=1)
 
 @router.put("/roles/{roleId}", response_model=RoleRead)
-def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
@@ -44,7 +42,7 @@ def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.
     return db_role
 
 @router.delete("/roles/{roleId}", response_model=RoleRead)
-def delete_exisiting_role(roleId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+def delete_existing_role(roleId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")

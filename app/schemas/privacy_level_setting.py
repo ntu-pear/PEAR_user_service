@@ -2,25 +2,23 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
+#TODO: id should be retrieved from user auth
 class PrivacyLevelSettingBase(BaseModel):
-    roleId: int
-    privacyLevelSensitive: int
-    privacyLevelNonSensitive: int
+    id: str
+    privacyLevelSensitive: Optional[int] = None
 
 class PrivacyLevelSettingCreate(PrivacyLevelSettingBase):
-    privacyLevelSensitive: int
-    privacyLevelNonSensitive: int
+    active: bool
 
 class PrivacyLevelSettingUpdate(PrivacyLevelSettingBase):
     pass
 
 class PrivacyLevelSetting(PrivacyLevelSettingBase):
-    id: int
     createdById: str
     modifiedById: str
     createdDate: datetime
     modifiedDate: datetime
-    active: str
+    active: bool
 
     class Config:
         orm_mode = True

@@ -4,12 +4,14 @@ from typing import Optional
 
 class RoleBase(BaseModel):
     roleName: str
+    privacyLevelSensitive: int
 
 class RoleCreate(RoleBase):
     pass
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
+    privacyLevelSensitive: Optional[int] = None
     active: Optional[bool] = None
 
 class RoleRead(RoleBase):

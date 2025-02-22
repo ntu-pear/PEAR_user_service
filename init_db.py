@@ -13,10 +13,10 @@ load_dotenv()
 #ntu
 #DATABASE_URL = os.getenv("DB_URL")
 #local
-#DATABASE_URL = os.getenv("DB_URL_LOCAL")
+DATABASE_URL = os.getenv("DB_URL_LOCAL")
 
-DATABASE_URL = ("mssql+pyodbc://sa:Fyppear@2@10.96.188.171:1433/user_service_dev"
- "?TrustServerCertificate=yes&driver=ODBC+Driver+17+for+SQL+Server")
+#DATABASE_URL = ("mssql+pyodbc://sa:Fyppear@2@10.96.188.171:1433/user_service_dev"
+ #"?TrustServerCertificate=yes&driver=ODBC+Driver+17+for+SQL+Server")
 
 print(DATABASE_URL, "Trying...")
 # Create engine for MSSQL database
