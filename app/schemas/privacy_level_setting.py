@@ -5,16 +5,16 @@ from app.models.privacy_level_setting_model import PrivacyStatus
 
 #TODO: id should be retrieved from user auth
 class PrivacyLevelSettingBase(BaseModel):
-    id: str
     privacyLevelSensitive: Optional[PrivacyStatus] = None
 
 class PrivacyLevelSettingCreate(PrivacyLevelSettingBase):
-    active: bool
+    active: Optional[bool] = None
 
 class PrivacyLevelSettingUpdate(PrivacyLevelSettingBase):
-    pass
+    active: Optional[bool] = None
 
 class PrivacyLevelSetting(PrivacyLevelSettingBase):
+    id: str
     createdById: str
     modifiedById: str
     createdDate: datetime

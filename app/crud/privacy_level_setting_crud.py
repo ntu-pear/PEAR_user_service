@@ -16,8 +16,8 @@ def get_privacy_level_settings_by_role(db: Session, skip: int = 0, limit: int = 
     return db.query(Role).order_by(Role.id).offset(skip).limit(limit).all()
 
 #TODO: Created by + modified by should be from user
-def create_privacy_level_setting(db: Session, privacy_level_setting: PrivacyLevelSettingCreate):
-    db_privacy_level_setting = PrivacyLevelSetting(**privacy_level_setting.model_dump(),createdById=1,modifiedById=1)
+def create_privacy_level_setting(db: Session, privacy_level_setting: PrivacyLevelSettingCreate, created_by: int):
+    db_privacy_level_setting = PrivacyLevelSetting(**privacy_level_setting.model_dump(),createdById=created_by,modifiedById=created_by)
     db.add(db_privacy_level_setting)
     db.commit()
     db.refresh(db_privacy_level_setting)

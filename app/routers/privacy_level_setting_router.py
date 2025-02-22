@@ -32,29 +32,29 @@ def read_privacy_level_settings_by_role(skip: int = 0, limit: int = 10, db: Sess
     privacy_settings = get_privacy_level_settings_by_role(db, skip=skip, limit=limit)
     return privacy_settings
 
-#TODO: Add in user auth
+#TODO: ask about rate limit
 @router.post("/privacy_settings", response_model=PrivacyLevelSetting)
-def create_new_privacy_level_setting(privacy_level_setting: PrivacyLevelSettingCreate, db: Session = Depends(get_db)):
-    # is_guardian = current_user["roleName"] == "GUARDIAN"
-    # if not is_guardian:
-    #     raise HTTPException(status_code=404, detail="User is not authorised")
-    return create_privacy_level_setting(db=db, privacy_level_setting=privacy_level_setting)
+def create_new_privacy_level_setting(privacy_level_setting: PrivacyLevelSettingCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_guardian = current_user["roleName"] == "GUARDIAN"
+    if not is_guardian:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    return create_privacy_level_setting(db=db, privacy_level_setting=privacy_level_setting, created_by=current_user["userId"])
 
 @router.put("/privacy_settings/{user_id}", response_model=PrivacyLevelSetting)
-def update_existing_privacy_level_setting(user_id: str, privacy_level_setting: PrivacyLevelSettingUpdate, db: Session = Depends(get_db)):
-    # is_guardian = current_user["roleName"] == "GUARDIAN"
-    # if not is_guardian:
-    #     raise HTTPException(status_code=404, detail="User is not authorised")
+def update_existing_privacy_level_setting(user_id: str, privacy_level_setting: PrivacyLevelSettingUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_guardian = current_user["roleName"] == "GUARDIAN"
+    if not is_guardian:
+        raise HTTPException(status_code=404, detail="User is not authorised")
     db_privacy_setting = update_privacy_level_setting(db=db, privacy_user_id=user_id, privacy_level_setting=privacy_level_setting)
     if db_privacy_setting is None:
         raise HTTPException(status_code=404, detail="Privacy setting not found")
     return db_privacy_setting
 
 @router.delete("/privacy_settings/{user_id}", response_model=PrivacyLevelSetting)
-def delete_existing_privacy_level_setting(user_id: str, db: Session = Depends(get_db)):
-    # is_guardian = current_user["roleName"] == "GUARDIAN"
-    # if not is_guardian:
-    #     raise HTTPException(status_code=404, detail="User is not authorised")
+def delete_existing_privacy_level_setting(user_id: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_guardian = current_user["roleName"] == "GUARDIAN"
+    if not is_guardian:
+        raise HTTPException(status_code=404, detail="User is not authorised")
     db_privacy_setting = delete_privacy_level_setting(db=db, privacy_user_id=user_id)
     if db_privacy_setting is None:
         raise HTTPException(status_code=404, detail="Privacy setting not found")
