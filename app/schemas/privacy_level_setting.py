@@ -1,11 +1,12 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from app.models.privacy_level_setting_model import PrivacyStatus
 
 #TODO: id should be retrieved from user auth
 class PrivacyLevelSettingBase(BaseModel):
     id: str
-    privacyLevelSensitive: Optional[int] = None
+    privacyLevelSensitive: Optional[PrivacyStatus] = None
 
 class PrivacyLevelSettingCreate(PrivacyLevelSettingBase):
     active: bool

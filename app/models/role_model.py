@@ -4,13 +4,20 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 import enum
 import pytz
+
+class RolePrivacyStatus(enum.Enum):
+    NONE = 0
+    LOW = 1
+    MEDIUM = 2
+    HIGH = 3
+
 class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 
     id = Column(String(255), primary_key=True)
     active = Column(Boolean, default=True, nullable=False)
     roleName = Column(String(255), unique=True, nullable=False)
-    privacyLevelSensitive = Column(BigInteger, nullable=False)
+    privacyLevelSensitive = Column(SqlEnum(RolePrivacyStatus), nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     

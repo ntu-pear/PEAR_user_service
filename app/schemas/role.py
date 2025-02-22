@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+from app.models.role_model import RolePrivacyStatus
 
 class RoleBase(BaseModel):
     roleName: str
@@ -11,7 +12,7 @@ class RoleCreate(RoleBase):
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
-    privacyLevelSensitive: Optional[int] = None
+    privacyLevelSensitive: Optional[RolePrivacyStatus] = None
     active: Optional[bool] = None
 
 class RoleRead(RoleBase):
