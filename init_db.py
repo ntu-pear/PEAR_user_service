@@ -11,9 +11,9 @@ load_dotenv()
 
 # Get the database URL from environment variables
 #ntu
-#DATABASE_URL = os.getenv("DB_URL")
+DATABASE_URL = os.getenv("DB_URL")
 #local
-DATABASE_URL = os.getenv("DB_URL_LOCAL")
+#DATABASE_URL = os.getenv("DB_URL_LOCAL")
 
 #DATABASE_URL = ("mssql+pyodbc://sa:Fyppear@2@10.96.188.171:1433/user_service_dev"
  #"?TrustServerCertificate=yes&driver=ODBC+Driver+17+for+SQL+Server")
