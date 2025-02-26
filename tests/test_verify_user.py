@@ -21,7 +21,7 @@ def test_verify_user_user_found_not_verified(db_session_mock, User_Create):
     db_session_mock.query(User).filter(User.email == User_Create.email).first.return_value = mock_user
 
     # Simulate verify_userDetails returning True (i.e., details match)
-    with mock.patch("app.crud.user_crud.verify_userDetails", return_value=True):
+    with mock.patch("app.service.user_service.verify_userDetails", return_value=True):
            # Call the function to verify the user
         result = verify_user(db_session_mock, User_Create)
     

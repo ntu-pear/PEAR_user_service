@@ -18,7 +18,7 @@ class GenderStatus(enum.Enum):
 class User(Base):
     __tablename__ = 'TABLE_USER'
 
-    id = Column(String(255), primary_key=True)
+    id = Column(String(12), primary_key=True)
     active = Column(Boolean,default=True,nullable=False)
     nric_FullName = Column(String(255), nullable=False)
     nric = Column(String(9), unique=True, nullable=False)
@@ -26,7 +26,7 @@ class User(Base):
     nric_DateOfBirth = Column(Date,nullable=False)
     nric_Gender = Column(SqlEnum(GenderStatus, values_callable=lambda x: [e.value for e in x]), nullable=False)
     preferredName= Column(String(255), nullable=True)
-    contactNo = Column(String(32),nullable=False)
+    contactNo = Column(String(8),nullable=False)
     contactNoConfirmed = Column(Boolean, default=False, nullable=False)
     allowNotification = Column(Boolean, default=False, nullable=False)
     profilePicture = Column(String(255))

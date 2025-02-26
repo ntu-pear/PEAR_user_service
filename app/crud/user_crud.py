@@ -160,11 +160,11 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
                 detail="A user with this nric already exists."
             )
 
-    # Generate a unique ID with a fixed length of 11
+    # Generate a unique ID with a fixed length of 12
     while True:
-        unique_id = "U" + str(uuid.uuid4().hex[:10])
-        # Ensure the total length is 11 characters
-        userId =unique_id[:10]  # Truncate to 11 if necessary
+        unique_id = "U" + str(uuid.uuid4().hex[:11])
+        # Ensure the total length is 12 characters
+        userId =unique_id[:11]  # Truncate to 11 if necessary
         existing_user_id = db.query(User).filter(User.id == userId).first()
         if not existing_user_id:
             break

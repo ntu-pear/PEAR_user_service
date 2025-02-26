@@ -14,7 +14,7 @@ class PrivacyStatus(enum.Enum):
 class PrivacyLevelSetting(Base):
     __tablename__ = 'PRIVACY_LEVEL_SETTING'
 
-    id = Column(String(255), ForeignKey('TABLE_USER.id'), primary_key=True)
+    id = Column(String(12), ForeignKey('TABLE_USER.id'), primary_key=True)
     active = Column(Boolean, nullable=False)
     privacyLevelSensitive = Column(SqlEnum(PrivacyStatus), nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)

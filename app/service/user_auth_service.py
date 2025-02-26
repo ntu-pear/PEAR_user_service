@@ -159,7 +159,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
     #Check if token's roleName matches with user's rolename in DB
-    if not (userDetails["roleName"]==user.roleName):
+    if ((userDetails["roleName"]!=user.roleName)| (userDetails["userId"]!=user.id) | (userDetails["fullName"]!=user.nric_FullName)):
         raise HTTPException(status_code=404, detail="Token value does not match with database")
     if not user:
         raise user_credentials_exception
@@ -190,5 +190,5 @@ def create_tokens(user, sessionId:str):
         "access_token_expires_at": access_token["expires_at"],
         "refresh_token_expires_at": refresh_token["expires_at"],
         "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES), 
-        "data": data,  # Avoid sensitive data
+        #"data": data,  # Avoid sensitive data
     }
