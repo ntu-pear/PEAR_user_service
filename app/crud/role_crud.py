@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from ..models.role_model import Role
 from ..models.user_model import User
 from ..schemas.role import RoleCreate, RoleUpdate
+from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 import uuid
 
@@ -29,11 +30,20 @@ def create_role(db: Session, role: RoleCreate, created_by:str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A role with this name already exists."
         )
-    
-    db_role = Role(**role.model_dump(),createdById=created_by,modifiedById=created_by,id=roleId)
-    db.add(db_role)
-    db.commit()
-    db.refresh(db_role)
+    # Use a transaction to ensure rollback on error
+    try:
+        db_role = Role(**role.model_dump(),createdById=created_by,modifiedById=created_by,id=roleId)
+        db.add(db_role)
+        db.commit()
+        db.refresh(db_role)
+    except IntegrityError as e:
+        # Rollback transaction if any IntegrityError occurs
+        db.rollback()
+        print(e.orig)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An error occurred: possibly a duplicate unique field."
+        )
     return db_role
 
 def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):

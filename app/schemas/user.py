@@ -66,6 +66,8 @@ class UserRead(BaseModel):
 class AdminRead(UserRead):
     lockOutEnabled: Optional[bool]=None
     lockoutReason: Optional[str]=None
+    loginTimeStamp: Optional[datetime]=None
+    lastPasswordChanged: Optional[datetime]=None
     #password:Optional[str]=None
     createdById: Optional[str]=None
     createdDate: datetime

@@ -11,11 +11,13 @@ from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
 from app.service import user_service as UserService
 from app.models.user_model import User
+from sqlalchemy.exc import IntegrityError
 import cloudinary
 import cloudinary.uploader
 from PIL import Image
 from io import BytesIO
-
+import pytz  # Import pytz for timezone conversion
+from datetime import datetime
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 from fastapi import Request
@@ -26,6 +28,9 @@ from cachetools import TTLCache
 from sqlalchemy import event
 from cachetools import TTLCache
 
+
+
+sgt_tz = pytz.timezone("Asia/Singapore")
 global_bucket = TokenBucket(rate=5, capacity=10)
 
 # Create a cache for user details (maxsize=100, TTL=300 seconds)
@@ -135,11 +140,23 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         raise AuthService.user_credentials_exception
     if (password.newPassword != password.confirmPassword):
         raise HTTPException(status_code=404, detail="Password do not match")
-    #Check password format
-    UserService.validate_password_format(user.password)
-    #Hash password
-    user.password = AuthService.get_password_hash(password.newPassword)
-    db.commit()
+    try:
+        #Check password format
+        UserService.validate_password_format(password.newPassword)
+        #Hash password
+        user.password = AuthService.get_password_hash(password.newPassword)
+        #update modifiedById
+        user.modifiedById=user.id
+        #upadte last password changed time stamp
+        user.lastPasswordChanged=datetime.now(sgt_tz)
+        db.commit()
+    except IntegrityError:
+        # Rollback transaction if any IntegrityError occurs
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An error occurred: possibly a wrong password format."
+        )
     return {"Password Updated"}
 
 #Change Email
@@ -217,12 +234,23 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
     #return user
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    #Check password format
-    UserService.validate_password_format(user.password)
-    #Hash password
-    user.password = AuthService.get_password_hash(userResetPassword.newPassword)
-    db.commit()
-    
+    try:
+        #Check password format
+        UserService.validate_password_format(userResetPassword.newPassword)
+        #Hash password
+        user.password = AuthService.get_password_hash(userResetPassword.newPassword)
+        #update modifiedById
+        user.modifiedById=user.id
+        #update last password changed time stamp
+        user.lastPasswordChanged=datetime.now(sgt_tz)
+        db.commit()
+    except IntegrityError:
+        # Rollback transaction if any IntegrityError occurs
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="An error occurred: possibly a wrong password format."
+        )
     return {"Password Updated"}
 
 #update user
@@ -234,11 +262,10 @@ async def update_user(user: schemas_user.UserUpdate_User, current_user: user_aut
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.post("/users/upload_profile_pic/")
-async def upload_profile_picture(token: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    # Decode the access token
-    user_details = AuthService.decode_access_token(token)
-    user_id = user_details["userId"]
+@router.post("/user/upload_profile_pic/")
+async def upload_profile_picture(file: UploadFile = File(...),current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    #Get current user Id
+    user_id = current_user["userId"]
     #Fetch user
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
@@ -275,11 +302,8 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
 
         # Get the uploaded image URL
         image_url = upload_response.get("secure_url")
-
-        # Update the user's profile picture in the database
-        db_user = db.query(User).filter(User.id == user_id).first()
-        if not db_user:
-            raise HTTPException(status_code=404, detail="User not found.")
+        # Update ModifiedById
+        db_user.modifiedById = db_user.id
         
         db_user.profilePicture = image_url
         db.commit()
@@ -290,10 +314,10 @@ async def upload_profile_picture(token: str, file: UploadFile = File(...), db: S
 
     return {"message": "Profile picture uploaded successfully", "file_url": db_user.profilePicture}
 
-@router.get("/users/profile_pic/")
-async def get_profile_picture(token: str, db: Session = Depends(get_db)):
-    user_details = AuthService.decode_access_token(token)
-    user_id = user_details["userId"]
+@router.get("/user/profile_pic/")
+async def get_profile_picture(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    #Get current user Id
+    user_id = current_user["userId"]
 
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user or not db_user.profilePicture:
@@ -301,11 +325,10 @@ async def get_profile_picture(token: str, db: Session = Depends(get_db)):
 
     return {"image_url": db_user.profilePicture}
 
-@router.delete("/users/delete_profile_pic/")
-async def delete_profile_picture(token: str, db: Session = Depends(get_db)):
-    # Decode access token
-    user_details = AuthService.decode_access_token(token)
-    user_id = user_details["userId"]
+@router.delete("/user/delete_profile_pic/")
+async def delete_profile_picture(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    #Get current user Id
+    user_id = current_user["userId"]
 
     # Fetch user from DB
     db_user = db.query(User).filter(User.id == user_id).first()
@@ -319,6 +342,9 @@ async def delete_profile_picture(token: str, db: Session = Depends(get_db)):
 
         # Remove profile picture reference from DB
         db_user.profilePicture = None
+        # Update ModifiedById
+        db_user.modifiedById = db_user.id
+
         db.commit()
         db.refresh(db_user)
     except Exception as e:

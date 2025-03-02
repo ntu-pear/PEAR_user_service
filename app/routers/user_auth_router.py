@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
 import json
 from fastapi.security import OAuth2PasswordBearer
+import pytz  # Import pytz for timezone conversion
+from datetime import datetime
 from ..database import get_db
 from ..schemas import user_auth
-from ..schemas.user import UserRead,UserBase
 from ..models.user_model import User
 from ..service import user_auth_service
 from ..schemas import user_auth
@@ -15,7 +16,7 @@ from ..crud import session_crud as user_Session
 import os
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
-
+sgt_tz = pytz.timezone("Asia/Singapore")
 router = APIRouter()
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")) # Token validity period
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
@@ -36,7 +37,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if user.twoFactorEnabled:
         await verification.request_otp(user.email, db)  # Send OTP email
         return {"msg": "2FA required", "email": user.email}  # Prompt to enter OTP
-   
+    
+    #Update Login Time stamp
+    user.loginTimeStamp = datetime.now(sgt_tz)
+    db.commit()
     # If 2FA is not enabled, proceed to create session, generate and return tokens
     return user_Session.create_session(user, db)
 

@@ -8,12 +8,9 @@ from ..models.user_model import User
 from ..models.session_model import User_Session
 import json
 from ..schemas import user as schemas_User
-from ..service import user_auth_service
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db
-from app.service import user_service as UserService
-from app.service import email_service as EmailService
 from app.service import user_auth_service as AuthService
 import uuid
 import os

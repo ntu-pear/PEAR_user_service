@@ -5,7 +5,7 @@ from app.models.role_model import RolePrivacyStatus
 
 class RoleBase(BaseModel):
     roleName: str
-    privacyLevelSensitive: int
+    privacyLevelSensitive: RolePrivacyStatus
 
 class RoleCreate(RoleBase):
     pass

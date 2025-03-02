@@ -80,7 +80,7 @@ async def get_user_by_email(email: str,current_user: user_auth.TokenData = Depen
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
 
-@router.put("/admin/{userId}", response_model=schemas_user.UserUpdate)
+@router.put("/admin/{userId}", response_model=schemas_user.AdminRead)
 def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
@@ -131,7 +131,7 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
 
     #delete user from db
     db_user = crud_user.delete_user(db=db, userId=userId)
-     
+    
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user

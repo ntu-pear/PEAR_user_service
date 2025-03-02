@@ -27,8 +27,11 @@ def read_roles(current_user: user_auth.TokenData = Depends(AuthService.get_curre
     return roles
 
 @router.post("/roles/", response_model=RoleRead )
-def create_new_role(role: RoleCreate,  db: Session = Depends(get_db)):
-
+def create_new_role(role: RoleCreate,  current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    
     return create_role(db=db, role=role, created_by=1)
 
 @router.put("/roles/{roleId}", response_model=RoleRead)

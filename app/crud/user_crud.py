@@ -1,9 +1,7 @@
 from venv import logger
 from sqlalchemy.orm import Session
 from sqlalchemy import update
-
 from ..models.user_model import User
-
 from ..schemas import user as schemas_User
 from ..service import user_auth_service
 from fastapi import HTTPException, status
@@ -30,6 +28,8 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
     # update modified by who
     stmt = stmt.values(modifiedById=modified_by)
     for field, value in user.model_dump(exclude_unset=True).items():
+        if field =="contactNo":
+            UserService.validate_contactNo(value)
         if field != "email":
             stmt = stmt.values({field: value})
         if field == "email":
@@ -62,6 +62,13 @@ def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Ad
         stmt = stmt.values(email=user.email)
 
     for field, value in user.model_dump(exclude_unset=True).items():
+        # Need to addd in format checking for various fields
+        if field =="nric":
+            UserService.validate_nric(value)
+        if field =="nric_DateOfBirth":
+            UserService.validate_dob(value)
+        if field=="contactNo":
+            UserService.validate_contactNo(value)
         if field != "email":
             stmt = stmt.values({field: value})
 
