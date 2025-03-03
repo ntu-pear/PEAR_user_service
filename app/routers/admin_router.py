@@ -57,6 +57,18 @@ def read_user(userId: str, current_user: user_auth.TokenData = Depends(AuthServi
     
     return db_user
 
+@router.get("/admin/get_guardian/{nric}", response_model=schemas_user.AdminRead)
+@rate_limit(global_bucket, tokens_required=1)
+def read_guadrian_nric(nric: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    db_user = crud_user.get_guardian_nric(db=db, nric=nric)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return db_user
+
 @router.get("/admin/", response_model=list[schemas_user.AdminRead])
 @rate_limit(global_bucket, tokens_required=1)
 def read_users(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):

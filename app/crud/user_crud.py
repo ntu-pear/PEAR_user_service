@@ -21,6 +21,8 @@ def get_user_by_email(db: Session, email: str):
 def get_users(db: Session, skip: int = 0, limit: int = 10):
     return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
 
+def get_guardian_nric(db: Session, nric= str):
+    return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
 #Update User
 async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpdate_User, modified_by):
     stmt = update(User).where(User.id == userId)
