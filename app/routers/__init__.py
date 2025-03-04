@@ -13,10 +13,13 @@ scheduler = BackgroundScheduler()
 
 # Define the task to run periodically (every 5 minutes)
 def delete_expired_sessions_task():
-    # Fetch DB session (handle session lifecycle properly)
-    db = next(get_db())  
-    User_Session.delete_sessions(db)
-    print(f"Expired sessions cleaned at {datetime.now()}")
+    db = next(get_db())  # Fetch DB session
+    try:
+        User_Session.delete_sessions(db)  # Delete expired sessions
+        print(f"Expired sessions cleaned at {datetime.now()}")
+    finally:
+        db.close()  # Ensure session is closed properly
+
 
 # Schedule the task to run every 5 minutes
 scheduler.add_job(delete_expired_sessions_task, 'interval', minutes=2)
