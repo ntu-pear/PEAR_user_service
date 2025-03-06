@@ -80,4 +80,30 @@ class AdminRead(UserRead):
             datetime: lambda v: v.strftime('%Y-%m-%d %H:%M:%S') if v else None
         }
 
+class AdminSearch(BaseModel):
+    id:Optional[str]=None
+    preferredName: Optional[str]=None
+    nric_FullName: Optional[str]=None
+    nric: Optional[str]=None
+    status:Optional[UserStatus]=None
+    email:Optional[str]=None
+    verified: Optional[bool]=None
+    active:Optional[bool]=None
+    twoFactorEnabled:Optional[bool]=None
+    roleName: Optional[str]=None
+    page: Optional[int] = 1  # Default to page 1
+    page_size: Optional[int] = 10  # Default page size to 10
 
+class SupervisorSearch(BaseModel):
+    nric_FullName:str
+class PaginationResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    class Config:
+        orm_mode = True
+class UserPaginationResponse(PaginationResponse):
+    users: List[AdminRead]
+
+class SupervisorPaginationResponse(PaginationResponse):
+    users: List[SupervisorSearch]

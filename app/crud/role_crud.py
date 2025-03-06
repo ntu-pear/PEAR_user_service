@@ -10,8 +10,29 @@ import uuid
 def get_role(db: Session, roleId: str):
     return db.query(Role).filter(Role.id == roleId).first()
 
-def get_roles(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(Role).order_by(Role.id).offset(skip).limit(limit).all()
+def get_roles(db: Session, page:int, page_size:int): 
+    # Maximum page size limit to prevent excessively large queries
+    max_page_size = 100
+    page_size = min(page_size, max_page_size)  # Enforce max page size
+    page = max(page, 1)  # Default to page 1 if the page number is less than 1
+    offset = (page - 1) * page_size  # Calculate the offset
+
+    # Query to get all roles (no filters applied)
+    query = db.query(Role)
+
+    # Total count of roles (without pagination)
+    total_count = query.count()
+
+    # Get the roles with pagination
+    roles= query.order_by(Role.id).offset(offset).limit(page_size).all()
+
+    # Return the paginated response
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "roles": roles
+    }
 
 def create_role(db: Session, role: RoleCreate, created_by:str):
     # Generate a unique ID with a fixed length of 8
@@ -70,13 +91,24 @@ def delete_role(db: Session, roleId: str):
     db.commit()
     return db_role
 
-def get_users_by_role(role_name: str, db: Session):
+def get_users_by_role(role_name: str, page: int, page_size: int, db: Session):
     # Fetch the role by name
     role = db.query(Role).filter(Role.roleName == role_name).first()
     if not role:
         return {"error": "Role not found"}
-    
-    # Get all users associated with this role
-    users = db.query(User).filter(User.roleName == role.roleName).all()
-     # Convert the users to UserRead model
-    return [{"id": user.id, "FullName": user.nric_FullName, "Role": user.roleName} for user in users]
+
+    # Pagination logic
+    offset = (page - 1) * page_size
+    # Get total number of users with the given role
+    total_count = db.query(User).filter(User.roleName == role.roleName).count()
+
+    # Get users associated with this role, applying pagination
+    users = db.query(User).filter(User.roleName == role.roleName).order_by(User.id).offset(offset).limit(page_size).all()
+
+    # Return paginated result
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "users": [{"id": user.id, "FullName": user.nric_FullName, "Role": user.roleName} for user in users]
+    }

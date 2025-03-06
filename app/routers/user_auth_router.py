@@ -73,7 +73,7 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     #check if refresh mapped to session
     user_auth_service.check_refresh_token(session_id=payload["sessionId"], token=refresh_token, db=db)
     #update session
-    user_Session.update_session(session_id=payload["sessionId"],access_Token= new_access_token,db=db)
+    user_Session.update_session(session_id=payload["sessionId"],access_Token= new_access_token["token"],db=db)
     
     return {
         "access_token": new_access_token["token"],

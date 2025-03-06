@@ -69,10 +69,15 @@ def update_session(session_id: str,access_Token:str, db: Session = Depends(get_d
     db_session = db.query(User_Session).filter(User_Session.id == session_id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
-    # Get current timestamp using datetime.now()
+    # Ensure `expired_at` is timezone-aware
+    if db_session.expired_at.tzinfo is None:
+        expired_at_aware = db_session.expired_at.replace(tzinfo=pytz.utc)  # Assume stored in UTC
+    else:
+        expired_at_aware = db_session.expired_at
+    # Set timezone to Singapore Time (SGT)
     current_timestamp = datetime.now(sgt_tz)  # Get current time in SGT
     #Check if session is expired
-    if db_session.expired_at < current_timestamp:
+    if expired_at_aware < current_timestamp:
         db.delete(db_session)
         db.commit()
         raise HTTPException(status_code=401, detail="Session expired")

@@ -15,7 +15,7 @@ def read_privacy_level_setting_by_user(user_id: str, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Privacy user setting not found")
     return db_privacy_setting
 
-@router.get("/privacy_settings_user", response_model=list[PrivacyLevelSetting])
+@router.get("/privacy_settings_user/", response_model=list[PrivacyLevelSetting])
 def read_privacy_level_settings_by_user(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     privacy_settings = get_privacy_level_settings_by_user(db, skip=skip, limit=limit)
     return privacy_settings
@@ -27,13 +27,13 @@ def read_privacy_level_setting_by_role(user_id: str, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Privacy role setting not found")
     return db_privacy_setting
 
-@router.get("/privacy_settings_role", response_model=list[PrivacyLevelSetting])
+@router.get("/privacy_settings_role/", response_model=list[PrivacyLevelSetting])
 def read_privacy_level_settings_by_role(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     privacy_settings = get_privacy_level_settings_by_role(db, skip=skip, limit=limit)
     return privacy_settings
 
 #TODO: ask about rate limit
-@router.post("/privacy_settings", response_model=PrivacyLevelSetting)
+@router.post("/privacy_settings/", response_model=PrivacyLevelSetting)
 def create_new_privacy_level_setting(privacy_level_setting: PrivacyLevelSettingCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_guardian = current_user["roleName"] == "GUARDIAN"
     if not is_guardian:

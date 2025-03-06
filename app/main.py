@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from .database import engine, Base
-from .routers import admin_router,user_auth_router, user_router,role_router,privacy_level_setting_router,email_router,verification_router
+from app.database import engine, Base
+from app.routers import admin_router,user_auth_router,supervisor_router, user_router,role_router,privacy_level_setting_router,email_router,verification_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -41,6 +41,7 @@ async def test_rate_limit():
 app.include_router(admin_router.router, prefix="/api/v1", tags=["admin"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
+app.include_router(supervisor_router.router, prefix="/api/v1", tags=["supervisor"])
 app.include_router(privacy_level_setting_router.router, prefix="/api/v1", tags=["privacy_level"])
 app.include_router(user_auth_router.router, prefix="/api/v1", tags=["auth"])
 app.include_router(email_router.router, prefix="/api/v1", tags=["email"])

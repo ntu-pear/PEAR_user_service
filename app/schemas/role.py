@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 from app.models.role_model import RolePrivacyStatus
-
+from typing import List
 class RoleBase(BaseModel):
     roleName: str
     privacyLevelSensitive: RolePrivacyStatus
@@ -27,3 +27,12 @@ class RoleRead(RoleBase):
         json_encoders = {
             datetime: lambda v: v.strftime('%Y-%m-%d %H:%M:%S') if v else None
         }
+
+class RolePaginationResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    roles: List[RoleRead]
+
+    class Config:
+        orm_mode = True

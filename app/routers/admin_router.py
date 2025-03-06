@@ -14,6 +14,7 @@ import logging
 import sys
 import cloudinary
 import cloudinary.uploader
+from typing import Optional
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
@@ -47,7 +48,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
 
 @router.get("/admin/{userId}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
-def read_user(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
@@ -56,6 +57,19 @@ def read_user(userId: str, current_user: user_auth.TokenData = Depends(AuthServi
         raise HTTPException(status_code=404, detail="User not found")
     
     return db_user
+
+@router.post("/admin/get_users_by_fields", response_model=schemas_user.UserPaginationResponse)
+@rate_limit(global_bucket, tokens_required=1)
+def get_users_by_fields(fields: schemas_user.AdminSearch, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),page:Optional[int]=1, page_size:Optional[int]=10,db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    db_user = crud_user.get_users_by_fields(db=db, fields=fields, page=page,page_size=page_size)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return db_user
+
 
 @router.get("/admin/get_guardian/{nric}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
@@ -69,15 +83,15 @@ def read_guadrian_nric(nric: str, current_user: user_auth.TokenData = Depends(Au
     
     return db_user
 
-@router.get("/admin/", response_model=list[schemas_user.AdminRead])
+@router.get("/admin/", response_model=schemas_user.UserPaginationResponse)
 @rate_limit(global_bucket, tokens_required=1)
-def read_users(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
+def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_current_user), page: Optional[int]= 1, page_size:Optional[int]=10, db: Session = Depends(get_db)):
     
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
     #Only Admin can read all users
-    users = crud_user.get_users(db=db, skip=skip, limit=limit)
+    users = crud_user.get_users(db=db, page=page,page_size=page_size)
     
     return users
 

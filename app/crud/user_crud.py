@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.service import user_service as UserService
 from app.service import email_service as EmailService
+from sqlalchemy import and_
 import uuid
 import cloudinary
 import cloudinary.uploader
@@ -18,11 +19,99 @@ def get_user(db: Session, userId: str):
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
-def get_users(db: Session, skip: int = 0, limit: int = 10):
-    return db.query(User).order_by(User.id).offset(skip).limit(limit).all()
+
+def get_users(db: Session, page: int, page_size:int ): 
+    # Maximum page size limit to prevent excessively large queries
+    max_page_size = 100
+    page_size = min(page_size, max_page_size)  # Enforce max page size
+    page = max(page, 1)  # Default to page 1 if the page number is less than 1
+    offset = (page - 1) * page_size  # Calculate the offset
+
+    # Query to get all users (no filters applied)
+    query = db.query(User)
+
+    # Total count of users (without pagination)
+    total_count = query.count()
+
+    # Get the users with pagination
+    users = query.order_by(User.id).offset(offset).limit(page_size).all()
+
+    # Return the paginated response
+    return {
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "users": users
+    }
 
 def get_guardian_nric(db: Session, nric= str):
     return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
+
+def get_doctor_supervisor(db:Session, fullName: str, page: int, page_size: int):
+    # Pagination Logic
+    # Maximum page size limit to prevent excessively large queries
+    max_page_size = 100
+    page_size = min(page_size, max_page_size)  # Enforce max page size
+    page = max(page, 1)  # Default to page 1 if the page number is less than 1
+    offset = (page - 1) * page_size  # Calculate the offset
+
+    
+    query=db.query(User).filter((User.roleName=="DOCTOR") & (User.nric_FullName.ilike(f"%{fullName}%")))
+    
+    total_count = query.count()  # Get total number of records
+    users = query.order_by(User.id).offset(offset).limit(page_size).all()  # Apply pagination
+
+    return { 
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "users": users
+    }
+
+def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch):
+    filters = []
+
+    if fields.id:
+        filters.append(User.id == fields.id)
+    if fields.preferredName:
+       filters.append(User.preferredName.ilike(f"%{fields.preferredName}%")) #partial matching
+    if fields.nric_FullName:
+        filters.append(User.nric_FullName.ilike(f"%{fields.nric_FullName}%")) #partial matching
+    if fields.nric:
+        filters.append(User.nric == fields.nric)
+    if fields.status:
+        filters.append(User.status == fields.status)
+    if fields.email:
+        filters.append(User.email.ilike(f"%{fields.email}%"))
+    if fields.verified is not None:
+        filters.append(User.verified == fields.verified)
+    if fields.active is not None:
+        filters.append(User.active == fields.active)
+    if fields.twoFactorEnabled is not None:
+        filters.append(User.twoFactorEnabled == fields.twoFactorEnabled)
+    if fields.roleName:
+        filters.append(User.roleName == fields.roleName)
+
+    # Pagination Logic
+    # Maximum page size limit to prevent excessively large queries
+    max_page_size = 100
+    page_size = min(page_size, max_page_size)  # Enforce max page size
+    page = max(page, 1)  # Default to page 1 if the page number is less than 1
+    offset = (page - 1) * page_size  # Calculate the offset
+
+
+    query=db.query(User).filter(and_(*filters))
+    
+    total_count = query.count()  # Get total number of records
+    users = query.order_by(User.id).offset(offset).limit(page_size).all()  # Apply pagination
+
+    return { 
+        "total": total_count,
+        "page": page,
+        "page_size": page_size,
+        "users": users
+    }
+
 #Update User
 async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpdate_User, modified_by):
     stmt = update(User).where(User.id == userId)
