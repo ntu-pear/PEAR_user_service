@@ -1,0 +1,57 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    env:
+      DB_SERVER_DEV: ${{ secrets.DB_SERVER_DEV }}
+      DB_DATABASE_DEV: ${{ secrets.DB_DATABASE_DEV }}
+      DB_DATABASE_PORT: ${{ secrets.DB_DATABASE_PORT }}
+      DB_USERNAME_DEV: ${{ secrets.DB_USERNAME_DEV }}
+      DB_PASSWORD_DEV: ${{ secrets.DB_PASSWORD_DEV }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      WEB_FE_ORIGIN: ${{ secrets.WEB_FE_ORIGIN }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.9.19
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.9.19'
+
+      - name: Create .env file from GitHub Secrets
+        run: |
+          echo "DB_SERVER_DEV=${{ secrets.DB_SERVER_DEV }}" >> .env
+          echo "DB_DATABASE_DEV=${{ secrets.DB_DATABASE_DEV }}" >> .env
+          echo "DB_DATABASE_PORT=${{ secrets.DB_DATABASE_PORT }}" >> .env
+          echo "DB_USERNAME_DEV=${{ secrets.DB_USERNAME_DEV }}" >> .env
+          echo "DB_PASSWORD_DEV=${{ secrets.DB_PASSWORD_DEV }}" >> .env
+          echo "DB_DRIVER_DEV=${{ secrets.DB_DRIVER_DEV }}" >> .env
+          echo "CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}" >> .env
+          echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
+          echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
+          echo "WEB_FE_ORIGIN=${{ secrets.WEB_FE_ORIGIN }}" >> .env
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Test with pytest
+        run: |
+          pytest
