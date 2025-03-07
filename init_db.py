@@ -4,7 +4,7 @@ from sqlalchemy.exc import ProgrammingError
 from app.database import Base
 from dotenv import load_dotenv
 from app.models import privacy_level_setting_model,role_model,user_model
-
+from urllib.parse import quote_plus
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,8 +15,18 @@ load_dotenv()
 #local
 #DATABASE_URL = os.getenv("DB_URL_LOCAL")
 
-DATABASE_URL = ("mssql+pyodbc://sa:Fyppear@2@10.96.188.171:1433/user_service_dev"
- "?TrustServerCertificate=yes&driver=ODBC+Driver+17+for+SQL+Server")
+username = os.getenv("DB_USERNAME_DEV")
+password = os.getenv("DB_PASSWORD_DEV") # Contains `@`, needs encoding
+server = os.getenv("DB_SERVER_DEV")
+database = os.getenv("DB_DATABASE_DEV")
+driver = "ODBC+Driver+17+for+SQL+Server"
+
+encoded_password = quote_plus(password)  # Encode special characters
+
+DATABASE_URL = (
+    f"mssql+pyodbc://{username}:{encoded_password}@{server}:1433/{database}"
+    f"?TrustServerCertificate=yes&driver={driver}"
+)
 
 print(DATABASE_URL, "Trying...")
 # Create engine for MSSQL database
