@@ -15,18 +15,20 @@ def get_privacy_level_setting_by_role(db: Session, roleId: str):
 def get_privacy_level_settings_by_role(db: Session, skip: int = 0, limit: int = 10):
     return db.query(Role).order_by(Role.id).offset(skip).limit(limit).all()
 
-#TODO: Created by + modified by should be from user
-def create_privacy_level_setting(db: Session, privacy_level_setting: PrivacyLevelSettingCreate, created_by: int):
-    db_privacy_level_setting = PrivacyLevelSetting(**privacy_level_setting.model_dump(),createdById=created_by,modifiedById=created_by)
+def create_privacy_level_setting(db: Session, privacy_user_id: str, privacy_level_setting: PrivacyLevelSettingCreate, created_by: int):
+    db_privacy_level_setting = PrivacyLevelSetting(**privacy_level_setting.model_dump(),id=privacy_user_id,createdById=created_by,modifiedById=created_by)
     db.add(db_privacy_level_setting)
     db.commit()
     db.refresh(db_privacy_level_setting)
     return db_privacy_level_setting
 
-def update_privacy_level_setting(db: Session, privacy_user_id: str, privacy_level_setting: PrivacyLevelSettingUpdate):
+def update_privacy_level_setting(db: Session, privacy_user_id: str, privacy_level_setting: PrivacyLevelSettingUpdate, modified_by:str):
     db_privacy_level_setting = db.query(PrivacyLevelSetting).filter(PrivacyLevelSetting.id == privacy_user_id).first()
     if db_privacy_level_setting:
-            # Update only provided fields
+        if db_privacy_level_setting.active == 0:
+            db_privacy_level_setting.privacyLevelSensitive = 0
+        db_privacy_level_setting.modifiedById = modified_by
+        # Update only provided fields
         for field, value in privacy_level_setting.model_dump(exclude_unset=True).items():
             setattr(db_privacy_level_setting, field, value)
         db.commit()

@@ -71,9 +71,6 @@ class User(Base):
 
     # Relationship to Session table
     user_session = relationship('User_Session', back_populates='users')
-    
-    # Relationship to Privacy table
-    privacy_level = relationship('PrivacyLevelSetting', back_populates='users')
 
     def get_created_date_sgt(self):
         """Convert createdDate to Singapore Time (SGT)"""

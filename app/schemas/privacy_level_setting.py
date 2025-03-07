@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 from app.models.privacy_level_setting_model import PrivacyStatus
 
-#TODO: id should be retrieved from user auth
 class PrivacyLevelSettingBase(BaseModel):
     privacyLevelSensitive: Optional[PrivacyStatus] = None
 

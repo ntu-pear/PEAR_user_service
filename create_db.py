@@ -58,9 +58,9 @@ connection_string = (
 )
 try:
     #ntu
-    #connection_string = f"DRIVER={driver};SERVER={server};DATABASE={DB_DATABASE};UID={username};PWD={password};"
+    connection_string = f"DRIVER={driver};SERVER={server};DATABASE={DB_DATABASE};UID={username};PWD={password};"
     #local
-    connection_string = (f"DRIVER={{{driver}}};"f"SERVER={server};"f"DATABASE={DB_DATABASE};"f"Trusted_Connection=yes;")
+    #connection_string = (f"DRIVER={{{driver}}};"f"SERVER={server};"f"DATABASE={DB_DATABASE};"f"Trusted_Connection=yes;")
     with pyodbc.connect(connection_string, autocommit=True) as conn:
         with conn.cursor() as cursor:
             cursor.execute(create_db_query)

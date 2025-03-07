@@ -3,7 +3,18 @@ INSERT INTO [user_service_dev].[dbo].[PRIVACY_LEVEL_SETTING](
     createdDate, modifiedDate, 
     createdById, modifiedById
 ) VALUES 
-('Ubdc5372f735', 'True', 'LOW', GETDATE(), GETDATE(), 1, 1),
-('Ubdc5372f736', 'True', 'MEDIUM', GETDATE(), GETDATE(), 1, 1),
-('Ubdc5372f737', 'True', 'HIGH', GETDATE(), GETDATE(), 1, 1),
-('Ubdc5372f738', 'False', 'NONE', GETDATE(), GETDATE(), 1, 1)
+('Pc8ec553e5f0', 'True', 'LOW', 
+GETDATE(), GETDATE(), 
+1, 1),
+
+('Pb895f80031b', 'True', 'MEDIUM',
+GETDATE(), GETDATE(), 
+1, 1),
+
+('Pc0d01686374', 'True', 'HIGH', 
+GETDATE(), GETDATE(), 
+1, 1),
+
+('Pbe117b0c697', 'False', 'NONE', 
+GETDATE(), GETDATE(), 
+1, 1)
