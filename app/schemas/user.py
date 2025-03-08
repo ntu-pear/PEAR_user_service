@@ -17,6 +17,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     nric: str
     password:str
+    confirm_Password: str
     
 class TempUserCreate(UserBase):
     nric: str

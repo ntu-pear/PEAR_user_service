@@ -214,6 +214,11 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Account has already been verified"
         )
+    if (user.password != user.confirm_Password):
+        raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Password does not match"
+        )
 
     # Use a transaction to ensure rollback on error
     try:
