@@ -14,11 +14,11 @@ class PrivacyLevelSettingUpdate(PrivacyLevelSettingBase):
 
 class PrivacyLevelSetting(PrivacyLevelSettingBase):
     id: str
+    active: bool
     createdById: str
     modifiedById: str
     createdDate: datetime
     modifiedDate: datetime
-    active: bool
 
     class Config:
         orm_mode = True
