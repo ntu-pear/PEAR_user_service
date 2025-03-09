@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..schemas.privacy_level_setting import PrivacyLevelSettingCreate, PrivacyLevelSettingUpdate, PrivacyLevelSetting
+from ..models.privacy_level_setting_model import PrivacyStatus
+from ..schemas.role import RoleRead
 from ..crud.privacy_level_setting_crud import get_privacy_level_setting_by_user, get_privacy_level_settings_by_user, get_privacy_level_setting_by_role, get_privacy_level_settings_by_role, create_privacy_level_setting, update_privacy_level_setting, delete_privacy_level_setting
 from ..crud.patient_allocation_crud import get_patient_allocation
 from ..database import get_db
@@ -21,14 +23,14 @@ def read_privacy_level_settings_by_user(skip: int = 0, limit: int = 10, db: Sess
     privacy_settings = get_privacy_level_settings_by_user(db, skip=skip, limit=limit)
     return privacy_settings
 
-@router.get("/privacy_settings_role/{user_id}", response_model=PrivacyLevelSetting)
+@router.get("/privacy_settings_role/{user_id}", response_model=RoleRead)
 def read_privacy_level_setting_by_role(user_id: str, db: Session = Depends(get_db)):
     db_privacy_setting = get_privacy_level_setting_by_role(db, roleId=user_id)
     if db_privacy_setting is None:
         raise HTTPException(status_code=404, detail="Privacy role setting not found")
     return db_privacy_setting
 
-@router.get("/privacy_settings_role/", response_model=list[PrivacyLevelSetting])
+@router.get("/privacy_settings_role/", response_model=list[RoleRead])
 def read_privacy_level_settings_by_role(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     privacy_settings = get_privacy_level_settings_by_role(db, skip=skip, limit=limit)
     return privacy_settings
@@ -63,12 +65,15 @@ def delete_existing_privacy_level_setting(patient_id: str, current_user: user_au
         raise HTTPException(status_code=404, detail="Privacy setting not found")
     return db_privacy_setting
 
-@router.get("/privacy_settings/")
-def evaluate_privacy_level(patient_id: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
-    patient_privacy_level = read_privacy_level_setting_by_user(patient_id, db)
-    user_privacy_level = read_privacy_level_setting_by_role(current_user["userId"], db)
+@router.get("/privacy_settings/", response_model=PrivacyLevelSetting)
+def evaluate_privacy_level(patient_id: str, db: Session = Depends(get_db)):
+    db_patient_privacy_setting = get_privacy_level_setting_by_user(db, patient_id)
+    db_user_privacy_setting = get_privacy_level_setting_by_role(db, 'ADmin123')
     
-    if user_privacy_level >= patient_privacy_level:
-        return 1
+    patient_privacy_level = db_patient_privacy_setting.privacyLevelSensitive
+    user_privacy_level = db_user_privacy_setting.privacyLevelSensitive
+    
+    if patient_privacy_level == PrivacyStatus.MEDIUM:
+        return db_patient_privacy_setting
     else:
-        return 0
+        raise HTTPException(status_code=404, detail="User is not authorized")
