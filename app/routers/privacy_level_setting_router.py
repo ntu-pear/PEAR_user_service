@@ -62,3 +62,13 @@ def delete_existing_privacy_level_setting(patient_id: str, current_user: user_au
     if db_privacy_setting is None:
         raise HTTPException(status_code=404, detail="Privacy setting not found")
     return db_privacy_setting
+
+@router.get("/privacy_settings/")
+def evaluate_privacy_level(patient_id: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    patient_privacy_level = read_privacy_level_setting_by_user(patient_id, db)
+    user_privacy_level = read_privacy_level_setting_by_role(current_user["userId"], db)
+    
+    if user_privacy_level >= patient_privacy_level:
+        return 1
+    else:
+        return 0
