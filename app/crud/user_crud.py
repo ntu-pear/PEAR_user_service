@@ -233,7 +233,7 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
     return db_user
 
 def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
-    # Validate NRIC
+    # Check NRIC Format
     UserService.validate_nric(user.nric)
     # Combine checks for email and NRIC into a single query
     existing_user = db.query(User).filter(
@@ -262,9 +262,6 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
         existing_user_id = db.query(User).filter(User.id == userId).first()
         if not existing_user_id:
             break
-
-    # Check NRIC Format
-    UserService.validate_nric(user.nric)
     # Check ContactNo Format
     UserService.validate_contactNo(user.contactNo)
     # Check DOB Format

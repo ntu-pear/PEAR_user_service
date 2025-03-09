@@ -26,10 +26,7 @@ class Role(Base):
     createdById = Column(String(255),nullable=False)
     modifiedById = Column(String(255),nullable=False) 
 
-    # Back-reference to users
-    def users(self):
-        from app.models.user_model import User 
-        return relationship("User", back_populates="role")  # One-to-Many relationship
+    users = relationship('User', back_populates='role')
     
     def get_created_date_sgt(self):
         """Convert createdDate to Singapore Time (SGT)"""
