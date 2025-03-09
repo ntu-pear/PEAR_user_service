@@ -4,7 +4,8 @@ from app.crud.user_crud import create_user
 from app.service import user_service
 from app.schemas.user import TempUserCreate, UserCreate
 from app.models.user_model import User
-
+from app.models.patient_allocation_model import PatientAllocation
+from app.models.privacy_level_setting_model import PrivacyLevelSetting
 from fastapi import HTTPException, status
 
 # Import your mock_db from tests/utils
@@ -51,7 +52,9 @@ def test_create_user_nric_already_exists(db_session_mock, Temp_User_Create):
     """Test Case for existing user with the same email"""
 
     # Simulate an existing user with the same email
-    db_session_mock.query(User).filter(User.nric == Temp_User_Create.nric).first.return_value = mock.MagicMock()
+    mock_existing_user = mock.MagicMock()
+    mock_existing_user.nric = Temp_User_Create.nric
+    db_session_mock.query.return_value.filter.return_value.first.return_value = mock_existing_user
 
     # Assert that an HTTPException is raised
     with pytest.raises(HTTPException):

@@ -3,6 +3,7 @@ from unittest import mock
 from app.crud.role_crud import create_role, update_role, delete_role
 from app.schemas.role import RoleCreate, RoleUpdate
 from app.models.role_model import Role
+from app.models.privacy_level_setting_model import PrivacyStatus 
 
 from fastapi import HTTPException, status
 
@@ -31,7 +32,9 @@ def test_create_role_roleName_exist(db_session_mock, Create_Role):
     # Arrange
     created_by = 1
     # Simulate Role exists with the given Name
-    db_session_mock.query(Role).filter(Role.roleName == Create_Role.roleName).first.return_value = mock.MagicMock()
+    mock_existing_role = mock.MagicMock()
+    mock_existing_role.roleName = Create_Role.roleName
+    db_session_mock.query(Role).filter(Role.roleName == Create_Role.roleName).first.return_value = mock_existing_role
     # Assert that an HTTPException is raised
     with pytest.raises(HTTPException):
         create_role(db_session_mock, Create_Role, created_by)
@@ -42,11 +45,14 @@ def test_update_role(db_session_mock, Update_Role):
     modified_by = 1
     roleID = 123
     # Simulate Role Found with the provided id/roleName
-    db_session_mock.query(Role).filter(Role.roleName == Update_Role.roleName).first.return_value = mock.MagicMock()
+    mock_existing_role = mock.MagicMock()
+    mock_existing_role.roleName = Update_Role.roleName
+    mock_existing_role.active = False 
+    db_session_mock.query(Role).filter(Role.roleName == Update_Role.roleName).first.return_value = mock_existing_role
     #Act
     result=update_role(db_session_mock, roleID ,Update_Role, modified_by)
     #Assertions
-    assert result.active =="F"
+    assert result.active is False
     assert result.roleName == "CAREGIVER"
     #Commit updated Role
     db_session_mock.commit.assert_called_once()
@@ -66,6 +72,7 @@ def Create_Role():
         roleName="DOCTOR",
         createdDate="2002-01-01",
         modifiedDate ="2002-01-01",
+        privacyLevelSensitive=PrivacyStatus.LOW.value,
     )
 @pytest.fixture
 def Update_Role():

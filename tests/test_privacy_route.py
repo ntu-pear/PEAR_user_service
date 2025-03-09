@@ -3,6 +3,7 @@ from unittest import mock
 from datetime import datetime
 from app.crud.privacy_level_setting_crud import get_privacy_level_setting_by_user, get_privacy_level_settings_by_user, get_privacy_level_setting_by_role, get_privacy_level_settings_by_role, create_privacy_level_setting, update_privacy_level_setting, delete_privacy_level_setting
 from app.schemas.privacy_level_setting import PrivacyLevelSettingCreate, PrivacyLevelSetting, PrivacyLevelSettingUpdate
+from app.models.privacy_level_setting_model import PrivacyStatus
 
 from fastapi import HTTPException, status
 
@@ -38,7 +39,7 @@ def test_create_privacy_level_setting(db_session_mock, Create_Privacy_Level):
 
     assert result.id == 'Pc8ec553e5f0'
     assert result.active == 1
-    assert result.privacyLevelSensitive == 1
+    assert result.privacyLevelSensitive == PrivacyStatus.LOW
     
 @pytest.fixture
 def db_session_mock():
