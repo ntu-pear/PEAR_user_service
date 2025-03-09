@@ -48,27 +48,6 @@ def get_users(db: Session, page: int, page_size:int ):
 def get_guardian_nric(db: Session, nric= str):
     return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
 
-def get_doctor_supervisor(db:Session, fullName: str, page: int, page_size: int):
-    # Pagination Logic
-    # Maximum page size limit to prevent excessively large queries
-    max_page_size = 100
-    page_size = min(page_size, max_page_size)  # Enforce max page size
-    page = max(page, 1)  # Default to page 1 if the page number is less than 1
-    offset = (page - 1) * page_size  # Calculate the offset
-
-    
-    query=db.query(User).filter((User.roleName=="DOCTOR") & (User.nric_FullName.ilike(f"%{fullName}%")))
-    
-    total_count = query.count()  # Get total number of records
-    users = query.order_by(User.id).offset(offset).limit(page_size).all()  # Apply pagination
-
-    return { 
-        "total": total_count,
-        "page": page,
-        "page_size": page_size,
-        "users": users
-    }
-
 def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch):
     filters = []
 
