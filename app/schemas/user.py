@@ -94,9 +94,6 @@ class AdminSearch(BaseModel):
     roleName: Optional[str]=None
     page: Optional[int] = 1  # Default to page 1
     page_size: Optional[int] = 10  # Default page size to 10
-
-class SupervisorSearch(BaseModel):
-    nric_FullName:str
 class PaginationResponse(BaseModel):
     total: int
     page: int
@@ -105,6 +102,3 @@ class PaginationResponse(BaseModel):
         orm_mode = True
 class UserPaginationResponse(PaginationResponse):
     users: List[AdminRead]
-
-class SupervisorPaginationResponse(PaginationResponse):
-    users: List[SupervisorSearch]

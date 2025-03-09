@@ -33,15 +33,15 @@ def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
 
-@router.post("/supervisor/get_doctors", response_model=schemas_user.SupervisorPaginationResponse)
+@router.post("/supervisor/get_doctors")
 @rate_limit(global_bucket, tokens_required=1)
-def get_doctor_by_name(fullName: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),page:Optional[int]=1, page_size:Optional[int]=10,db: Session = Depends(get_db)):
+def get_doctor_by_name(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_supervisor = current_user["roleName"] == "SUPERVISOR"
 
     if not is_supervisor:
         raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user = crud_user.get_doctor_supervisor(db=db, fullName=fullName, page=page,page_size=page_size)
+    db_user=db.query(User).filter((User.roleName=="DOCTOR")&(User.id == userId)).first()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
         
-    return db_user
+    return db_user.nric_FullName
