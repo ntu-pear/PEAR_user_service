@@ -29,9 +29,9 @@ if not REFRESH_SECRET_KEY:
 
 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")) # Token validity period
-REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES")) # Token validity period
-SESSION_EXPIRY_MINUTES=int(os.getenv('SESSION_EXPIRE_MINUTES')) #session validity period
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "20")) # Token validity period
+REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "150")) # Token validity period
+SESSION_EXPIRY_MINUTES=int(os.getenv("SESSION_EXPIRE_MINUTES", "30")) #session validity period
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
