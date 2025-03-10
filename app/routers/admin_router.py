@@ -46,7 +46,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
    
     return db_user
 
-@router.get("/admin/{userId}", response_model=schemas_user.AdminRead)
+@router.get("/admin/{userId}", response_model=schemas_user.AdminRead.from_orm)
 @rate_limit(global_bucket, tokens_required=1)
 def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
@@ -57,6 +57,18 @@ def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(Auth
         raise HTTPException(status_code=404, detail="User not found")
     
     return db_user
+
+@router.get("/admin/get_nric/{userId}")
+@rate_limit(global_bucket, tokens_required=1)
+def get_user_nric(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    db_user = crud_user.get_user(db=db, userId=userId)
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return db_user.nric
 
 @router.post("/admin/get_users_by_fields", response_model=schemas_user.UserPaginationResponse)
 @rate_limit(global_bucket, tokens_required=1)
@@ -92,8 +104,10 @@ def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_cu
         raise HTTPException(status_code=404, detail="User is not authorised")
     #Only Admin can read all users
     users = crud_user.get_users(db=db, page=page,page_size=page_size)
-    
-    return users
+    # Convert ORM objects to AdminRead
+    users_data = [schemas_user.AdminRead.from_orm(user) for user in users["users"]]
+
+    return users_data
 
 @router.get("/admin/get_email/{email}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
@@ -147,7 +161,7 @@ def reset_and_update_users_role(request: schemas_user.UpdateUsersRoleRequest,cur
                 failed_updates.append({"users_id": userId, "error": "User not found"})
     return {"Updated Users": updated_users, "Failed Updates":failed_updates}
 
-@router.delete("/admin/{userId}", response_model=schemas_user.UserBase)
+@router.delete("/admin/{userId}", response_model=schemas_user.AdminRead)
 def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
@@ -161,3 +175,5 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user
+
+

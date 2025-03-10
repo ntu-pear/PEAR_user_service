@@ -10,17 +10,17 @@ class UserBase(BaseModel):
     nric_Address: str
     nric_DateOfBirth: date= Field("YYYY-MM-DD")
     nric_Gender: GenderStatus
+    nric: str
     contactNo: str
     email: str
     roleName: Optional[str] = None
 
 class UserCreate(UserBase):
-    nric: str
     password:str
     confirm_Password: str
     
 class TempUserCreate(UserBase):
-    nric: str
+    pass
 
 class UserUpdate(BaseModel):
     preferredName: Optional[str] = None
@@ -64,6 +64,7 @@ class UserRead(BaseModel):
     verified: bool
     active: bool
     twoFactorEnabled: bool
+    
 class AdminRead(UserRead):
     lockOutEnabled: Optional[bool]=None
     lockoutReason: Optional[str]=None
@@ -92,8 +93,6 @@ class AdminSearch(BaseModel):
     active:Optional[bool]=None
     twoFactorEnabled:Optional[bool]=None
     roleName: Optional[str]=None
-    page: Optional[int] = 1  # Default to page 1
-    page_size: Optional[int] = 10  # Default page size to 10
 class PaginationResponse(BaseModel):
     total: int
     page: int
