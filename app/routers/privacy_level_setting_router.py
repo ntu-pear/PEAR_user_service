@@ -68,12 +68,12 @@ def delete_existing_privacy_level_setting(patient_id: str, current_user: user_au
 @router.get("/privacy_settings/", response_model=PrivacyLevelSetting)
 def evaluate_privacy_level(patient_id: str, db: Session = Depends(get_db)):
     db_patient_privacy_setting = get_privacy_level_setting_by_user(db, patient_id)
-    db_user_privacy_setting = get_privacy_level_setting_by_role(db, 'ADmin123')
+    db_user_privacy_setting = get_privacy_level_setting_by_role(db, 'Game1234')
     
     patient_privacy_level = db_patient_privacy_setting.privacyLevelSensitive
     user_privacy_level = db_user_privacy_setting.privacyLevelSensitive
     
-    if patient_privacy_level == PrivacyStatus.MEDIUM:
+    if user_privacy_level.value >= patient_privacy_level.value:
         return db_patient_privacy_setting
     else:
         raise HTTPException(status_code=404, detail="User is not authorized")
