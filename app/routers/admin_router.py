@@ -104,10 +104,8 @@ def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_cu
         raise HTTPException(status_code=404, detail="User is not authorised")
     #Only Admin can read all users
     users = crud_user.get_users(db=db, page=page,page_size=page_size)
-    # Convert ORM objects to AdminRead
-    users_data = [schemas_user.AdminRead.from_orm(user) for user in users["users"]]
 
-    return users_data
+    return users
 
 @router.get("/admin/get_email/{email}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
