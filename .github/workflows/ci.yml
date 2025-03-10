@@ -22,6 +22,8 @@ jobs:
       DB_DATABASE_PORT: ${{ secrets.DB_DATABASE_PORT }}
       DB_USERNAME_DEV: ${{ secrets.DB_USERNAME_DEV }}
       DB_PASSWORD_DEV: ${{ secrets.DB_PASSWORD_DEV }}
+      SENDPULSE_API_KEY: ${{ secrets.SENDPULSE_API_KEY }}
+      SENDPULSE_SECRET_KEY: ${{ secrets.SENDPULSE_SECRET_KEY }}
       CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
@@ -42,6 +44,8 @@ jobs:
           echo "DB_USERNAME_DEV=${{ secrets.DB_USERNAME_DEV }}" >> .env
           echo "DB_PASSWORD_DEV=${{ secrets.DB_PASSWORD_DEV }}" >> .env
           echo "DB_DRIVER_DEV=${{ secrets.DB_DRIVER_DEV }}" >> .env
+          echo "SENDPULSE_API_KEY=${{ secrets.SENDPULSE_API_KEY }}" >> .env
+          echo "SENDPULSE_SECRET_KEY=${{ secrets.SENDPULSE_SECRET_KEY }}" >> .env
           echo "CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}" >> .env
           echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
           echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env

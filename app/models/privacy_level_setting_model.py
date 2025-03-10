@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Boolean, Integer, String, DateTime, ForeignKey, BigInteger, Enum as SqlEnum
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declared_attr
+from app.models.patient_allocation_model import PatientAllocation
 from app.database import Base
 import pytz
 import enum
@@ -23,8 +25,8 @@ class PrivacyLevelSetting(Base):
     modifiedById = Column(String(255), nullable=True)
 
     # Relationship with Patient
-    patients = relationship('PatientAllocation', back_populates='privacy_level')
-
+    patients = relationship(PatientAllocation, back_populates='privacy_level')
+    
     def get_created_date_sgt(self):
         """Convert createdDate to Singapore Time (SGT)"""
         return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))

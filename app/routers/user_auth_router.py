@@ -18,7 +18,7 @@ import os
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 sgt_tz = pytz.timezone("Asia/Singapore")
 router = APIRouter()
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")) # Token validity period
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES" , "0")) # Token validity period
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 
 @router.post("/login/")#, response_model=user_auth.Token)

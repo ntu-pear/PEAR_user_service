@@ -35,14 +35,6 @@ def get_roles(db: Session, page:int, page_size:int):
     }
 
 def create_role(db: Session, role: RoleCreate, created_by:str):
-    # Generate a unique ID with a fixed length of 8
-    while True:
-        unique_id = role.roleName[0] + str(uuid.uuid4().hex[:7])
-        # Ensure the total length is 8 characters
-        roleId =unique_id[:8]  # Truncate to 8 if necessary
-        existing_role_id = db.query(Role).filter(Role.id == roleId).first()
-        if not existing_role_id:
-            break
 
     # Check if the role already exists
     existing_role = db.query(Role).filter(Role.roleName == role.roleName).first()
@@ -51,6 +43,15 @@ def create_role(db: Session, role: RoleCreate, created_by:str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A role with this name already exists."
         )
+
+    # Generate a unique ID with a fixed length of 8
+    while True:
+        unique_id = role.roleName[0].upper() + str(uuid.uuid4().hex[:7])  # Ensure first char is uppercase
+        roleId = unique_id[:8]  # Ensure exactly 8 characters
+        existing_role_id = db.query(Role).filter(Role.id == roleId).first()
+        if not existing_role_id:
+            break
+
     # Use a transaction to ensure rollback on error
     try:
         db_role = Role(**role.model_dump(),createdById=created_by,modifiedById=created_by,id=roleId)

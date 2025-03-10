@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import update
 from ..models.user_model import User
 from ..schemas import user as schemas_User
+from ..schemas import user as UserUpdate
 from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -164,15 +165,24 @@ def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by
 
 def delete_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
-    if db_user:
 
-        #delete user pic id from cloudinary
-        if db_user.profilePicture:
-            public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
-            cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
-        db.delete(db_user)
-        db.commit()
-    return db_user
+    # If the user does not exist, raise a 404 error
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    #delete user pic id from cloudinary
+    if db_user.profilePicture:
+        public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
+        cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
+
+    # Delete the user from the database
+    db.delete(db_user)
+    db.commit()
+
+    return {"message": "User deleted successfully"}
 
 def verify_user(db: Session, user: schemas_User.UserCreate):
     #Verify Info with User DB
@@ -223,6 +233,8 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
     return db_user
 
 def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
+    # Check NRIC Format
+    UserService.validate_nric(user.nric)
     # Combine checks for email and NRIC into a single query
     existing_user = db.query(User).filter(
         (User.email == user.email) | (User.nric == user.nric)
@@ -250,9 +262,6 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
         existing_user_id = db.query(User).filter(User.id == userId).first()
         if not existing_user_id:
             break
-
-    # Check NRIC Format
-    UserService.validate_nric(user.nric)
     # Check ContactNo Format
     UserService.validate_contactNo(user.contactNo)
     # Check DOB Format
@@ -275,6 +284,27 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."
         )
+    
+    return db_user
+
+def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by: int):
+    """Function to update an existing user"""
+
+    # Retrieve the user from the database
+    db_user = db.query(User).filter(User.id == user_id).first()
+
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # Update fields if provided
+    update_data = user_update.model_dump(exclude_unset=True)  # Exclude unset fields
+    for key, value in update_data.items():
+        setattr(db_user, key, value)
+
+    db_user.modifiedById = modified_by  # Track who modified the user
+
+    db.commit()
+    db.refresh(db_user)
     
     return db_user
 

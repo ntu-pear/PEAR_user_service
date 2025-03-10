@@ -26,8 +26,8 @@ class Role(Base):
     createdById = Column(String(255),nullable=False)
     modifiedById = Column(String(255),nullable=False) 
 
-    # Back-reference to users
-    users = relationship('User', back_populates='role')  # One-to-Many relationship
+    users = relationship('User', back_populates='role')
+    
     def get_created_date_sgt(self):
         """Convert createdDate to Singapore Time (SGT)"""
         return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))

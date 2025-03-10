@@ -15,7 +15,7 @@ from app.service import user_auth_service as AuthService
 import uuid
 import os
 # Setup Variables
-SESSION_EXPIRY_MINUTES=int(os.getenv('SESSION_EXPIRE_MINUTES'))
+SESSION_EXPIRY_MINUTES=int(os.getenv("SESSION_EXPIRE_MINUTES", "0"))
 # Set timezone to Singapore Time (SGT)
 sgt_tz = pytz.timezone("Asia/Singapore")
 

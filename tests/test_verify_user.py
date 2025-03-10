@@ -94,5 +94,6 @@ def User_Create():
     email= "daniel@gmail.com",
     roleName= "DOCTOR",
     nric= "S1234567D",
-    password = "ILoVEFYP!123")
+    password = "ILoVEFYP!123",
+    confirm_Password= "ILoVEFYP!123")
 

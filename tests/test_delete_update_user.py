@@ -20,6 +20,7 @@ def test_update_user(db_session_mock, User_Update):
     # Simulate an existing user with the same id
     mock_existing_user = mock.MagicMock()
     mock_existing_user.id = userId
+    mock_existing_user.nric_FullName = "DANIEL TAN"
     db_session_mock.query(User).filter(User.id == userId).first.return_value = mock_existing_user
     result = user_crud.update_user(db_session_mock, userId, User_Update, modified_by)
     #Assert
@@ -51,7 +52,7 @@ def test_delete_user(db_session_mock):
     db_session_mock.query(User).filter(User.id == userId).first.return_value = mock_existing_user
     result = user_crud.delete_user(db_session_mock, userId)
     #Assert
-    assert result.id == userId
+    assert result == {"message": "User deleted successfully"}
 
 
 def test_delete_user_invalid_userId(db_session_mock):
