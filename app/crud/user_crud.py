@@ -37,13 +37,7 @@ def get_users(db: Session, page: int, page_size:int ):
     # Get the users with pagination
     users = query.order_by(User.id).offset(offset).limit(page_size).all()
 
-    # Return the paginated response
-    return {
-        "total": total_count,
-        "page": page,
-        "page_size": page_size,
-        "users": users
-    }
+    return users, total_count
 
 def get_guardian_nric(db: Session, nric= str):
     return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
@@ -85,12 +79,7 @@ def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_
     total_count = query.count()  # Get total number of records
     users = query.order_by(User.id).offset(offset).limit(page_size).all()  # Apply pagination
 
-    return { 
-        "total": total_count,
-        "page": page,
-        "page_size": page_size,
-        "users": users
-    }
+    return users, total_count
 
 #Update User
 async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpdate_User, modified_by):

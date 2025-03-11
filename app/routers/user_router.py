@@ -126,7 +126,7 @@ def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_curren
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     
-    return db_user
+    return schemas_user.UserRead.from_orm(db_user)
 
 #Change Password
 @router.put("/user/change_password/")

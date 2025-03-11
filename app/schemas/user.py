@@ -64,17 +64,41 @@ class UserRead(BaseModel):
     verified: bool
     active: bool
     twoFactorEnabled: bool
-    
+
+    @staticmethod
+    def mask_nric(nric: str) -> str:
+        """Mask the first 5 characters of the NRIC."""
+        return "*****" + nric[5:] if nric else None
+
+    @classmethod
+    def from_orm(cls, user):
+        return cls(
+            id=user.id,
+            preferredName=user.preferredName,
+            nric_FullName=user.nric_FullName,
+            nric=cls.mask_nric(user.nric),  # Masked NRIC
+            nric_Address=user.nric_Address,
+            nric_DateOfBirth=user.nric_DateOfBirth,
+            nric_Gender=user.nric_Gender.value,
+            contactNo=user.contactNo,
+            email=user.email,
+            allowNotification=user.allowNotification,
+            profilePicture=user.profilePicture,
+            status=user.status,
+            emailConfirmed=user.emailConfirmed,
+            verified=user.verified,
+            active=user.active,
+            twoFactorEnabled=user.twoFactorEnabled
+        )
 class AdminRead(UserRead):
     lockOutEnabled: Optional[bool]=None
-    lockoutReason: Optional[str]=None
+    lockOutReason: Optional[str]=None
     loginTimeStamp: Optional[datetime]=None
     lastPasswordChanged: Optional[datetime]=None
-    #password:Optional[str]=None
     createdById: Optional[str]=None
-    createdDate: datetime
+    createdDate: Optional[datetime]=None
     modifiedById: Optional[str]=None
-    modifiedDate: datetime
+    modifiedDate: Optional[datetime]=None
     
     class Config:
         orm_mode = True
@@ -82,6 +106,21 @@ class AdminRead(UserRead):
             datetime: lambda v: v.strftime('%Y-%m-%d %H:%M:%S') if v else None
         }
 
+    @classmethod
+    def from_orm(cls, user):
+        """Extend UserRead.from_orm to include AdminRead fields."""
+        base_data = super().from_orm(user)  # Get fields from UserRead
+        return cls(
+            **base_data.model_dump(exclude_unset=True),  # Unpack UserRead fields
+            lockOutEnabled=user.lockOutEnabled,
+            lockOutReason=user.lockOutReason,
+            loginTimeStamp=user.loginTimeStamp,
+            lastPasswordChanged=user.lastPasswordChanged,
+            createdById=user.createdById,
+            createdDate=user.createdDate,
+            modifiedById=user.modifiedById,
+            modifiedDate=user.modifiedDate
+        )
 class AdminSearch(BaseModel):
     id:Optional[str]=None
     preferredName: Optional[str]=None
