@@ -281,6 +281,9 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
 
         # Open the image
         image = Image.open(BytesIO(await file.read()))
+        # Read and convert image
+        if image.mode == "RGBA":
+            image = image.convert("RGB")
 
         # Resize the image (maintains aspect ratio)
         image.thumbnail(MAX_SIZE)
