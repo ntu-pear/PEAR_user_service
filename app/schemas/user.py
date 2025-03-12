@@ -80,6 +80,7 @@ class UserRead(BaseModel):
             nric_Address=user.nric_Address,
             nric_DateOfBirth=user.nric_DateOfBirth,
             nric_Gender=user.nric_Gender.value,
+            roleName=user.roleName,
             contactNo=user.contactNo,
             email=user.email,
             allowNotification=user.allowNotification,
