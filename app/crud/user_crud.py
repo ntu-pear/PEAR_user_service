@@ -7,7 +7,7 @@ from ..schemas import user as UserUpdate
 from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
-from app.service import user_service as UserService
+from app.service import validation_service as Validation_Service
 from app.service import email_service as EmailService
 from sqlalchemy import and_
 import uuid
@@ -89,7 +89,7 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
     stmt = stmt.values(modifiedById=modified_by)
     for field, value in user.model_dump(exclude_unset=True).items():
         if field =="contactNo":
-            UserService.validate_contactNo(value)
+            Validation_Service.validate_contactNo(value)
         if field != "email":
             stmt = stmt.values({field: value})
         if field == "email":
@@ -124,11 +124,11 @@ def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Ad
     for field, value in user.model_dump(exclude_unset=True).items():
         # Need to addd in format checking for various fields
         if field =="nric":
-            UserService.validate_nric(value)
+            Validation_Service.validate_nric(value)
         if field =="nric_DateOfBirth":
-            UserService.validate_dob(value)
+            Validation_Service.validate_dob(value)
         if field=="contactNo":
-            UserService.validate_contactNo(value)
+            Validation_Service.validate_contactNo(value)
         if field != "email":
             stmt = stmt.values({field: value})
 
@@ -182,7 +182,7 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
             detail="User not found"
         )
     if db_user.verified == False:
-        if not UserService.verify_userDetails(db_user, user):
+        if not Validation_Service.verify_userDetails(db_user, user):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Details do not match with pre-registered details"
@@ -201,7 +201,7 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
     # Use a transaction to ensure rollback on error
     try:
         #Check password format
-        UserService.validate_password_format(user.password)
+        Validation_Service.validate_password_format(user.password)
         # Hashes the password
         db_user.password = user_auth_service.get_password_hash(user.password)
         #Set Account as Verified
@@ -223,7 +223,7 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
 
 def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
     # Check NRIC Format
-    UserService.validate_nric(user.nric)
+    Validation_Service.validate_nric(user.nric)
     # Combine checks for email and NRIC into a single query
     existing_user = db.query(User).filter(
         (User.email == user.email) | (User.nric == user.nric)
@@ -252,9 +252,9 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
         if not existing_user_id:
             break
     # Check ContactNo Format
-    UserService.validate_contactNo(user.contactNo)
+    Validation_Service.validate_contactNo(user.contactNo)
     # Check DOB Format
-    UserService.validate_dob(user.nric_DateOfBirth)
+    Validation_Service.validate_dob(user.nric_DateOfBirth)
 
     # Use a transaction to ensure rollback on error
     try:

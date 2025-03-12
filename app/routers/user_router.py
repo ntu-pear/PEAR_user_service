@@ -9,7 +9,7 @@ from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
-from app.service import user_service as UserService
+from app.service import validation_service as Validation_Service
 from app.models.user_model import User
 from sqlalchemy.exc import IntegrityError
 import cloudinary
@@ -142,7 +142,7 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         raise HTTPException(status_code=404, detail="Password do not match")
     try:
         #Check password format
-        UserService.validate_password_format(password.newPassword)
+        Validation_Service.validate_password_format(password.newPassword)
         #Hash password
         user.password = AuthService.get_password_hash(password.newPassword)
         #update modifiedById
@@ -236,7 +236,7 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
         raise HTTPException(status_code=404, detail="User not found")
     try:
         #Check password format
-        UserService.validate_password_format(userResetPassword.newPassword)
+        Validation_Service.validate_password_format(userResetPassword.newPassword)
         #Hash password
         user.password = AuthService.get_password_hash(userResetPassword.newPassword)
         #update modifiedById
@@ -271,9 +271,7 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found.")
     # Validate file type
-    allowed_formats = ["image/jpeg", "image/png"]
-    if file.content_type not in allowed_formats:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only JPG and PNG are allowed.")
+    Validation_Service.validate_profile_picture_format(file)
 
     try:
         # # Delete old profile picture from Cloudinary**

@@ -80,7 +80,7 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
         "refresh_token": refresh_token,
         "token_type": "bearer",
         # Include token expiry information in the response for the client to handle reauthentication.
-        "access_token_expires_in":new_access_token["expires_at"],
+        "access_token_expires_at":new_access_token["expires_at"],
         #"data": data,  # Avoid sensitive data
     }
 

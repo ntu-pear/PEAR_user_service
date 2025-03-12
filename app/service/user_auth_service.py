@@ -127,6 +127,7 @@ def decode_refresh_token(token: str):
     except Exception as e:
         logging.error(f"Unexpected token decoding error: {e}")
         raise unknown_token_exception
+    
 #Check if refresh token matches the session's refresh token
 def check_refresh_token(session_id:str, token:str, db: Session = Depends(get_db)):
     #get Session
