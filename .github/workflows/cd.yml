@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: [self-hosted, Windows, X64, user]
+    runs-on: [self-hosted, Linux, X64, user]
 
     env:
       DB_SERVER_DEV: ${{ secrets.DB_SERVER_DEV }}
