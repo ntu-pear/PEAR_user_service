@@ -50,6 +50,12 @@ jobs:
           echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
           echo "WEB_FE_ORIGIN=${{ secrets.WEB_FE_ORIGIN }}" >> .env
 
+      # Set up kubectl using Azure's GitHub Action (for Ubuntu)
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v1
+        with:
+          version: 'latest'  # Optionally specify a version (e.g., 'v1.21.0')
+
       - name: Delete old deployment
         run: |
           echo "Deleting old deployment..."
