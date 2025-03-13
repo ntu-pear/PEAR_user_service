@@ -56,6 +56,14 @@ jobs:
         with:
           version: 'latest'  # Optionally specify a version (e.g., 'v1.21.0')
 
+      - name: Set up kubeconfig from GitHub Secret
+        run: |
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+        
+      - name: Verify kubectl is working
+        run: |
+          kubectl get nodes
+
       - name: Delete old deployment
         run: |
           echo "Deleting old deployment..."
