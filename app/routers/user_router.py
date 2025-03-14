@@ -32,6 +32,8 @@ from cachetools import TTLCache
 
 sgt_tz = pytz.timezone("Asia/Singapore")
 global_bucket = TokenBucket(rate=5, capacity=10)
+# use this global bucket to test rate limiter, to make it run out of tokens
+# global_bucket = TokenBucket(rate=0.1, capacity=10)
 
 # Create a cache for user details (maxsize=100, TTL=300 seconds)
 user_cache = TTLCache(maxsize=100, ttl=300)

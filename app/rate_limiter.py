@@ -56,13 +56,19 @@ def rate_limit(bucket: TokenBucket, tokens_required=1):
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             if not bucket.allow_request(tokens_required):
-                raise HTTPException(status_code=429, detail="Too Many Requests")
+                next_token_in = 1 / bucket.rate  # Time in seconds until the next token
+
+                raise HTTPException(status_code=429, detail=f"Too Many Requests. Tokens Left: {bucket.tokens}, "
+                           f"Next token in: {round(next_token_in, 2)} seconds.")
             return await func(*args, **kwargs)
 
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             if not bucket.allow_request(tokens_required):
-                raise HTTPException(status_code=429, detail="Too Many Requests")
+                next_token_in = 1 / bucket.rate  # Time in seconds until the next token
+
+                raise HTTPException(status_code=429, detail=f"Too Many Requests. Tokens Left: {bucket.tokens}, "
+                           f"Next token in: {round(next_token_in, 2)} seconds.")
             return func(*args, **kwargs)
 
         # Choose the correct wrapper based on whether the function is async
@@ -85,26 +91,30 @@ def rate_limit_by_ip(tokens_required=1):
     """
 
     def decorator(func):
-        # explicitly declare request, so that we can extract ip address
         @wraps(func)
         async def async_wrapper(request: Request, *args, **kwargs):
             client_ip = request.client.host
             bucket = ip_rate_limiter_dict[client_ip]
 
             if not bucket.allow_request(tokens_required):
-                raise HTTPException(status_code=429, detail="Too Many Requests")
-            return await func(*args, **kwargs)
+                next_token_in = 1 / bucket.rate  # Time in seconds until the next token
+                raise HTTPException(status_code=429, detail=f"Too Many Requests from {client_ip}, "
+                        f"Too Many Requests. Tokens Left: {bucket.tokens}, "
+                        f"Next token in: {round(next_token_in, 2)} seconds.")
+            return await func(request, *args, **kwargs)  # Ensure request is passed explicitly
 
         @wraps(func)
         def sync_wrapper(request: Request, *args, **kwargs):
             client_ip = request.client.host
-            bucket = rate_limiter_buckets[client_ip]
+            bucket = ip_rate_limiter_dict[client_ip]
 
             if not bucket.allow_request(tokens_required):
-                raise HTTPException(status_code=429, detail="Too Many Requests")
-            return func(*args, **kwargs)
+                next_token_in = 1 / bucket.rate  # Time in seconds until the next token
+                raise HTTPException(status_code=429, detail=f"Too Many Requests from {client_ip}, "
+                        f"Too Many Requests. Tokens Left: {bucket.tokens}, "
+                        f"Next token in: {round(next_token_in, 2)} seconds.")
+            return func(request, *args, **kwargs)  # Ensure request is passed explicitly
 
-        # Choose the correct wrapper based on whether the function is async
         return async_wrapper if iscoroutinefunction(func) else sync_wrapper
 
     return decorator
