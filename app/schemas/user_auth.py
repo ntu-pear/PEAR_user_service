@@ -9,3 +9,4 @@ class TokenData(BaseModel):
     userId: str = None
     fullName: str = None
     roleName: str = None
+    email: str= None

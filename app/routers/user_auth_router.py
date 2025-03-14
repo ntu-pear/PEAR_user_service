@@ -64,7 +64,8 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     data={
             "userId": payload["userId"], 
             "fullName": payload["fullName"], 
-            "roleName": payload["roleName"]
+            "roleName": payload["roleName"],
+            "email": payload["email"]
         }
     #hide session id from frontend
     serialized_data = json.dumps({**data, "sessionId": payload["sessionId"]})

@@ -26,8 +26,6 @@ if not REFRESH_SECRET_KEY:
     SECRET_KEY = "FakeKey2"
     logging.warning("REFRESH_SECRET_KEY environment variable not set. Using an insecure fallback for development.")
     # raise ValueError("SECRET_KEY environment variable not set.")
-
-
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "0")) # Token validity period
 REFRESH_TOKEN_EXPIRE_MINUTES = int(os.getenv("REFRESH_TOKEN_EXPIRE_MINUTES", "0")) # Token validity period
@@ -159,13 +157,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     check_access_token(session_id=userDetails["sessionId"], token=token, db=db)
 
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
-    #Check if token's roleName matches with user's rolename in DB
-    if ((userDetails["roleName"]!=user.roleName)| (userDetails["userId"]!=user.id) | (userDetails["fullName"]!=user.nric_FullName)):
+    #Check if token's details matches with user's details in DB
+    if ((userDetails["roleName"]!=user.roleName)| (userDetails["userId"]!=user.id) | (userDetails["fullName"]!=user.nric_FullName) | (userDetails["email"]!= user.email)):
         raise HTTPException(status_code=404, detail="Token value does not match with database")
     if not user:
         raise user_credentials_exception
 
-    return {"userId": user.id, "fullName": user.nric_FullName, "roleName": user.roleName}
+    return {"userId": user.id, "fullName": user.nric_FullName, "roleName": user.roleName, "email": user.email}
 
 #Create access and refresh tokens
 def create_tokens(user, sessionId:str):
@@ -174,6 +172,7 @@ def create_tokens(user, sessionId:str):
         "userId": user.id,
         "fullName": user.nric_FullName,
         "roleName": user.roleName,
+        "email": user.email
     }
 
     # Serialize payload and generate access token
@@ -190,6 +189,5 @@ def create_tokens(user, sessionId:str):
         # Include token expiry information in the response for the client to handle reauthentication.
         "access_token_expires_at": access_token["expires_at"],
         "refresh_token_expires_at": refresh_token["expires_at"],
-        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES), 
-        #"data": data,  # Avoid sensitive data
+        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)
     }
