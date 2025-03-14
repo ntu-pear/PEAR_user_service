@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 from app.crud import user_crud 
-from app.service import user_service
+from app.service import validation_service
 from app.schemas.user import UserUpdate, UserRead
 from app.models.user_model import User
 
