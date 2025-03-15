@@ -27,7 +27,7 @@ def read_roles(current_user: user_auth.TokenData = Depends(AuthService.get_curre
     roles = role_crud.get_roles(db, page=page, page_size=page_size)
     return roles
 
-@router.post("/roles/", response_model=RoleRead )
+@router.post("/roles/create", response_model=RoleRead )
 def create_new_role(role: RoleCreate,  current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
@@ -35,7 +35,7 @@ def create_new_role(role: RoleCreate,  current_user: user_auth.TokenData = Depen
     
     return role_crud.create_role(db=db, role=role, created_by=1)
 
-@router.put("/roles/{roleId}", response_model=RoleRead)
+@router.put("/roles/update/{roleId}", response_model=RoleRead)
 def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
@@ -45,7 +45,7 @@ def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role
 
-@router.delete("/roles/{roleId}", response_model=RoleRead)
+@router.delete("/roles/delete/{roleId}", response_model=RoleRead)
 def delete_existing_role(roleId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
