@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from app.database import engine, Base
-from app.routers import admin_router,user_auth_router,supervisor_router, user_router,role_router,privacy_level_setting_router,email_router,verification_router,patient_allocation_router
+from app.routers import admin_router,user_auth_router,supervisor_router, user_router,role_router,email_router,verification_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -55,11 +55,9 @@ app.include_router(admin_router.router, prefix="/api/v1", tags=["admin"])
 app.include_router(user_router.router, prefix="/api/v1", tags=["users"])
 app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
 app.include_router(supervisor_router.router, prefix="/api/v1", tags=["supervisor"])
-app.include_router(privacy_level_setting_router.router, prefix="/api/v1", tags=["privacy_level"])
-app.include_router(user_auth_router.router, prefix="/api/v1", tags=["auth"])
+app.include_router(user_auth_router.router, prefix="/api/v1", tags=["authentication"])
 app.include_router(email_router.router, prefix="/api/v1", tags=["email"])
 app.include_router(verification_router.router, prefix="/api/v1", tags=["2FA"])
-app.include_router(patient_allocation_router.router, prefix="/api/v1", tags=["patient_allocation"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the User API hello"} 
