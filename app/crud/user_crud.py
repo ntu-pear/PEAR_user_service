@@ -171,7 +171,7 @@ def delete_user(db: Session, userId: str):
     db.delete(db_user)
     db.commit()
 
-    return {"message": "User deleted successfully"}
+    return db_user
 
 def verify_user(db: Session, user: schemas_User.UserCreate):
     #Verify Info with User DB

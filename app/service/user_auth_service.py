@@ -62,6 +62,13 @@ user_credentials_exception = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+user_verify_exception = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="User is not verified",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+
 
 # Methods
 def get_password_hash(password):
@@ -189,5 +196,5 @@ def create_tokens(user, sessionId:str):
         # Include token expiry information in the response for the client to handle reauthentication.
         "access_token_expires_at": access_token["expires_at"],
         "refresh_token_expires_at": refresh_token["expires_at"],
-        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)
+        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)   
     }
