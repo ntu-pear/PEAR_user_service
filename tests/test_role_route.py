@@ -3,7 +3,6 @@ from unittest import mock
 from app.crud.role_crud import create_role, update_role, delete_role
 from app.schemas.role import RoleCreate, RoleUpdate
 from app.models.role_model import Role
-from app.models.privacy_level_setting_model import PrivacyStatus 
 
 from fastapi import HTTPException, status
 
@@ -72,12 +71,11 @@ def Create_Role():
         roleName="DOCTOR",
         createdDate="2002-01-01",
         modifiedDate ="2002-01-01",
-        privacyLevelSensitive=PrivacyStatus.LOW.value,
     )
 @pytest.fixture
 def Update_Role():
     """Fixture to provide a mock Role Object."""
     return RoleUpdate(
         roleName="CAREGIVER",
-        active = "F"
+        active = False
     )

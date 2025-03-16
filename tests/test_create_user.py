@@ -4,8 +4,6 @@ from app.crud.user_crud import create_user
 from app.service import validation_service
 from app.schemas.user import TempUserCreate, UserCreate
 from app.models.user_model import User
-from app.models.patient_allocation_model import PatientAllocation
-from app.models.privacy_level_setting_model import PrivacyLevelSetting
 from fastapi import HTTPException, status
 
 # Import your mock_db from tests/utils

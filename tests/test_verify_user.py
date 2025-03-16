@@ -83,7 +83,6 @@ def db_session_mock():
 def User_Create():
     """Fixture to provide a mock User object. With Password"""
     from app.models.role_model import Role
-    from app.models.privacy_level_setting_model import PrivacyLevelSetting
     
     return UserCreate(
     nric_FullName="DANIEL ANG",

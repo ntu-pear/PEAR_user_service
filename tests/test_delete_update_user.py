@@ -52,7 +52,7 @@ def test_delete_user(db_session_mock):
     db_session_mock.query(User).filter(User.id == userId).first.return_value = mock_existing_user
     result = user_crud.delete_user(db_session_mock, userId)
     #Assert
-    assert result == {"message": "User deleted successfully"}
+    assert result == mock_existing_user
 
 
 def test_delete_user_invalid_userId(db_session_mock):
