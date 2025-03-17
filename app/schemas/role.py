@@ -5,14 +5,12 @@ from app.models.role_model import RolePrivacyStatus
 from typing import List
 class RoleBase(BaseModel):
     roleName: str
-    privacyLevelSensitive: RolePrivacyStatus
 
 class RoleCreate(RoleBase):
     pass
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
-    privacyLevelSensitive: Optional[RolePrivacyStatus] = None
     active: Optional[bool] = None
 
 class RoleRead(RoleBase):
