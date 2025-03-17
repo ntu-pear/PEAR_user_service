@@ -8,7 +8,7 @@ import uuid
 
 
 def get_role(db: Session, roleId: str):
-    return db.query(Role).filter(Role.id == roleId).first()
+    return db.query(Role).filter(Role.roleName == roleId).first()
 
 def get_roles(db: Session, page:int, page_size:int): 
     # Maximum page size limit to prevent excessively large queries
