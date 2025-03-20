@@ -153,7 +153,7 @@ def reset_and_update_users_role(request: schemas_user.UpdateUsersRoleRequest,cur
     updated_users = []
     failed_updates=[]
     update_list = request.users_Id
-    db_users= crud_role.get_users_by_role(role_name=request.role, db=db)
+    db_users= crud_role.get_users_by_role(role_name=request.role, page=1, page_size=10, db=db)
     #No updates for admin role
     if request.role != "ADMIN":
         for user in db_users:
