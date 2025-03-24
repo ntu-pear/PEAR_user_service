@@ -8,7 +8,7 @@ import uuid
 
 
 def get_role(db: Session, roleId: str):
-    return db.query(Role).filter(Role.roleName == roleId).first()
+    return db.query(Role).filter(Role.id == roleId).first()
 
 def get_roles(db: Session, page:int, page_size:int): 
     # Maximum page size limit to prevent excessively large queries
@@ -87,6 +87,11 @@ def delete_role(db: Session, roleId: str):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Role not found."
+        )
+    if db_role.roleName == "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete Admin."
         )
     db.delete(db_role)
     db.commit()
