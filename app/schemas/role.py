@@ -7,7 +7,7 @@ class RoleBase(BaseModel):
     roleName: str
 
 class RoleCreate(RoleBase):
-    pass
+    privacyLevelSensitive: RolePrivacyStatus
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
