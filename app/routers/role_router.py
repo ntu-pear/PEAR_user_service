@@ -17,7 +17,7 @@ def read_role(roleId: str, db: Session = Depends(get_db)):
     return db_role
 
 @router.get("/roles/", response_model=RolePaginationResponse)
-def read_roles(page: Optional[int] = 1, page_size: Optional[int]=10, db: Session = Depends(get_db)):
+def read_roles(page: Optional[int] = 0, page_size: Optional[int]=10, db: Session = Depends(get_db)):
     roles = role_crud.get_roles(db, page=page, page_size=page_size)
     return roles
 
@@ -50,7 +50,7 @@ def delete_existing_role(roleId: str,current_user: user_auth.TokenData = Depends
     return db_role
 
 @router.get("/roles/users/{role_name}")
-def get_users_by_role(role_name: str,page:Optional[int]=1, page_size:Optional[int]=10,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+def get_users_by_role(role_name: str,page:Optional[int]=0, page_size:Optional[int]=10,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")

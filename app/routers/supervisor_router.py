@@ -12,8 +12,6 @@ from ..service import user_auth_service as AuthService
 from app.models.user_model import User
 import logging
 import sys
-import cloudinary
-import cloudinary.uploader
 from typing import Optional
 
 
@@ -33,7 +31,7 @@ def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
 
-@router.post("/supervisor/get_doctors")
+@router.post("/supervisor/get_doctor")
 @rate_limit(global_bucket, tokens_required=1)
 def get_doctor_by_name(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_supervisor = current_user["roleName"] == "SUPERVISOR"
