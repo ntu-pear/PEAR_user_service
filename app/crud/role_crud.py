@@ -14,8 +14,8 @@ def get_roles(db: Session, page:int, page_size:int):
     # Maximum page size limit to prevent excessively large queries
     max_page_size = 100
     page_size = min(page_size, max_page_size)  # Enforce max page size
-    page = max(page, 1)  # Default to page 1 if the page number is less than 1
-    offset = (page - 1) * page_size  # Calculate the offset
+    page = max(page, 0)  # Default to page 0 if the page number is less than 0
+    offset = page* page_size  # Calculate the offset
 
     # Query to get all roles (no filters applied)
     query = db.query(Role)
@@ -104,7 +104,7 @@ def get_users_by_role(role_name: str, page: int, page_size: int, db: Session):
         return {"error": "Role not found"}
 
     # Pagination logic
-    offset = (page - 1) * page_size
+    offset = page * page_size
     # Get total number of users with the given role
     total_count = db.query(User).filter(User.roleName == role.roleName).count()
 

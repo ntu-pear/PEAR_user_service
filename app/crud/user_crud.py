@@ -25,8 +25,8 @@ def get_users(db: Session, page: int, page_size:int ):
     # Maximum page size limit to prevent excessively large queries
     max_page_size = 100
     page_size = min(page_size, max_page_size)  # Enforce max page size
-    page = max(page, 1)  # Default to page 1 if the page number is less than 1
-    offset = (page - 1) * page_size  # Calculate the offset
+    page = max(page, 0)  # Default to page 0 if the page number is less than 0
+    offset = page  * page_size  # Calculate the offset
 
     # Query to get all users (no filters applied)
     query = db.query(User)
@@ -70,8 +70,8 @@ def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_
     # Maximum page size limit to prevent excessively large queries
     max_page_size = 100
     page_size = min(page_size, max_page_size)  # Enforce max page size
-    page = max(page, 1)  # Default to page 1 if the page number is less than 1
-    offset = (page - 1) * page_size  # Calculate the offset
+    page = max(page, 0)  # Default to page 0 if the page number is less than 0
+    offset = page * page_size  # Calculate the offset
 
 
     query=db.query(User).filter(and_(*filters))
