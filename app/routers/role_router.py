@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from ..schemas.role import RoleCreate, RoleUpdate, RoleRead, RolePaginationResponse
+from ..models.role_model import Role
+from ..schemas.role import RoleCreate, RoleUpdate, RoleRead, AdminRolePaginationResponse,RoleNamePaginationResponse
 from ..schemas import user_auth
 from ..crud import role_crud
 from ..database import get_db
@@ -9,6 +10,11 @@ from typing import Optional
 
 router = APIRouter()
 
+@router.get("/roles_name/", response_model=RoleNamePaginationResponse)
+def get_roles_name(page: Optional[int] = 0, page_size: Optional[int]=10, db: Session = Depends(get_db)):
+    roles = role_crud.get_roles(db, page=page, page_size=page_size)
+    return roles
+    
 @router.get("/roles/{roleId}", response_model=RoleRead)
 def read_role(roleId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
@@ -19,7 +25,7 @@ def read_role(roleId: str, current_user: user_auth.TokenData = Depends(AuthServi
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role
 
-@router.get("/roles/", response_model=RolePaginationResponse)
+@router.get("/roles/", response_model=AdminRolePaginationResponse)
 def read_roles(page: Optional[int] = 0, page_size: Optional[int]=10, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:

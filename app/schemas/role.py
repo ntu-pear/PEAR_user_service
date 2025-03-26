@@ -32,7 +32,11 @@ class RolePaginationResponse(BaseModel):
     total: int
     page: int
     page_size: int
-    roles: List[RoleRead]
-
     class Config:
         orm_mode = True
+
+class AdminRolePaginationResponse(RolePaginationResponse):
+    roles: List[RoleRead]
+
+class RoleNamePaginationResponse(RolePaginationResponse):
+    roles: List[RoleBase]

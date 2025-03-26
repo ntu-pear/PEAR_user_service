@@ -196,5 +196,6 @@ def create_tokens(user, sessionId:str):
         # Include token expiry information in the response for the client to handle reauthentication.
         "access_token_expires_at": access_token["expires_at"],
         "refresh_token_expires_at": refresh_token["expires_at"],
-        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)   
+        "session_expires_at": datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES),   
+        "server_time": datetime.now(sgt_tz)
     }
