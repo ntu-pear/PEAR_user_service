@@ -1,14 +1,18 @@
 from sqlalchemy.orm import Session
 from ..models.role_model import Role
 from ..models.user_model import User
-from ..schemas.role import RoleCreate, RoleUpdate
+from ..schemas.role import RoleBase, RoleUpdate
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 import uuid
 
 
-def get_role(db: Session, roleId: str):
+def get_role_by_id(db: Session, roleId: str):
     return db.query(Role).filter(Role.roleName == roleId).first()
+
+def get_role_by_name(db: Session, roleName: str):
+    return db.query(Role).filter(Role.roleName == roleName).first()
+
 
 def get_roles(db: Session, page:int, page_size:int): 
     # Maximum page size limit to prevent excessively large queries
@@ -34,7 +38,7 @@ def get_roles(db: Session, page:int, page_size:int):
         "roles": roles
     }
 
-def create_role(db: Session, role: RoleCreate, created_by:str):
+def create_role(db: Session, role: RoleBase, created_by:str):
 
     # Check if the role already exists
     existing_role = db.query(Role).filter(Role.roleName == role.roleName).first()

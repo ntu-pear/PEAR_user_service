@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..models.role_model import Role
-from ..schemas.role import RoleCreate, RoleUpdate, RoleRead, AdminRolePaginationResponse,RoleNamePaginationResponse
+from ..schemas.role import RoleBase, RoleUpdate, RoleRead, AdminRolePaginationResponse,RoleNamePaginationResponse
 from ..schemas import user_auth
 from ..crud import role_crud
 from ..database import get_db
@@ -14,21 +14,35 @@ router = APIRouter()
 def get_roles_name(page: Optional[int] = 0, page_size: Optional[int]=10, db: Session = Depends(get_db)):
     roles = role_crud.get_roles(db, page=page, page_size=page_size)
     return roles
+
+@router.get("/roles/name/{name}", response_model=RoleBase)
+def get_role_by_name(roleName: str , db: Session = Depends(get_db)):
+    role= role_crud.get_role_by_name(db, roleName)
+    if not role:
+        raise HTTPException(status_code=404, detail="Role not found")
+    return role
     
 @router.get("/roles/{roleId}", response_model=RoleRead)
-def read_role(roleId: str, db: Session = Depends(get_db)):
-    db_role = role_crud.get_role(db, roleId=roleId)
+def read_role(roleId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    db_role = role_crud.get_role_by_id(db, roleId=roleId)
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role
 
 @router.get("/roles/", response_model=AdminRolePaginationResponse)
-def read_roles(page: Optional[int] = 0, page_size: Optional[int]=10, db: Session = Depends(get_db)):
+def read_roles(page: Optional[int] = 0, page_size: Optional[int]=10, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    
     roles = role_crud.get_roles(db, page=page, page_size=page_size)
     return roles
 
-@router.post("/roles/create", response_model=RoleRead )
-def create_new_role(role: RoleCreate,  current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
+@router.post("/roles/create/", response_model=RoleRead )
+def create_new_role(role: RoleBase,  current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")

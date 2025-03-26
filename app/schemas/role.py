@@ -5,8 +5,6 @@ from app.models.role_model import RolePrivacyStatus
 from typing import List
 class RoleBase(BaseModel):
     roleName: str
-
-class RoleCreate(RoleBase):
     privacyLevelSensitive: RolePrivacyStatus
 
 class RoleUpdate(BaseModel):
@@ -39,4 +37,4 @@ class AdminRolePaginationResponse(RolePaginationResponse):
     roles: List[RoleRead]
 
 class RoleNamePaginationResponse(RolePaginationResponse):
-    roles: List[RoleBase]
+    roles: List[RoleBase] #return name and privacylevel

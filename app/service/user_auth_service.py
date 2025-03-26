@@ -5,7 +5,6 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.crud import session_crud as user_Session
-from app.crud.role_crud import get_role
 from ..models.user_model import User
 from ..database import get_db
 import os
