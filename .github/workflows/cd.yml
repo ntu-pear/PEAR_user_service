@@ -5,7 +5,7 @@ name: CD
 
 on:
   push:
-    branches: ["main"]
+    branches: ["2024s2_main"]
 
 permissions:
   contents: read
