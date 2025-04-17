@@ -17,7 +17,7 @@ class Role(Base):
     id = Column(String(8), primary_key=True)
     active = Column(Boolean, default=True, nullable=False)
     roleName = Column(String(255), unique=True, nullable=False)
-    privacyLevelSensitive = Column(SqlEnum(RolePrivacyStatus), nullable=False)
+    accessLevelSensitive = Column(SqlEnum(RolePrivacyStatus), nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
     modifiedDate = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)  # Ensure it's updated
     

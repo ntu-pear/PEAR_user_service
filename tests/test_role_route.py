@@ -72,7 +72,7 @@ def Create_Role():
         roleName="DOCTOR",
         createdDate="2002-01-01",
         modifiedDate ="2002-01-01",
-        privacyLevelSensitive=RolePrivacyStatus.LOW.value,
+        accessLevelSensitive=RolePrivacyStatus.LOW.value,
     )
 @pytest.fixture
 def Update_Role():
