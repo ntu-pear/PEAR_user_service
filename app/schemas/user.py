@@ -83,7 +83,6 @@ class UserRead(BaseModel):
             email=user.email,
             allowNotification=user.allowNotification,
             profilePicture=user.profilePicture,
-            status=user.status,
             emailConfirmed=user.emailConfirmed,
             verified=user.verified,
             isDeleted=user.isDeleted,

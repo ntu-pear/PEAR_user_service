@@ -1,12 +1,12 @@
 INSERT INTO [user_service_dev].[dbo].[TABLE_ROLES] (
-    id, active, roleName, accessLevelSensitive, createdDate, modifiedDate, createdById, modifiedById
+    id, isDeleted, roleName, accessLevelSensitive, createdDate, modifiedDate, createdById, modifiedById
 ) VALUES
-('ADmin123', 1, 'ADMIN', 'NONE', GETDATE(), GETDATE(), 1, 1),
-('DOctor12', 1, 'DOCTOR', 'HIGH', GETDATE(), GETDATE(), 1, 1),
-('Guard123', 1, 'GUARDIAN', 'HIGH', GETDATE(), GETDATE(), 1, 1),
-('Game1234', 1, 'GAME THERAPIST', 'LOW', GETDATE(), GETDATE(), 1, 1),
-('Super085', 1, 'SUPERVISOR', 'HIGH', GETDATE(), GETDATE(), 1, 1),
-('Care1562', 1, 'CAREGIVER', 'MEDIUM', GETDATE(), GETDATE(), 1, 1);
+('ADmin123', 0, 'ADMIN', 'NONE', GETDATE(), GETDATE(), 1, 1),
+('DOctor12', 0, 'DOCTOR', 'HIGH', GETDATE(), GETDATE(), 1, 1),
+('Guard123', 0, 'GUARDIAN', 'HIGH', GETDATE(), GETDATE(), 1, 1),
+('Game1234', 0, 'GAME THERAPIST', 'LOW', GETDATE(), GETDATE(), 1, 1),
+('Super085', 0, 'SUPERVISOR', 'HIGH', GETDATE(), GETDATE(), 1, 1),
+('Care1562', 0, 'CAREGIVER', 'MEDIUM', GETDATE(), GETDATE(), 1, 1);
 
 -- INSERT INTO [user_service_dev].[dbo].[TABLE_ROLES](
 --     id, active, roleName, createdDate, modifiedDate, createdById, modifiedById
