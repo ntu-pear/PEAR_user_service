@@ -1,5 +1,5 @@
 INSERT INTO [user_service_dev].[dbo].[TABLE_ROLES] (
-    id, active, roleName, privacyLevelSensitive, createdDate, modifiedDate, createdById, modifiedById
+    id, active, roleName, accessLevelSensitive, createdDate, modifiedDate, createdById, modifiedById
 ) VALUES
 ('ADmin123', 1, 'ADMIN', 'NONE', GETDATE(), GETDATE(), 1, 1),
 ('DOctor12', 1, 'DOCTOR', 'HIGH', GETDATE(), GETDATE(), 1, 1),
