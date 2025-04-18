@@ -9,12 +9,12 @@ class RoleBase(BaseModel):
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
-    active: Optional[bool] = None
+    isDeleted: Optional[bool] = None
     privacyLevelSensitive: Optional[RolePrivacyStatus] = None
 
 class RoleRead(RoleBase):
     id: str
-    active: bool
+    isDeleted: bool
     privacyLevelSensitive: RolePrivacyStatus
     createdById: Optional[str]=None
     createdDate: datetime

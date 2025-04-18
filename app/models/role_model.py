@@ -15,7 +15,7 @@ class Role(Base):
     __tablename__ = 'TABLE_ROLES'
 
     id = Column(String(8), primary_key=True)
-    active = Column(Boolean, default=True, nullable=False)
+    isDeleted = Column(Boolean, default=True, nullable=False)
     roleName = Column(String(255), unique=True, nullable=False)
     privacyLevelSensitive = Column(SqlEnum(RolePrivacyStatus), nullable=False)
     createdDate = Column(DateTime, server_default=func.now(), nullable=False)  # Ensure default value
