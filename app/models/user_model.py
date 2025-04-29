@@ -13,7 +13,7 @@ class User(Base):
     __tablename__ = 'TABLE_USER'
 
     id = Column(String(12), primary_key=True)
-    isDeleted = Column(Boolean,default=True,nullable=False)
+    isDeleted = Column(Boolean,default=False,nullable=False)
     nric_FullName = Column(String(255), nullable=False)
     nric = Column(String(9), unique=True, nullable=False)
     nric_Address = Column(String(255),nullable=False)
