@@ -5,6 +5,7 @@ from app.models.role_model import RolePrivacyStatus
 from typing import List
 class RoleBase(BaseModel):
     roleName: str
+    accessLevelSensitive: RolePrivacyStatus
 
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
