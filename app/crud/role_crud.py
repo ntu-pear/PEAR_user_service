@@ -92,10 +92,12 @@ def delete_role(db: Session, roleId: str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Role not found."
         )
-    if db_role.roleName == "ADMIN":
+    #Check if any user has the role, if so stop the deletion of the role
+    db_users= db.query(User).filter(User.roleName==db_role.roleName).first()
+    if db_users:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot delete Admin."
+            detail="There are users with the role"
         )
     db.delete(db_role)
     db.commit()
