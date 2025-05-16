@@ -5,12 +5,6 @@ from app.database import Base
 import enum
 import pytz
 # Define an Enum for status
-class UserStatus(enum.Enum):
-    ANNUAL_LEAVE = "AL"
-    MEDICAL_LEAVE= "MC"
-    ACTIVE="ACTIVE"
-
-
 class GenderStatus(enum.Enum):
     MALE = "M"
     FEMALE = "F"
@@ -19,7 +13,7 @@ class User(Base):
     __tablename__ = 'TABLE_USER'
 
     id = Column(String(12), primary_key=True)
-    active = Column(Boolean,default=True,nullable=False)
+    isDeleted = Column(Boolean,default=False,nullable=False)
     nric_FullName = Column(String(255), nullable=False)
     nric = Column(String(9), unique=True, nullable=False)
     nric_Address = Column(String(255),nullable=False)
@@ -33,8 +27,6 @@ class User(Base):
     lockOutReason = Column(String(255))
     loginTimeStamp = Column(DateTime)#,nullable=False)
     lastPasswordChanged = Column(DateTime)#,nullable=False)
-    status = Column(SqlEnum(UserStatus), default=UserStatus.ACTIVE, nullable=False)  # Enum for status
- 
     email = Column(String(255), unique=True,nullable=False)
     emailConfirmed = Column(Boolean, default=False, nullable=False)
     password = Column(String(255))

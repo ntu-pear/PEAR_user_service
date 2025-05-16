@@ -53,14 +53,12 @@ def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_
         filters.append(User.nric_FullName.ilike(f"%{fields.nric_FullName}%")) #partial matching
     if fields.nric:
         filters.append(User.nric == fields.nric)
-    if fields.status:
-        filters.append(User.status == fields.status)
     if fields.email:
         filters.append(User.email.ilike(f"%{fields.email}%"))
     if fields.verified is not None:
         filters.append(User.verified == fields.verified)
-    if fields.active is not None:
-        filters.append(User.active == fields.active)
+    if fields.isDeleted is not None:
+        filters.append(User.isDeleted == fields.isDeleted)
     if fields.twoFactorEnabled is not None:
         filters.append(User.twoFactorEnabled == fields.twoFactorEnabled)
     if fields.roleName:
@@ -312,7 +310,7 @@ def activate_user(db: Session, userId: str):
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     
-    db_user.active = True
+    db_user.isDeleted = False
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -329,7 +327,7 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
 
     # Set the status to inactive and add the lockout reason
     stmt = update(User).where(User.id == userId).values(
-        status="inactive",
+        isDeleted = True,
         lockoutReason=lockout_reason,
         modifiedById=modified_by
     )

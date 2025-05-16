@@ -29,7 +29,7 @@ def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
 
-@router.post("/doctor/get_doctors")
+@router.post("/doctor/get_doctor")
 @rate_limit(global_bucket, tokens_required=1)
 def get_doctor_by_name(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_supervisor = current_user["roleName"] == "DOCTOR"

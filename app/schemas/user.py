@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, date
 from typing import Optional
-from app.models.user_model import UserStatus, GenderStatus
+from app.models.user_model import GenderStatus
 from typing import List
 
 class UserBase(BaseModel):
@@ -35,8 +35,7 @@ class UserUpdate_Admin(UserUpdate):
     lockOutReason: Optional[str] = None
     lockOutEnabled: Optional[bool]= None
     lockOutEnd : Optional[datetime]=None
-    active: Optional[bool]=None
-    status: Optional[UserStatus] = None
+    isDeleted: Optional[bool]=None
     email: Optional[str] = None
     roleName: Optional[str] = None
 class UserUpdate_User(UserUpdate):
@@ -58,11 +57,10 @@ class UserRead(BaseModel):
     contactNo: str
     allowNotification:bool
     profilePicture: Optional[str]=None
-    status:UserStatus
     email:str
     emailConfirmed:bool
     verified: bool
-    active: bool
+    isDeleted: bool
     twoFactorEnabled: bool
 
     @staticmethod
@@ -85,10 +83,9 @@ class UserRead(BaseModel):
             email=user.email,
             allowNotification=user.allowNotification,
             profilePicture=user.profilePicture,
-            status=user.status,
             emailConfirmed=user.emailConfirmed,
             verified=user.verified,
-            active=user.active,
+            isDeleted=user.isDeleted,
             twoFactorEnabled=user.twoFactorEnabled
         )
 class AdminRead(UserRead):
@@ -127,10 +124,9 @@ class AdminSearch(BaseModel):
     preferredName: Optional[str]=None
     nric_FullName: Optional[str]=None
     nric: Optional[str]=None
-    status:Optional[UserStatus]=None
     email:Optional[str]=None
     verified: Optional[bool]=None
-    active:Optional[bool]=None
+    isDeleted:Optional[bool]=None
     twoFactorEnabled:Optional[bool]=None
     roleName: Optional[str]=None
 class PaginationResponse(BaseModel):

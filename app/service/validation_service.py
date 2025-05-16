@@ -72,13 +72,16 @@ def validate_dob(DOB: date):
             detail="Date of Birth indicates the person is older than 150 years old."
         )
     
-#Check for profile file format
+# Constants for file size limits
+MIN_FILE_SIZE = 10 * 1024        # 10 KB
+MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
+
 def validate_profile_picture_format(file: File):
     # Validate file type
     if not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Uploaded file is not an image")
-    
-    # Validate file type
+
+    # Validate allowed content types
     ALLOWED_FILE_TYPES = ["image/jpeg", "image/png"]
     if file.content_type not in ALLOWED_FILE_TYPES:
         raise HTTPException(
@@ -92,4 +95,20 @@ def validate_profile_picture_format(file: File):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid file extension. Only JPG and PNG images are allowed."
+        )
+    
+    # Validate file size
+    file.file.seek(0, 2)  # Seek to the end of the file
+    file_size = file.file.tell()
+    file.file.seek(0)     # Reset file pointer to the beginning
+
+    if file_size < MIN_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too small. Minimum size is {MIN_FILE_SIZE // 1024} KB."
+        )
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB."
         )
