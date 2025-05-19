@@ -28,14 +28,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     user = db.query(User).filter(User.email == form_data.username).first()
     
     # Check is user is verified
+    if not user or not user_auth_service.verify_password(form_data.password, user.password):
+        raise user_auth_service.user_credentials_exception
     if not user.verified:
         raise user_auth_service.user_verify_exception
-    
-    # Validate User Credentials
-    if not user:
-        raise user_auth_service.user_credentials_exception
-    if not user_auth_service.verify_password(form_data.password, user.password):
-        raise user_auth_service.user_credentials_exception
     
     #check is user enabled 2FA
     if user.twoFactorEnabled:
