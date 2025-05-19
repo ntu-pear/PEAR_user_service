@@ -82,12 +82,8 @@ def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_
     query=db.query(User).filter(and_(*filters))
     
     total_count = query.count()  # Get total number of records
-    # sort by preferredName (if non-empty), otherwise by nric_FullName
-    order_column = func.coalesce(
-        func.nullif(User.preferredName, ''), 
-        User.nric_FullName
-    )
-    users = query.order_by(order_column).offset(offset).limit(page_size).all()  # Apply pagination
+    # sort by nric_FullName, otherwise by preferredName if nric_FullName and preferredName are the same
+    users = (query.order_by(User.nric_FullName.asc(), User.preferredName.asc()).offset(offset).limit(page_size).all())  # Apply pagination
 
     return users, total_count
 
