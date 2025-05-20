@@ -1,5 +1,5 @@
 from app.utils.utils import mask_nric
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user 
@@ -71,11 +71,20 @@ def get_user_nric(userId: str, current_user: user_auth.TokenData = Depends(AuthS
 
 @router.post("/admin/get_users_by_fields", response_model=schemas_user.UserPaginationResponse)
 @rate_limit(global_bucket, tokens_required=1)
-def get_users_by_fields(fields: schemas_user.AdminSearch, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),page:Optional[int]=0, page_size:Optional[int]=10,db: Session = Depends(get_db)):
+def get_users_by_fields(*, fields: schemas_user.AdminSearch, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), 
+page: int = 0, page_size: Optional[int] = 10, sort_by: Optional[str] = Query(None, description="Column to sort by (must match a User field)."),
+sort_dir: str = Query("asc", description="'asc' or 'desc'"), db: Session = Depends(get_db),):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
-    db_users,total_count= crud_user.get_users_by_fields(db=db, fields=fields, page=page,page_size=page_size)
+    db_users, total_count = crud_user.get_users_by_fields(
+        db=db,
+        page=page,
+        page_size=page_size,
+        fields=fields,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
     if db_users is None:
         raise HTTPException(status_code=404, detail="User not found")
         
