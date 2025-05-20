@@ -14,6 +14,18 @@ from sqlalchemy import and_
 import uuid
 import cloudinary
 import cloudinary.uploader
+from typing import Optional
+
+# whitelist of sortable columns for get_users_by_fields
+ALLOWED_SORT_COLUMNS = {
+    "id":                User.id,
+    "preferredName":     User.preferredName,
+    "nric_FullName":     User.nric_FullName,
+    "email":             User.email,
+    "loginTimeStamp":    User.loginTimeStamp,
+    "roleName":          User.roleName,
+    "createdDate":       User.createdDate,
+}
 
 def get_user(db: Session, userId: str):
     return db.query(User).filter(User.id == userId).first()
@@ -43,7 +55,8 @@ def get_users(db: Session, page: int, page_size:int ):
 def get_guardian_nric(db: Session, nric= str):
     return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
 
-def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch):
+def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch,
+sort_by: Optional[str] = None, sort_dir: str = "asc",) -> tuple[list[User], int]:
     filters = []
     
     if fields.id:
@@ -76,8 +89,19 @@ def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_
     query=db.query(User).filter(and_(*filters))
     
     total_count = query.count()  # Get total number of records
-    # sort by nric_FullName, otherwise by preferredName if nric_FullName and preferredName are the same
-    users = (query.order_by(User.nric_FullName.asc(), User.preferredName.asc()).offset(offset).limit(page_size).all())  # Apply pagination
+
+    # apply dynamic ordering
+    if sort_by in ALLOWED_SORT_COLUMNS:
+        col = ALLOWED_SORT_COLUMNS[sort_by]
+        if sort_dir.lower() == "desc":
+            query = query.order_by(col.desc())
+        else:
+            query = query.order_by(col.asc())
+    else:
+        # default sort
+        query = query.order_by(User.nric_FullName.asc())
+
+    users = query.offset(offset).limit(page_size).all()  # Apply pagination
 
     return users, total_count
 
