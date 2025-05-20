@@ -29,8 +29,8 @@ def get_users(db: Session, page: int, page_size:int ):
     page = max(page, 0)  # Default to page 0 if the page number is less than 0
     offset = page  * page_size  # Calculate the offset
 
-    # Query to get all users only when isDeleted is False 
-    query = db.query(User).filter(User.isDeleted == False)
+    # Query to get all users 
+    query = db.query(User)
 
     # Total count of users (without pagination)
     total_count = query.count()
@@ -45,12 +45,6 @@ def get_guardian_nric(db: Session, nric= str):
 
 def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch):
     filters = []
-
-    # default: only show non-deleted unless admin explicitly wants deleted
-    if fields.isDeleted is None:
-        filters.append(User.isDeleted == False)
-    else:
-        filters.append(User.isDeleted == fields.isDeleted)
     
     if fields.id:
         filters.append(User.id == fields.id)
@@ -173,10 +167,9 @@ def delete_user(db: Session, userId: str):
         public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
         cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
 
-    # mark them soft-deleted instead of actually deleting
-    db_user.isDeleted = True
+    ## Delete the user from the database
+    db.delete(db_user)
     db.commit()
-    db.refresh(db_user)
     return db_user
 
 def verify_user(db: Session, user: schemas_User.UserCreate):
