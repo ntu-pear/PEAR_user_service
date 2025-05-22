@@ -26,6 +26,7 @@ jobs:
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
       WEB_FE_ORIGIN: ${{ secrets.WEB_FE_ORIGIN }}
+      REFRESH_SECRET_KEY: ${{ secrets.REFRESH_SECRET_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +50,7 @@ jobs:
           echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
           echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
           echo "WEB_FE_ORIGIN=${{ secrets.WEB_FE_ORIGIN }}" >> .env
+          echo "REFRESH_SECRET_KEY=${{ secrets.REFRESH_SECRET_KEY }}" >> .env
 
       - name: Delete old deployment
         run: |
