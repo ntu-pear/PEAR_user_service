@@ -36,6 +36,40 @@ spec:
               value: 'http://10.96.188.171:5173'
             - name: REFRESH_SECRET_KEY
               value: 'FakeKey2'
+            - name: MAIL_USERNAME
+              value: 'fyppear.backend3@gmail.com'
+            - name: MAIL_PASSWORD
+              value: 'kqhdpokoptqudrmj'
+            - name: MAIL_FROM
+              value: 'fyppear.backend3@gmail.com'
+            - name: MAIL_PORT
+              value: '587'
+            - name: MAIL_SERVER
+              value: 'smtp.gmail.com'
+            - name: MAIL_STARTTLS
+              value: 'True'
+            - name: MAIL_SSL_TLS
+              value: 'False'
+            - name: MAIL_FROM_NAME
+              value: 'PEAR_FYP'
+            - name: USE_CREDENTIALS
+              value: 'True'
+            - name: VALIDATE_CERTS
+              value: 'True'
+            - name: SALT
+              value: 'email-confirmation-salt'
+            - name: SECRET_KEY
+              value: 'FakeKey'
+            - name: OTP_EMAIL
+              value: 'fyp_pear@techdevglobal.com'
+            - name: ACCESS_TOKEN_EXPIRE_MINUTES 
+              value: '15'
+            - name: REFRESH_TOKEN_EXPIRE_MINUTES
+              value: '120'
+            - name: SESSION_EXPIRE_MINUTES
+              value: '10'
+            - name: EMAIL_LINK_BASEURL
+              value: 'http://10.96.188.171:5173'
 ---
 apiVersion: v1
 kind: Service
