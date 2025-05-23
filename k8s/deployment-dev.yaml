@@ -33,7 +33,7 @@ spec:
             - name: DB_PASSWORD_DEV
               value: 'Fyppear@2'
             - name: WEB_FE_ORIGIN
-              value: 'http://10.96.188.171:5173'
+              value: '10.96.188.185:5173'
             - name: REFRESH_SECRET_KEY
               value: 'FakeKey2'
             - name: MAIL_USERNAME
