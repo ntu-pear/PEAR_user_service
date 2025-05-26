@@ -363,3 +363,17 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
     # Fetch and return the updated user
     db_user = db.query(User).filter(User.id == userId).first()
     return db_user
+
+def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional[str], modified_by: str) -> Optional[User]:
+    stmt = (
+        update(User)
+        .where(User.id == user_id)
+        .values(
+            profilePicture=profile_url,   
+            modifiedById=modified_by
+        )
+        .execution_options(synchronize_session="fetch")
+    )
+    db.execute(stmt)
+    db.commit()
+    return db.query(User).filter(User.id == user_id).first()

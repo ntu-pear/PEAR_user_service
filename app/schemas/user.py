@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 from datetime import datetime, date
 from typing import Optional
 from app.models.user_model import GenderStatus
@@ -14,6 +14,7 @@ class UserBase(BaseModel):
     contactNo: str
     email: str
     roleName: Optional[str] = None
+    profilePicture: Optional[HttpUrl] = None
 
 class UserCreate(UserBase):
     password:str
@@ -26,6 +27,8 @@ class UserUpdate(BaseModel):
     preferredName: Optional[str] = None
     contactNo: Optional[str] = None
     email: Optional[str] = None
+    profilePicture: Optional[HttpUrl] = None
+
 class UserUpdate_Admin(UserUpdate):
     nric:Optional[str] = None
     nric_FullName: Optional[str] = None
@@ -38,6 +41,8 @@ class UserUpdate_Admin(UserUpdate):
     isDeleted: Optional[bool]=None
     email: Optional[str] = None
     roleName: Optional[str] = None
+    profilePicture: Optional[HttpUrl] = None
+
 class UserUpdate_User(UserUpdate):
     twoFactorEnabled: Optional[bool]= None
 
@@ -56,7 +61,7 @@ class UserRead(BaseModel):
     roleName: Optional[str]=None
     contactNo: str
     allowNotification:bool
-    profilePicture: Optional[str]=None
+    profilePicture: Optional[HttpUrl]=None
     email:str
     emailConfirmed:bool
     verified: bool

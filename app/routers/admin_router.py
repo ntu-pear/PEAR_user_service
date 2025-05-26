@@ -1,5 +1,5 @@
 from app.utils.utils import mask_nric
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Response, status
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user 
@@ -9,10 +9,13 @@ from ..schemas import account as schemas_account
 from ..schemas import user_auth
 from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
+from app.service import validation_service as Validation_Service
 from app.models.user_model import User
 from typing import List
 import cloudinary
 import cloudinary.uploader
+from PIL import Image
+from io import BytesIO
 from typing import Optional
 
 # import rate limiter
@@ -25,6 +28,15 @@ router = APIRouter(
     dependencies=[Depends(get_db)],
     responses={404: {"description": "Not found"}},
 )
+
+# Profile Picture Max Size
+MAX_SIZE = (300, 300)  # Max image size (300x300)
+
+# Function to assert if the user is an admin
+def assert_admin(token_data: dict):
+    if token_data.get("roleName") != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="User is not authorised")
 
 # standardise successful responses
 def create_success_response(data: dict):
@@ -200,4 +212,85 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
         raise HTTPException(status_code=404, detail="User not found")
     return schemas_user.AdminRead.from_orm(db_user)
 
+@router.post("/admin/user/{userId}/upload_profile_pic/", status_code=status.HTTP_200_OK)
+async def upload_profile_picture(userId: str, file: UploadFile = File(...), current_user=Depends(AuthService.get_current_user), db: Session = Depends(get_db),):
+    assert_admin(current_user)
+    db_user = crud_user.get_user(db, userId)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+    # Validate format
+    Validation_Service.validate_profile_picture_format(file)
 
+    try:
+        # Remove old picture from Cloudinary
+        if db_user.profilePicture:
+            old_id = db_user.profilePicture.rsplit("/", 1)[-1].split(".")[0]
+            cloudinary.uploader.destroy(f"profile_pictures/{old_id}")
+
+        # Resize & convert
+        img = Image.open(BytesIO(await file.read()))
+        if img.mode == "RGBA":
+            img = img.convert("RGB")
+        img.thumbnail(MAX_SIZE)
+
+        buf = BytesIO()
+        img.save(buf, format="JPEG")
+        buf.seek(0)
+
+        # Upload new picture to Cloudinary
+        res = cloudinary.uploader.upload(
+            buf,
+            folder="profile_pictures",
+            public_id=f"user_{userId}_profile_picture",
+            overwrite=True
+        )
+        url = res.get("secure_url")
+
+        # Persist in DB
+        db_user.profilePicture = url
+        db_user.modifiedById  = current_user["userId"]
+        db.commit()
+        db.refresh(db_user)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload profile picture: {e}"
+        )
+
+    return {"message": "Profile picture uploaded successfully", "file_url": url}
+
+
+@router.get("/admin/user/{userId}/profile_pic/", status_code=status.HTTP_200_OK)
+def get_profile_picture(userId: str, current_user=Depends(AuthService.get_current_user), db: Session = Depends(get_db),):
+    assert_admin(current_user)
+    user = crud_user.get_user(db, userId)
+    if not user or not user.profilePicture:
+        raise HTTPException(status_code=404, detail="No profile picture set")
+
+    return {"image_url": user.profilePicture}
+
+
+@router.delete("/admin/user/{userId}/delete_profile_pic/", status_code=status.HTTP_200_OK)
+def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_current_user), db: Session = Depends(get_db),):
+    assert_admin(current_user)
+    user = crud_user.get_user(db, userId)
+    if not user or not user.profilePicture:
+        raise HTTPException(status_code=404, detail="No profile picture found.")
+    # Delete from Cloudinary
+    public_id = user.profilePicture.rsplit("/", 1)[-1].split(".")[0]
+    try:
+        cloudinary.uploader.destroy(f"profile_pictures/{public_id}")
+    except Exception:
+        # log if desired, but continue
+        pass
+
+    # Clear DB field
+    user.profilePicture = None
+    user.modifiedById  = current_user["userId"]
+    db.commit()
+    db.refresh(user)
+
+    return {"message": "Profile picture deleted successfully"}
