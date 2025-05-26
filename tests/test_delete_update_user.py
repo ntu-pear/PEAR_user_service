@@ -82,7 +82,7 @@ def User_Update():
     nric_Gender="M",
     contactNo= "94434567",
     allowNotification= True,
-    profilePicture="",
+    profilePicture=None,
     lockoutReason="",
     status="ACTIVE",
     email= "daniel22@gmail.com",
