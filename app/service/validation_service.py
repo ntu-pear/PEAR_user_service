@@ -73,7 +73,7 @@ def validate_dob(DOB: date):
         )
     
 # Constants for file size limits
-MIN_FILE_SIZE = 10 * 1024        # 10 KB
+MIN_FILE_SIZE = 5 * 1024        # 5 KB
 MAX_FILE_SIZE = 2 * 1024 * 1024  # 2 MB
 
 def validate_profile_picture_format(file: File):
