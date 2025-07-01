@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 # import rate limiter
 from .rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 from .routers.__init__ import scheduler, lifespan  # Import the scheduler and lifespan from your __init__.py
-
+import logging
 app = FastAPI(lifespan=lifespan)
 load_dotenv()
 origins = [
@@ -17,7 +17,7 @@ origins = [
     os.getenv("WEB_FE_ORIGIN"),
     # Add other origins if needed
 ]
-
+logger = logging.getLogger("uvicorn")
 
 # middleware to connect to the frontend
 app.add_middleware(
