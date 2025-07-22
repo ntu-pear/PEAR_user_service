@@ -86,15 +86,15 @@ jobs:
           echo "SESSION_EXPIRE_MINUTES=${{ secrets.SESSION_EXPIRE_MINUTES }}" >> .env
           echo "EMAIL_LINK_BASEURL=${{ secrets.EMAIL_LINK_BASEURL }}" >> .env
 
-    #   - name: Delete old deployment
-    #     run: |
-    #       echo "Deleting old deployment..."
-    #       kubectl delete deployment.apps/user-service-dev service/user-service-dev
+      - name: Delete old deployment
+        run: |
+          echo "Deleting old deployment..."
+          kubectl delete deployment.apps/user-service-staging service/user-service-staging
 
-    #   - name: Delete old docker images
-    #     run: |
-    #       docker rmi user_service_dev
-    #       docker rmi localhost:5000/user_service_dev
+      - name: Delete old docker images
+        run: |
+          docker rmi user_service_staging
+          docker rmi localhost:5000/user_service_staging
 
       - name: Build Docker image
         run: |
