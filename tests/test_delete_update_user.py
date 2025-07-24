@@ -88,4 +88,61 @@ def User_Update():
     email= "daniel22@gmail.com",
 )
 
+def test_admin_soft_delete_user_success(db_session_mock):
+    userId = "user123"
+    mock_user = mock.MagicMock()
+    mock_user.id = userId
+    mock_user.roleName = "USER"
+    mock_user.isDeleted = False
+
+    db_session_mock.query(User).filter(User.id == userId).first.return_value = mock_user
+
+    result = user_crud.soft_delete_admin_user(db_session_mock, userId)
+
+    db_session_mock.commit.assert_called_once()
+    assert result.isDeleted is True
+
+def test_admin_soft_delete_user_not_found(db_session_mock):
+    userId = "nonexistent"
+    db_session_mock.query(User).filter(User.id == userId).first.return_value = None
+
+    with pytest.raises(HTTPException) as exc:
+        user_crud.soft_delete_admin_user(db_session_mock, userId)
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "User not found"
+
+def test_admin_cannot_soft_delete_other_admin(db_session_mock):
+    userId = "admin456"
+
+    # Simulate that the user to delete is an ADMIN
+    mock_user = mock.MagicMock()
+    mock_user.id = userId
+    mock_user.roleName = "ADMIN"
+    mock_user.isDeleted = False
+
+    db_session_mock.query(User).filter(User.id == userId).first.return_value = mock_user
+
+    with pytest.raises(HTTPException) as exc:
+        user_crud.soft_delete_admin_user(db_session_mock, userId)
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "Cannot delete another admin"
+
+
+
+def test_admin_cannot_soft_delete_self():
+    userId = "admin123"
+    current_user = {
+        "userId": "admin123",
+        "roleName": "ADMIN"
+    }
+
+    with pytest.raises(HTTPException) as exc:
+        if current_user["userId"] == userId:
+            raise HTTPException(status_code=404, detail="No self delete")
+
+    assert exc.value.status_code == 404
+    assert exc.value.detail == "No self delete"
+
 

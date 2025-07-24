@@ -212,6 +212,23 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
         raise HTTPException(status_code=404, detail="User not found")
     return schemas_user.AdminRead.from_orm(db_user)
 
+
+@router.delete("/admin/soft_delete/{userId}", response_model=schemas_user.AdminRead)
+def admin_soft_delete_user(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+                db: Session = Depends(get_db)):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    if (current_user["userId"] == userId):
+        raise HTTPException(status_code=404, detail="No self delete")
+
+    # delete user from db
+    db_user = crud_user.soft_delete_admin_user(db=db, userId=userId)
+
+    if db_user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return schemas_user.AdminRead.from_orm(db_user)
+
 @router.post("/admin/user/{userId}/upload_profile_pic/", status_code=status.HTTP_200_OK)
 async def upload_profile_picture(userId: str, file: UploadFile = File(...), current_user=Depends(AuthService.get_current_user), db: Session = Depends(get_db),):
     assert_admin(current_user)

@@ -1,11 +1,11 @@
 # This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: CD
+name: CD (Staging)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["staging"]
 
 permissions:
   contents: read
@@ -89,29 +89,29 @@ jobs:
       - name: Delete old deployment
         run: |
           echo "Deleting old deployment..."
-          kubectl delete deployment.apps/user-service-dev service/user-service-dev
+          kubectl delete deployment.apps/user-service-staging service/user-service-staging
 
       - name: Delete old docker images
         run: |
-          docker rmi user_service_dev
-          docker rmi localhost:5000/user_service_dev
+          docker rmi user_service_staging
+          docker rmi localhost:5000/user_service_staging
 
       - name: Build Docker image
         run: |
           echo "Building Docker image..."
-          docker build --no-cache -f Dockerfile.dev -t user_service_dev .
+          docker build --no-cache -f Dockerfile.dev -t user_service_staging .
 
       - name: Tag Docker image
         run: |
           echo "Tagging Docker image..."
-          docker tag user_service_dev:latest localhost:5000/user_service_dev:latest
+          docker tag user_service_staging:latest localhost:5000/user_service_staging:latest
 
       - name: Push Docker image to local registry
         run: |
           echo "Pushing Docker image to localhost:5000...."
-          docker push localhost:5000/user_service_dev:latest
+          docker push localhost:5000/user_service_staging:latest
 
       - name: Deploying to Kubernetes
         run: |
           echo "Deploying..."
-          kubectl apply -f './k8s/deployment-dev.yaml'
+          kubectl apply -f './k8s/deployment-staging.yaml'

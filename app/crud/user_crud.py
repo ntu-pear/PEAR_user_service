@@ -34,14 +34,14 @@ def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
 
-def get_users(db: Session, page: int, page_size:int ): 
+def get_users(db: Session, page: int, page_size:int ):
     # Maximum page size limit to prevent excessively large queries
     max_page_size = 100
     page_size = min(page_size, max_page_size)  # Enforce max page size
     page = max(page, 0)  # Default to page 0 if the page number is less than 0
     offset = page  * page_size  # Calculate the offset
 
-    # Query to get all users 
+    # Query to get all users
     query = db.query(User)
 
     # Total count of users (without pagination)
@@ -58,7 +58,7 @@ def get_guardian_nric(db: Session, nric= str):
 def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch,
 sort_by: Optional[str] = None, sort_dir: str = "asc",) -> tuple[list[User], int]:
     filters = []
-    
+
     if fields.id:
         filters.append(User.id == fields.id)
     if fields.preferredName:
@@ -87,7 +87,7 @@ sort_by: Optional[str] = None, sort_dir: str = "asc",) -> tuple[list[User], int]
 
 
     query=db.query(User).filter(and_(*filters))
-    
+
     total_count = query.count()  # Get total number of records
 
     # apply dynamic ordering
@@ -120,7 +120,7 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
             #Send confirmation email if email is changed
             email_Token = EmailService.generate_email_token(userId, value)
             await EmailService.send_confirmation_email(value, email_Token)
-           
+
 
     db.execute(stmt)
     db.commit()
@@ -196,6 +196,31 @@ def delete_user(db: Session, userId: str):
     db.commit()
     return db_user
 
+def soft_delete_admin_user(db: Session, userId: str):
+    db_user = db.query(User).filter(User.id == userId).first()
+    # If the user does not exist, raise a 404 error
+    if not db_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    # Ensure user is not an admin
+    if db_user.roleName == "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete another admin"
+        )
+    # If already soft deleted, optionally raise or skip
+    if db_user.isDeleted:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="User is already deleted"
+        )
+    #soft delete, hence it only sets the isDeleted flag to True.
+    db_user.isDeleted = True
+    db.commit()
+    return db_user
+
 def verify_user(db: Session, user: schemas_User.UserCreate):
     #Verify Info with User DB
     db_user= db.query(User).filter(User.email == user.email).first()
@@ -209,7 +234,7 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Details do not match with pre-registered details"
-    ) 
+    )
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -229,7 +254,7 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
         db_user.password = user_auth_service.get_password_hash(user.password)
         #Set Account as Verified
         db_user.verified = True
-        
+
         # Begin transaction
         db.commit()
         db.refresh(db_user)
@@ -296,7 +321,7 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."
         )
-    
+
     return db_user
 
 def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by: int):
@@ -317,14 +342,14 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
 
     db.commit()
     db.refresh(db_user)
-    
+
     return db_user
 
 def reset_password(db: Session, userId: str, new_password: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
+
     db_user.password = user_auth_service.get_password_hash(new_password)
     db.commit()
     db.refresh(db_user)
@@ -334,7 +359,7 @@ def activate_user(db: Session, userId: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    
+
     db_user.isDeleted = False
     db.commit()
     db.refresh(db_user)
@@ -343,7 +368,7 @@ def activate_user(db: Session, userId: str):
 def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: str):
     # Fetch the user from the database
     db_user = db.query(User).filter(User.id == userId).first()
-    
+
     if db_user is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -369,7 +394,7 @@ def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional
         update(User)
         .where(User.id == user_id)
         .values(
-            profilePicture=profile_url,   
+            profilePicture=profile_url,
             modifiedById=modified_by
         )
         .execution_options(synchronize_session="fetch")
