@@ -33,13 +33,13 @@ spec:
             - name: DB_PASSWORD_DEV
               value: 'Fyppear@2'
             - name: WEB_FE_ORIGIN
+              value: '10.96.188.171:5173'
+            - name: WEB_FE_ORIGIN_STAGING
               value: '10.96.188.185:5173'
             - name: REFRESH_SECRET_KEY
               value: 'FakeKey2'
             - name: MAIL_USERNAME
               value: 'fyppear.backend3@gmail.com'
-            - name: MAIL_PASSWORD
-              value: 'kqhdpokoptqudrmj'
             - name: MAIL_FROM
               value: 'fyppear.backend3@gmail.com'
             - name: MAIL_PORT
