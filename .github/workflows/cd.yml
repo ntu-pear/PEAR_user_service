@@ -26,6 +26,7 @@ jobs:
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
       WEB_FE_ORIGIN: "${{ secrets.WEB_FE_ORIGIN }}"
+      WEB_FE_ORIGIN_STAGING:  "${{ secrets.WEB_FE_ORIGIN_STAGING }}"
       REFRESH_SECRET_KEY: ${{ secrets.REFRESH_SECRET_KEY }}
       MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
       MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
@@ -67,6 +68,7 @@ jobs:
           echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
           echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
           echo "WEB_FE_ORIGIN="${{ secrets.WEB_FE_ORIGIN }}"" >> .env
+          echo "WEB_FE_ORIGIN_STAGING="${{ secrets.WEB_FE_ORIGIN_STAGING }}"" >> .env
           echo "REFRESH_SECRET_KEY=${{ secrets.REFRESH_SECRET_KEY }}" >> .env
           echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
