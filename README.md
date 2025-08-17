@@ -51,12 +51,8 @@ uvicorn app.main:app --reload
 
 
 ## To Do:
-- Deploy user service
-- Create SMTP service to replace email sending
 - Populate Database
-- Add in 2FA authorization (pending if needed)
 - Add in security level check in functions (Should be done after gateway is completed?)
-- NRIC returned as masked depending on security level
 
 ## Structure
 Project structure was taken from: https://medium.com/@amirm.lavasani/how-to-structure-your-fastapi-projects-0219a6600a8f 
@@ -102,6 +98,3 @@ To make default secret questions for users to answer and store as an identity
 Maps user to their role
 - User Secret Question
 Maps user to their secret question and answer
-
-
-

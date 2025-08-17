@@ -28,7 +28,7 @@ jobs:
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
       WEB_FE_ORIGIN: "${{ secrets.WEB_FE_ORIGIN }}"
-
+      WEB_FE_ORIGIN_STAGING: "${{ secrets.WEB_FE_ORIGIN_STAGING }}"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.9.19
@@ -50,6 +50,7 @@ jobs:
           echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
           echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
           echo "WEB_FE_ORIGIN="${{ secrets.WEB_FE_ORIGIN }}"" >> .env
+          echo "WEB_FE_ORIGIN_STAGING="${{ secrets.WEB_FE_ORIGIN_STAGING }}"" >> .env
           
       - name: Install dependencies
         run: |
