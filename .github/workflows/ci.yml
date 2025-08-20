@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     env:
-      DB_SERVER_DEV: ${{ secrets.DB_SERVER_DEV }}
+      DB_SERVER_DEV: ${{ secrets.DB_SERVER_STG }}
       DB_DATABASE_DEV: ${{ secrets.DB_DATABASE_DEV }}
       DB_DATABASE_PORT: ${{ secrets.DB_DATABASE_PORT }}
       DB_USERNAME_DEV: ${{ secrets.DB_USERNAME_DEV }}
@@ -38,7 +38,7 @@ jobs:
 
       - name: Create .env file from GitHub Secrets
         run: |
-          echo "DB_SERVER_DEV=${{ secrets.DB_SERVER_DEV }}" >> .env
+          echo "DB_SERVER_DEV=${{ secrets.DB_SERVER_STG }}" >> .env
           echo "DB_DATABASE_DEV=${{ secrets.DB_DATABASE_DEV }}" >> .env
           echo "DB_DATABASE_PORT=${{ secrets.DB_DATABASE_PORT }}" >> .env
           echo "DB_USERNAME_DEV=${{ secrets.DB_USERNAME_DEV }}" >> .env
