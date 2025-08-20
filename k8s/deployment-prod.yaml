@@ -23,7 +23,10 @@ spec:
             - name: DB_DRIVER_DEV
               value: 'ODBC Driver 17 for SQL Server'
             - name: DB_SERVER_DEV
-              value: '192.168.188.185'
+              valueFrom:
+                configMapKeyRef:
+                  name: fyp-config
+                  key: DB_SERVER_PROD
             - name: DB_DATABASE_DEV
               value: 'user_service_dev'
             - name: DB_DATABASE_PORT
