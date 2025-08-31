@@ -29,6 +29,7 @@ cd PEAR_user_service
 
 ### Setting Up Your Environment
 Create a Virtual Environment:
+
 Conda:
 ```bash
 # This is to set the python version in your conda environment to 3.9.19
@@ -68,6 +69,11 @@ Project structure was taken from: https://medium.com/@amirm.lavasani/how-to-stru
 Functions related to user authorization is in the ./service/user_auth_service.py
 
 ### Email Service
+- SMTP-based  
+A separate service entity is responsible for sending emails through an SMTP server
+
+---
+
 NOTE: DO NOT refer to the old codebase to implement the email service for this. The method has been discontinued by Google and will be permanently disabled for use fully by Jan 2025. There is also security risk involved when doing it as it involved turning down ur security level to allow any application to login to your main account.
 
 ### Currently
@@ -100,5 +106,3 @@ To make default secret questions for users to answer and store as an identity
 Maps user to their role
 - User Secret Question
 Maps user to their secret question and answer
-- SMTP Server
-Creating a seperate email service entity that handles just the sending of email
