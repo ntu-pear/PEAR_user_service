@@ -7,3 +7,5 @@ data:
   DB_DRIVER: "ODBC Driver 17 for SQL Server"
   DB_SERVER: "sa,1433"
   DB_NAME: "fyp"
+  DB_SERVER_PROD: "192.168.188.171" # For Production Server
+  DB_SERVER_STG: "192.168.188.185" # For Staging Server
