@@ -5,7 +5,7 @@ from ..schemas.role import RoleBase, RoleUpdate
 from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 import uuid
-
+from ..logger.logger_utils import log_crud_action, ActionType, serialize_data
 
 def get_role_by_id(db: Session, roleId: str):
     return db.query(Role).filter(Role.roleName == roleId).first()
@@ -70,6 +70,13 @@ def create_role(db: Session, role: RoleBase, created_by:str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."
         )
+    log_crud_action(
+        action=ActionType.CREATE,
+        user=created_by,
+        role=role.roleName,
+        entity_id=roleId,
+        message="Created role",
+    )
     return db_role
 
 def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):
