@@ -25,6 +25,7 @@ ALLOWED_SORT_COLUMNS = {
     "loginTimeStamp":    User.loginTimeStamp,
     "roleName":          User.roleName,
     "createdDate":       User.createdDate,
+    "isDeleted": User.isDeleted,
 }
 
 def get_user(db: Session, userId: str):
@@ -402,3 +403,16 @@ def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional
     db.execute(stmt)
     db.commit()
     return db.query(User).filter(User.id == user_id).first()
+
+def get_user_by_filter(db: Session, is_deleted:int=="",fullname:str="") -> Optional[User]:
+    query = db.query(User)
+    #the query for full name not working yet, will try to fix
+    if fullname:
+        query = query.filter(
+            func.lower(func.trim(User.nric_FullName)).like(f"%{fullname.strip().lower()}%")
+        )
+    #this is okay, test prompt is enter 1 or 0
+    if is_deleted is not None:
+        query = query.filter(User.isDeleted == is_deleted)
+
+    return query.all()

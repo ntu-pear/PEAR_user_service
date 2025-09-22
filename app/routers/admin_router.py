@@ -311,3 +311,12 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     db.refresh(user)
 
     return {"message": "Profile picture deleted successfully"}
+
+@router.get("/admin/user/get_user_by_filter", status_code=status.HTTP_200_OK)
+def get_user_by_filter(is_deleted: int = "",fullname: str="",
+                       current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db),):
+    is_admin = current_user["roleName"] == "ADMIN"
+    if not is_admin:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    db_users = crud_user.get_user_by_filter(db,is_deleted=is_deleted,fullname=fullname)
+    return db_users
