@@ -13,7 +13,7 @@ from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
 from app.service import validation_service as Validation_Service
 from app.models.user_model import User
-from typing import List
+from typing import List, Optional
 import cloudinary
 import cloudinary.uploader
 from PIL import Image
@@ -318,8 +318,8 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
 
 @router.get("/admin/users/export", response_class=StreamingResponse)
 def export_users_csv(
-    nric_fullname: str | None = Query(None, alias="nric_FullName"),
-    is_deleted: bool | None = Query(None, alias="isDeleted"),
+    nric_fullname: Optional[str] = Query(None, alias="nric_FullName"),
+    is_deleted: Optional[bool] = Query(None, alias="isDeleted"),
     current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db),
 ):
