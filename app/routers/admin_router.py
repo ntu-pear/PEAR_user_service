@@ -1,5 +1,7 @@
 from app.utils.utils import mask_nric
 from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Response, status
+from fastapi.responses import StreamingResponse
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..crud import user_crud as crud_user 
@@ -11,12 +13,14 @@ from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
 from app.service import validation_service as Validation_Service
 from app.models.user_model import User
-from typing import List
+from typing import List, Optional
 import cloudinary
 import cloudinary.uploader
 from PIL import Image
 from io import BytesIO
 from typing import Optional
+import csv, io, datetime    
+import pytz
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
@@ -311,3 +315,47 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     db.refresh(user)
 
     return {"message": "Profile picture deleted successfully"}
+
+@router.get("/admin/users/export", response_class=StreamingResponse)
+def export_users_csv(
+    nric_fullname: Optional[str] = Query(None, alias="nric_FullName"),
+    is_deleted: Optional[bool] = Query(None, alias="isDeleted"),
+    current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.get("roleName") != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not authorised")
+
+    filters = []
+    if nric_fullname:
+        filters.append(User.nric_FullName.ilike(f"%{nric_fullname}%"))
+    if is_deleted is not None:
+        filters.append(User.isDeleted == is_deleted)
+
+    query = db.query(User)
+    if filters:
+        query = query.filter(and_(*filters))
+
+    users = query.order_by(User.id).all()
+
+    # Dynamically include ALL columns from the SQLAlchemy model
+    column_names = [c.name for c in User.__table__.columns]
+
+    # Write CSV to memory
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(column_names)
+    for u in users:
+        row = [getattr(u, col) for col in column_names]
+        writer.writerow(row)
+
+    sgt = pytz.timezone("Asia/Singapore")
+    ts = datetime.datetime.now(tz=sgt).strftime("%Y%m%d_%H%M%S")
+    filename = f"users_export_{ts}.csv"
+
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
