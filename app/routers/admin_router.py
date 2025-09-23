@@ -341,6 +341,18 @@ def export_users_csv(
     # Dynamically include ALL columns from the SQLAlchemy model
     column_names = [c.name for c in User.__table__.columns]
 
+    EXCLUDE_COLS = {
+        "password",
+        "otp",
+        "securityStamp",
+        "concurrencyStamp",
+        "captchaKey",
+        "captchaFailedCount",
+        "lastPasswordChanged",
+    }
+    exclude_lower = {c.lower() for c in EXCLUDE_COLS}
+    column_names = [c for c in column_names if c.lower() not in exclude_lower]
+
     # Write CSV to memory
     buf = io.StringIO()
     writer = csv.writer(buf)
