@@ -15,6 +15,7 @@ jobs:
     runs-on: [self-hosted, Linux, X64, user_prod]
 
     env:
+      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
       DB_SERVER_DEV: ${{ secrets.DB_SERVER_PROD }}
       DB_DATABASE_DEV: ${{ secrets.DB_DATABASE_DEV }}
       DB_DATABASE_PORT: ${{ secrets.DB_DATABASE_PORT }}
@@ -56,6 +57,7 @@ jobs:
 
       - name: Create .env file from GitHub Secrets
         run: |
+          echo "SERVICE_NAME=${{ vars.SERVICE_NAME }}" >> .env      # Taken from GitHub Actions Variables
           echo "DB_SERVER_DEV=${{ secrets.DB_SERVER_PROD }}" >> .env
           echo "DB_DATABASE_DEV=${{ secrets.DB_DATABASE_DEV }}" >> .env
           echo "DB_DATABASE_PORT=${{ secrets.DB_DATABASE_PORT }}" >> .env

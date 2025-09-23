@@ -1,4 +1,5 @@
 import os
+import sys
 import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base
@@ -7,17 +8,31 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-# Get the database URL from environment variables
-DB_URL_LOCAL = os.getenv("DB_URL_LOCAL")
-DB_DRIVER_DEV = os.getenv("DB_DRIVER_DEV")
-DB_SERVER_DEV = os.getenv("DB_SERVER_DEV")
-DB_DATABASE_DEV = os.getenv("DB_DATABASE_DEV")
-DB_DATABASE_PORT = os.getenv("DB_DATABASE_PORT")
-DB_USERNAME_DEV = os.getenv("DB_USERNAME_DEV")
-DB_PASSWORD_DEV = os.getenv("DB_PASSWORD_DEV")
+
+SERVICE_NAME = os.getenv("SERVICE_NAME")
+if SERVICE_NAME != "PATIENT":
+    print("Please ensure you are using the correct .env file for PATIENT service!")
+    sys.exit(1)
+
+#====  DB Connection Config ===
+def get_env_var(name, required=True, service=None):
+    value = os.getenv(name)
+    if required and not value:
+        print(f"{name} environment variable is not set.")
+        sys.exit(1)
+    return value
+
+# Get the database URL from environment variables (required to connect to server's DB)
+DB_DRIVER_DEV = get_env_var("DB_DRIVER_DEV")
+DB_SERVER_DEV = get_env_var("DB_SERVER_DEV")
+DB_DATABASE_DEV = get_env_var("DB_DATABASE_DEV")
+DB_DATABASE_PORT = get_env_var("DB_DATABASE_PORT")
+DB_USERNAME_DEV = get_env_var("DB_USERNAME_DEV")
+DB_PASSWORD_DEV = get_env_var("DB_PASSWORD_DEV")
+
 
 # Get the database URL from environment (DOCKER LOCAL)
-#DB_URL_LOCAL = os.getenv("DB_URL_LOCAL")
+DB_URL_LOCAL = os.getenv("DB_URL_LOCAL")
 DB_DRIVER = os.getenv("DB_DRIVER")
 DB_SERVER = os.getenv("DB_SERVER")
 DB_DATABASE = os.getenv("DB_DATABASE")
