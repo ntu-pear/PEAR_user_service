@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SERVICE_NAME = os.getenv("SERVICE_NAME")
-if SERVICE_NAME != "PATIENT":
-    print("Please ensure you are using the correct .env file for PATIENT service!")
+if SERVICE_NAME != "USER":
+    print("Please ensure you are using the correct .env file for USER service!")
     sys.exit(1)
 
 #====  DB Connection Config ===
