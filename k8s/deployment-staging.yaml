@@ -22,11 +22,6 @@ spec:
           volumeMounts:
             - name: log-volume
               mountPath: /app/logs  # Path inside the container
-      volumes:
-        - name: log-volume
-          hostPath:
-            path: /home/VMadmin/FYP_microservices/PEAR_user_service/logs  # Path on the host machine
-            type: DirectoryOrCreate  # Ensures directory is created if it doesn’t exist
           env:
             - name: DB_DRIVER_DEV
               value: 'ODBC Driver 17 for SQL Server'
@@ -81,6 +76,11 @@ spec:
               value: '10'
             - name: EMAIL_LINK_BASEURL
               value: 'http://10.96.188.171:5173'
+      volumes:
+        - name: log-volume
+          hostPath:
+            path: /home/VMadmin/FYP_microservices/PEAR_user_service/logs  # Path on the host machine
+            type: DirectoryOrCreate  # Ensures directory is created if it doesn’t exist
 ---
 apiVersion: v1
 kind: Service
