@@ -19,6 +19,14 @@ spec:
           image: host.minikube.internal:5000/user_service_staging # Replace with your Docker image
           ports:
             - containerPort: 8000
+          volumeMounts:
+            - name: log-volume
+              mountPath: /app/logs  # Path inside the container
+      volumes:
+        - name: log-volume
+          hostPath:
+            path: /home/VMadmin/FYP_microservices/PEAR_user_service/logs  # Path on the host machine
+            type: DirectoryOrCreate  # Ensures directory is created if it doesn’t exist
           env:
             - name: DB_DRIVER_DEV
               value: 'ODBC Driver 17 for SQL Server'
