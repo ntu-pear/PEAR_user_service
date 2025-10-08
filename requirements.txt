@@ -19,7 +19,7 @@ google-auth
 google-auth-oauthlib == 1.0.0
 google-auth-httplib2
 google-api-python-client
-bcrypt
+bcrypt==4.3.0
 pyotp
 captcha
 pysendpulse
