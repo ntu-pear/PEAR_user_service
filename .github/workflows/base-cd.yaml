@@ -39,7 +39,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: ${{ inputs.runner-label }}
+    runs-on: ${{ fromJSON(inputs['runner-label']) }}
 
     steps:
       - uses: actions/checkout@v4
