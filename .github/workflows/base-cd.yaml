@@ -36,6 +36,8 @@ on:
       REFRESH_TOKEN_EXPIRE_MINUTES: { required: true }
       SESSION_EXPIRE_MINUTES: { required: true }
       EMAIL_LINK_BASEURL: { required: true }
+      SENDPULSE_API_KEY: { required: true }
+      SENDPULSE_SECRET_KEY: { required: true }
 
 jobs:
   deploy:
@@ -72,6 +74,8 @@ jobs:
           echo "REFRESH_TOKEN_EXPIRE_MINUTES=${{ secrets.REFRESH_TOKEN_EXPIRE_MINUTES }}" >> .env
           echo "SESSION_EXPIRE_MINUTES=${{ secrets.SESSION_EXPIRE_MINUTES }}" >> .env
           echo "EMAIL_LINK_BASEURL=${{ secrets.EMAIL_LINK_BASEURL }}" >> .env
+          echo "SENDPULSE_API_KEY=${{ secrets.SENDPULSE_API_KEY }}" >> .env
+          echo "SENDPULSE_SECRET_KEY=${{ secrets.SENDPULSE_SECRET_KEY }}" >> .env
 
       - name: Delete old deployment/service (ignore if missing)
         run: |
