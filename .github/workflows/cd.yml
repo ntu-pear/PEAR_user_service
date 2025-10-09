@@ -9,7 +9,7 @@ jobs:
     uses: ./.github/workflows/base-cd.yaml
     with:
       environment: 'main'
-      runner-label: '[self-hosted, Linux, X64, user_prod]'
+      runner-label: self-hosted, Linux, X64, user_prod
       kube-deployment-file: './k8s/deployment-prod.yaml'
       app-name: 'user-service-dev'
       dockerfile: 'Dockerfile.dev'
