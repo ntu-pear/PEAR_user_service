@@ -1,3 +1,4 @@
+import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from fastapi import FastAPI, Depends
@@ -23,7 +24,7 @@ def delete_expired_sessions_task():
 
 # Schedule the task to run every 5 minutes
 scheduler.add_job(delete_expired_sessions_task, 'interval', minutes=2)
-
+logging.getLogger('apscheduler').setLevel(logging.WARNING)
 # Lifespan context manager to manage startup and shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
