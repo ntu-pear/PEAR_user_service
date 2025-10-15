@@ -22,4 +22,4 @@ data:
     logging.level: warning
 
     output.logstash:
-      hosts: ["192.168.188.172:5044"]
+      hosts: ["192.168.188.184:5044"]

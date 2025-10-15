@@ -11,6 +11,7 @@ jobs:
       environment: 'main'
       runner-label: '["self-hosted","Linux","X64","user_prod"]'
       kube-deployment-file: './k8s/deployment-prod.yaml'
+      kube-filebeat-file: './k8s/filebeat-daemonset.yaml'
       app-name: 'user-service-dev'
       dockerfile: 'Dockerfile.dev'
       docker-image-name: 'user_service_dev'
