@@ -11,21 +11,51 @@ from fastapi import HTTPException, status
 from tests.utils.mock_db import get_db_session_mock
 
 # Mocking the relevant models
-@mock.patch("app.crud.role_crud.Role") 
-def test_create_role(mock_role_class, db_session_mock, Create_Role):
+@mock.patch("app.crud.role_crud.sqlalchemy_to_dict")
+@mock.patch("app.crud.role_crud.log_crud_action")
+@mock.patch("app.crud.role_crud.Role")
+def test_create_role(mock_role_class, mock_log_crud, mock_sqlalchemy_to_dict, db_session_mock, Create_Role):
     # Arrange
     db_session_mock.query.return_value.filter.return_value.first.return_value = None
+
     # Simulate the Role class instantiation
     mock_role = mock.Mock()
     mock_role_class.return_value = mock_role
 
-    #Act
-    result = create_role(db_session_mock, Create_Role, created_by="admin1")
+    # Mock sqlalchemy_to_dict to return a dictionary
+    mock_sqlalchemy_to_dict.return_value = {
+        "id": "D1234567",
+        "roleName": "DOCTOR",
+        "accessLevelSensitive": 1,
+        "createdById": "admin1",
+        "modifiedById": "admin1"
+    }
+
+    # Create mock current_user context
+    current_user = {
+        "userId": "admin1",
+        "fullName": "Admin User",
+        "roleName": "ADMIN",
+        "email": "admin@example.com"
+    }
+
+    # Act
+    result = create_role(db_session_mock, Create_Role, current_user=current_user)
 
     # Assert
     db_session_mock.add.assert_called_once_with(mock_role)
     db_session_mock.commit.assert_called_once()
     db_session_mock.refresh.assert_called_once_with(mock_role)
+
+    # Verify sqlalchemy_to_dict was called with the mock role
+    mock_sqlalchemy_to_dict.assert_called_once_with(mock_role)
+
+    # Verify logging was called correctly
+    mock_log_crud.assert_called_once()
+    log_call_kwargs = mock_log_crud.call_args[1]
+    assert log_call_kwargs["user"] == "admin1"
+    assert log_call_kwargs["user_full_name"] == "Admin User"
+    assert log_call_kwargs["role"] == "ADMIN"
 
     # And we return exactly that instance
     assert result is mock_role
@@ -35,6 +65,8 @@ def test_create_role(mock_role_class, db_session_mock, Create_Role):
     _, kwargs = mock_role_class.call_args
     assert kwargs["roleName"] == "DOCTOR"
     assert kwargs["accessLevelSensitive"] == RolePrivacyStatus.LOW
+    assert kwargs["createdById"] == "admin1"
+    assert kwargs["modifiedById"] == "admin1"
 
 @mock.patch("app.crud.role_crud.Role")
 def test_create_role_roleName_exist(db_session_mock, Create_Role):
