@@ -48,7 +48,7 @@ class ConditionalFormatter(logging.Formatter):
 
         # Ensure message is valid JSON if it is a dict
         if isinstance(log_dict.get("message"), dict):
-            log_dict["message"] = log_dict["message"]  # already a dict, keep as-is
+            log_dict["message"] = json.dumps(log_dict["message"], default=str)
 
         return json.dumps(log_dict)
 
