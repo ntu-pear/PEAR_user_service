@@ -1,3 +1,6 @@
+from datetime import datetime, date
+from enum import Enum
+
 from sqlalchemy.orm import Session
 from ..models.role_model import Role
 from ..models.user_model import User
@@ -6,6 +9,19 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 import uuid
 from ..logger.logger_utils import log_crud_action, ActionType, serialize_data
+#Currently the role sensitivity is causing issue, so need to use sqlachemy to dict conversion.
+def sqlalchemy_to_dict(obj):
+    """Convert SQLAlchemy model to dict, handling enums and datetimes"""
+    result = {}
+    for c in obj.__table__.columns:
+        val = getattr(obj, c.name)
+        if isinstance(val, Enum):
+            val = val.value  # convert Enum to primitive
+        elif isinstance(val, (datetime, date)):
+            val = val.isoformat()
+        result[c.name] = val
+    return result
+
 
 def get_role_by_id(db: Session, roleId: str):
     return db.query(Role).filter(Role.roleName == roleId).first()
@@ -38,7 +54,7 @@ def get_roles(db: Session, page:int, page_size:int):
         "roles": roles
     }
 
-def create_role(db: Session, role: RoleBase, created_by:str):
+def create_role(db: Session, role: RoleBase, current_user: dict):
 
     # Check if the role already exists
     existing_role = db.query(Role).filter(Role.roleName == role.roleName).first()
@@ -58,7 +74,7 @@ def create_role(db: Session, role: RoleBase, created_by:str):
 
     # Use a transaction to ensure rollback on error
     try:
-        db_role = Role(**role.model_dump(),createdById=created_by,modifiedById=created_by,id=roleId)
+        db_role = Role(**role.model_dump(),createdById=current_user["userId"],modifiedById=current_user["userId"],id=roleId)
         db.add(db_role)
         db.commit()
         db.refresh(db_role)
@@ -70,12 +86,18 @@ def create_role(db: Session, role: RoleBase, created_by:str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="An error occurred: possibly a duplicate unique field."
         )
+    # Serialize the data properly (handles datetime and other types)
+    updated_data = sqlalchemy_to_dict(db_role)
+
     log_crud_action(
         action=ActionType.CREATE,
-        user=created_by,
-        role=role.roleName,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
         entity_id=roleId,
-        message="Created role",
+        table='role',
+        message=f"Created role: {role.roleName}",
+        updated_data=updated_data,
     )
     return db_role
 

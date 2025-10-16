@@ -11,15 +11,10 @@ data:
         paths:
           - /home/VMadmin/FYP_microservices/PEAR_user_service/logs/*.log
         ignore_older: 24h
-
-        parsers:
-          - ndjson:
-              keys_under_root: true          # Put all JSON fields at root level
-              add_error_key: true            # Add error field if parsing fails
-              message_key: message           # Field containing the JSON string
-              overwrite_keys: true           # Overwrite existing top-level keys if duplicated
+        json.keys_under_root: true    # Parse JSON fields at root level
+        json.add_error_key: true      # Add error key if parsing fails
 
     logging.level: warning
 
     output.logstash:
-      hosts: ["192.168.188.172:5044"]
+      hosts: ["192.168.188.184:5044"]
