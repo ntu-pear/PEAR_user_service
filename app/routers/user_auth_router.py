@@ -14,6 +14,7 @@ from ..schemas import user_auth
 from ..routers import verification_router as verification
 from ..crud import session_crud as user_Session
 import os
+from ..logger.logger_utils import log_user_login
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 sgt_tz = pytz.timezone("Asia/Singapore")
@@ -41,6 +42,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     #Update Login Time stamp
     user.loginTimeStamp = datetime.now(sgt_tz)
     db.commit()
+
+    # Log login
+    log_user_login(user.id, user.nric_FullName, user.roleName, session_id="sess123")
+
     # If 2FA is not enabled, proceed to create session, generate and return tokens
     return user_Session.create_session(user, db)
 

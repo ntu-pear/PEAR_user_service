@@ -47,7 +47,7 @@ def create_new_role(role: RoleBase,  current_user: user_auth.TokenData = Depends
     if not is_admin:
         raise HTTPException(status_code=404, detail="User is not authorised")
     
-    return role_crud.create_role(db=db, role=role, created_by=1)
+    return role_crud.create_role(db=db, role=role, current_user=current_user)
 
 @router.put("/roles/update/{roleId}", response_model=RoleRead)
 def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
