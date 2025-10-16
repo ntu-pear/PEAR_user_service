@@ -74,9 +74,17 @@ def test_create_role_roleName_exist(db_session_mock, Create_Role):
     existing = mock.Mock()
     db_session_mock.query.return_value.filter.return_value.first.return_value = existing
 
+    # Create mock current_user context
+    current_user = {
+        "userId": "admin1",
+        "fullName": "Admin User",
+        "roleName": "ADMIN",
+        "email": "admin@example.com"
+    }
+
     # Act & Assert: should raise a 400 HTTPException
     with pytest.raises(HTTPException) as excinfo:
-        create_role(db_session_mock, Create_Role, created_by="admin1")
+        create_role(db_session_mock, Create_Role, current_user=current_user)
 
     assert excinfo.value.status_code == 400
     assert "already exists" in str(excinfo.value.detail).lower()
