@@ -1,3 +1,4 @@
+from argparse import Action
 from venv import logger
 from sqlalchemy.orm import Session
 from sqlalchemy import update
@@ -15,6 +16,8 @@ import uuid
 import cloudinary
 import cloudinary.uploader
 from typing import Optional
+from app.logger.logger_utils import log_crud_action, ActionType
+
 
 # whitelist of sortable columns for get_users_by_fields
 ALLOWED_SORT_COLUMNS = {
@@ -106,9 +109,21 @@ sort_by: Optional[str] = None, sort_dir: str = "asc",) -> tuple[list[User], int]
     return users, total_count
 
 #Update User
-async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpdate_User, modified_by):
+async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpdate_User, modified_by,username):
     stmt = update(User).where(User.id == userId)
 
+    original_user = db.query(User).filter(User.id == userId).first()
+    original_data = {
+        "email": original_user.email,
+        "contactNo": original_user.contactNo,
+        "fullName": original_user.nric_FullName,
+        "profilePicture": original_user.profilePicture,
+    }
+    message = f"Updated user: {original_user.nric_FullName}"
+    if not original_user:
+        raise ValueError(f"User {userId} not found")
+
+    updated_fields = {}
     # update modified by who
     stmt = stmt.values(modifiedById=modified_by)
     for field, value in user.model_dump(exclude_unset=True).items():
@@ -120,13 +135,38 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
             #Send confirmation email if email is changed
             email_Token = EmailService.generate_email_token(userId, value)
             await EmailService.send_confirmation_email(value, email_Token)
+        else:
+            updated_fields[field] = value
+    updated_fields['modifiedById'] = modified_by
 
 
     db.execute(stmt)
     db.commit()
+    updated_user = db.query(User).filter(User.id == userId).first()
+    updated_data = {
+        "email": updated_user.email,
+        "contactNo": updated_user.contactNo,
+        "fullName": updated_user.nric_FullName,
+        "profilePicture": original_user.profilePicture,
+        "modified_by" : updated_user.modifiedDate
+    }
+
+    message = f"Updated user: {original_user.nric_FullName} ({userId})"
+    log_crud_action(
+            action=ActionType.UPDATE,
+            user=modified_by,
+            role=updated_user.roleName,
+            message=message,
+            user_full_name=original_user.nric_FullName,
+            entity_id=userId,
+            original_data=original_data,
+            updated_data=updated_data,
+            table='USER'
+    )
+
     # Fetch the updated user to return it
     db_user = db.query(User).filter(User.id == userId).first()
-    return db_user
+    return updated_user
 
 #Admin update other user's account
 def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Admin, modified_by):
@@ -332,7 +372,7 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
 
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
+    original_data = db_user.__dict__.copy()
     # Update fields if provided
     update_data = user_update.model_dump(exclude_unset=True)  # Exclude unset fields
     for key, value in update_data.items():
@@ -342,6 +382,7 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
 
     db.commit()
     db.refresh(db_user)
+
 
     return db_user
 
@@ -402,3 +443,11 @@ def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional
     db.execute(stmt)
     db.commit()
     return db.query(User).filter(User.id == user_id).first()
+
+def get_changed_fields(original_data, updated_data):
+    changed = {}
+    for key, new_value in updated_data.items():
+        old_value = original_data.get(key)
+        if old_value != new_value:
+            changed[key] = {"old": old_value, "new": new_value}
+    return changed
