@@ -30,6 +30,7 @@ class ConditionalFormatter(logging.Formatter):
             log_dict.update({
                 "user": getattr(record, "user"),
                 "user_full_name": getattr(record, "user_full_name", ""),
+                "role": getattr(record, "role", ""),
                 "table": getattr(record, "table"),
                 "action": getattr(record, "action", ""),
                 "log_text": getattr(record, "log_text", ""),
@@ -57,14 +58,15 @@ file_handler = logging.FileHandler(log_file)
 file_handler.setLevel(logging.INFO)
 file_handler.setFormatter(ConditionalFormatter(datefmt="%Y-%m-%dT%H:%M:%S"))
 
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
-stream_handler.setFormatter(ConditionalFormatter(datefmt="%Y-%m-%dT%H:%M:%S"))
+# stream_handler = logging.StreamHandler()
+# stream_handler.setLevel(logging.DEBUG)
+# stream_handler.setFormatter(ConditionalFormatter(datefmt="%Y-%m-%dT%H:%M:%S"))
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+logger.propagate = False
 logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+# logger.addHandler(stream_handler)
 
 
 
