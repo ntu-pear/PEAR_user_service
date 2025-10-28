@@ -56,7 +56,7 @@ def log_crud_action(action: ActionType, user: str, role: str, message: str,user_
         "user_full_name": user_full_name,
     }
 
-    logger.info("", extra=extra)
+    logger.info(json.dumps(log_data), extra=extra)
 
 
 #To log when a user logins in
