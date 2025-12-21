@@ -43,3 +43,22 @@ def get_doctor_by_name(userId: str, current_user: user_auth.TokenData = Depends(
         raise HTTPException(status_code=404, detail="User not found")
         
     return db_user.nric_FullName
+
+@router.get("/supervisor/get_active_staff", response_model=schemas_user.UserRoleListResponse)
+@rate_limit(global_bucket, tokens_required=1)
+def get_active_staff(current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
+    is_supervisor = current_user["roleName"] == "SUPERVISOR"
+
+    if not is_supervisor:
+        raise HTTPException(status_code=404, detail="User is not authorised")
+    role_whitelist = ["DOCTOR", "SUPERVISOR", "GAME THERAPIST", "CAREGIVER"]
+    db_users=db.query(User).filter((User.roleName.in_(role_whitelist))&(User.isDeleted==False)).all()
+    result = []
+    for user in db_users:
+        user_data = schemas_user.UserRoleWithName(
+            id=user.id,
+            role=user.roleName,
+            nric_FullName=user.nric_FullName
+        )
+        result.append(user_data)
+    return schemas_user.UserRoleListResponse(users=result)
