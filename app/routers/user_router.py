@@ -134,23 +134,6 @@ def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_curren
     
     return schemas_user.UserRead.from_orm(db_user)
 
-@router.get("/user/username/{user_id}", response_model=schemas_user.UsernameResponse)
-@rate_limit(global_bucket, tokens_required=1)
-def get_username_by_id(
-    user_id: str,
-    _current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
-    db: Session = Depends(get_db)
-):
-    result = crud_user.get_user(db=db, userId=user_id)
-    if result is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    return schemas_user.UsernameResponse(
-        id=result.id,
-        preferredName=result.preferredName,
-        nric_FullName=result.nric_FullName
-    )
-
 #Change Password
 @router.put("/user/change_password/")
 @rate_limit(global_bucket, tokens_required=1)
