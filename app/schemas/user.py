@@ -150,3 +150,8 @@ class UserPaginationResponse(PaginationResponse):
 
 class UserRoleListResponse(BaseModel):
     users: List[UserRoleWithName]
+
+class UsernameResponse(BaseModel):
+    id: str
+    preferredName: Optional[str] = None
+    nric_FullName: str
