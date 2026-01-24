@@ -218,7 +218,15 @@ def reset_and_update_users_role(
                     }
                 )
 
-        
+        if conflicts:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "USER_ALREADY_HAS_ROLE",
+                    "message": "One or more selected users are already assigned a role.",
+                    "conflicts": conflicts,  # list of {FullName, current_role, error, ...}
+                },
+            )
 
     db_users = crud_role.get_users_by_role(
         role_name=request.role,
