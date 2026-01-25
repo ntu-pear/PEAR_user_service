@@ -11,6 +11,7 @@ jobs:
       environment: 'staging'
       runner-label: '["self-hosted","Linux","X64","user"]'
       kube-deployment-file: './k8s/deployment-staging.yaml'
+      kube-filebeat-file: './k8s/filebeat-daemonset-staging.yaml'
       app-name: 'user-service-staging'
       dockerfile: 'Dockerfile.dev'
       docker-image-name: 'user_service_staging'

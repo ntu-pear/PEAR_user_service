@@ -8,6 +8,7 @@ on:
       kube-deployment-file: { required: true, type: string }
       app-name: { required: true, type: string }
       dockerfile: { required: true, type: string }
+      kube-filebeat-file: {required: true, type: string}
       docker-image-name: { required: true, type: string }
       docker-image-tag: { required: true, type: string }
     secrets:
@@ -108,6 +109,11 @@ jobs:
         run: |
           docker push localhost:5000/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
 
+      - name: Deploy filebeat to kubernetes
+        run: |
+          kubectl apply -f '${{ inputs.kube-filebeat-file }}'
+
       - name: Deploy to Kubernetes
         run: |
           kubectl apply -f '${{ inputs.kube-deployment-file }}'
+          

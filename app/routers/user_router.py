@@ -3,8 +3,12 @@ from app.utils.utils import mask_nric
 from fastapi import APIRouter, Depends, HTTPException,UploadFile, File,status,Security
 from fastapi.responses import FileResponse 
 from sqlalchemy.orm import Session
+
+from create_db import username
+from ..crud.user_crud import get_changed_fields
 from ..database import get_db
 from ..crud import user_crud as crud_user
+from ..logger.logger_utils import log_crud_action, ActionType
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..service import email_service as EmailService
@@ -130,11 +134,29 @@ def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_curren
     
     return schemas_user.UserRead.from_orm(db_user)
 
+@router.get("/user/username/{user_id}", response_model=schemas_user.UsernameResponse)
+@rate_limit(global_bucket, tokens_required=1)
+def get_username_by_id(
+    user_id: str,
+    _current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    result = crud_user.get_user(db=db, userId=user_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return schemas_user.UsernameResponse(
+        id=result.id,
+        preferredName=result.preferredName,
+        nric_FullName=result.nric_FullName
+    )
+
 #Change Password
 @router.put("/user/change_password/")
 @rate_limit(global_bucket, tokens_required=1)
 def user_change_password(password:schemas_account.UserChangePassword,current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     userId = current_user["userId"]
+    userName = current_user["fullName"]
     # Get User
     user = db.query(User).filter(User.id == userId).first()
     # verify current password
@@ -149,9 +171,24 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         user.password = AuthService.get_password_hash(password.newPassword)
         #update modifiedById
         user.modifiedById=user.id
-        #upadte last password changed time stamp
+        #update last password changed time stamp
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
+
+        update_data = {
+            "password": "[PROTECTED]",
+            "lastPasswordChanged": user.lastPasswordChanged.isoformat(),
+        }
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=userId,
+            table="user",
+            message=f"Changed password for user: {userName}",
+            updated_data=update_data,
+        )
     except IntegrityError:
         # Rollback transaction if any IntegrityError occurs
         db.rollback()
@@ -259,7 +296,8 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
 @router.put("/user/update_user/", response_model=schemas_user.UserRead)
 async def update_user(user: schemas_user.UserUpdate_User, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     userId = current_user["userId"]
-    db_user = await crud_user.update_user_User(db=db, userId=userId, user=user,modified_by=userId)
+    username = current_user["fullName"]
+    db_user = await crud_user.update_user_User(db=db, userId=userId, user=user,modified_by=userId,username=username)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return db_user

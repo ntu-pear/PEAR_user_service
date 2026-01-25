@@ -50,6 +50,11 @@ class UpdateUsersRoleRequest(BaseModel):
     users_Id: List[str]
     role: str
 
+class UserRoleWithName(BaseModel):
+    id: str
+    role: str
+    nric_FullName: str
+
 class UserRead(BaseModel):
     id:str
     preferredName: Optional[str]=None
@@ -142,3 +147,11 @@ class PaginationResponse(BaseModel):
         orm_mode = True
 class UserPaginationResponse(PaginationResponse):
     users: List[AdminRead]
+
+class UserRoleListResponse(BaseModel):
+    users: List[UserRoleWithName]
+
+class UsernameResponse(BaseModel):
+    id: str
+    preferredName: Optional[str] = None
+    nric_FullName: str
