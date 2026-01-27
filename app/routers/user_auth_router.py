@@ -14,7 +14,7 @@ from ..schemas import user_auth
 from ..routers import verification_router as verification
 from ..crud import session_crud as user_Session
 import os
-from ..logger.logger_utils import log_user_login
+from ..logger.logger_utils import log_user_login, log_user_logout
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 sgt_tz = pytz.timezone("Asia/Singapore")
@@ -97,6 +97,12 @@ def logout_user(access_token: str = Depends(oauth2_scheme),db: Session = Depends
     user_id = token["userId"]
     logout= user_Session.delete_user_sessions(userId=user_id, db=db)
     if logout:
+        # log the logout
+        log_user_logout(
+            user_id=user_id,
+            user_full_name=token["fullName"],
+            role=token["roleName"],
+        )
         return {"msg":"Successful Log Out"}
     return{"msg":"Invalid User"}
     

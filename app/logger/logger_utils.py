@@ -10,6 +10,7 @@ class ActionType(Enum):
     UPDATE = "update"
     DELETE = "delete"
     LOGIN = "login"
+    LOGOUT = "logout"
 
 
 EXCLUDED_KEYS = {"CreatedById", "ModifiedById", "ModifiedDate", "CreatedDate", "IsDeleted", "isDeleted"}
@@ -71,6 +72,23 @@ def log_user_login(user_id: str, user_full_name: str, role: str, session_id: str
         "log_data": {
             #"session_id": session_id,
             "loginTimeStamp": datetime.now().isoformat(),
+        },
+    }
+
+    logger.info("", extra=extra)
+
+#To log when a user logout
+def log_user_logout(user_id: str, user_full_name: str, role: str):
+    """Logs a user logout event with session metadata."""
+    extra = {
+        "user": user_id,
+        "user_full_name": user_full_name,
+        "role": role,
+        "action": ActionType.LOGOUT.value,
+        "log_text": "User logged out",
+        "log_data": {
+            #"session_id": session_id,
+            "logoutTimeStamp": datetime.now().isoformat(),
         },
     }
 
