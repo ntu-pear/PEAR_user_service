@@ -9,11 +9,13 @@ from ..crud import role_crud as crud_role
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..schemas import user_auth
+from ..schemas import admin_config as schemas_admin_config
 from ..service import email_service as EmailService
 from ..service import user_auth_service as AuthService 
+from ..service import admin_config_service as AdminConfigService
 from app.service import validation_service as Validation_Service
 from app.models.user_model import User
-from typing import List, Optional
+from typing import List, Optional, Dict
 import cloudinary
 import cloudinary.uploader
 from PIL import Image
@@ -439,3 +441,51 @@ def export_users_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+@router.get("/admin/config", response_model=schemas_admin_config.AdminConfigMapResponse)
+@rate_limit(global_bucket, tokens_required=1)
+def get_all_configs(
+    current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.get("roleName") != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not authorised")
+    
+    configs = AdminConfigService.get_all_configs(db)
+
+    return configs
+
+
+@router.put("/admin/config", response_model=schemas_admin_config.AdminConfigMapResponse)
+@rate_limit(global_bucket, tokens_required=1)
+def update_configs(
+    configs: Dict[str, schemas_admin_config.ConfigValue],
+    current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.get("roleName") != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not authorised")
+    
+    existing_configs = AdminConfigService.get_all_configs(db)
+    incoming_configs = configs
+
+    if existing_configs:
+        missing_keys = set(existing_configs.keys()) - set(incoming_configs.keys())
+        extra_keys = set(incoming_configs.keys()) - set(existing_configs.keys())
+        if missing_keys or extra_keys:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "Configuration keys must match the existing set.",
+                    "missing": missing_keys,
+                    "extra": extra_keys,
+                },
+            )
+
+    updated_configs = AdminConfigService.update_all_configs(
+        db,
+        incoming_configs,
+        current_user["userId"],
+    )
+
+    return updated_configs
