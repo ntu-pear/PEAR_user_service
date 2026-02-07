@@ -11,13 +11,23 @@ from ..schemas import user as schemas_User
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db
+from app.service import admin_config_service as AdminConfigService
 from app.service import user_auth_service as AuthService
 import uuid
-import os
-# Setup Variables
-SESSION_EXPIRY_MINUTES=int(os.getenv("SESSION_EXPIRE_MINUTES", "0"))
 # Set timezone to Singapore Time (SGT)
 sgt_tz = pytz.timezone("Asia/Singapore")
+
+def _get_session_expiry_minutes(db: Session) -> int:
+    """
+    Fetch the session expiry duration in minutes from admin configs.
+    """
+    configs = AdminConfigService.get_all_configs(db)
+    raw_value = configs.get("SESSION_EXPIRE_MINUTES", 0)
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return 0
+
 
 #create session and return access & refresh token
 def create_session(user, db:Session = Depends(get_db)):
@@ -38,7 +48,7 @@ def create_session(user, db:Session = Depends(get_db)):
     #expiry_timestamp = datetime.now() + timedelta(days=2)
 
     # Set timezone to Singapore (SGT = UTC+8)
-    expiry_timestamp = datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)  # Expire in 10 min
+    expiry_timestamp = datetime.now(sgt_tz) + timedelta(minutes=_get_session_expiry_minutes(db))
 
     #Check for any other sessions, if yes delete them
     delete_user_sessions(userId=user.id, db=db)
