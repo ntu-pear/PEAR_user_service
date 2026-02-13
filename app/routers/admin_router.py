@@ -442,7 +442,7 @@ def export_users_csv(
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
-@router.get("/admin/config", response_model=schemas_admin_config.AdminConfigMapResponse)
+@router.get("/admin/config", response_model=schemas_admin_config.AdminConfigMap)
 @rate_limit(global_bucket, tokens_required=1)
 def get_all_configs(
     current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
@@ -456,7 +456,7 @@ def get_all_configs(
     return configs
 
 
-@router.put("/admin/config", response_model=schemas_admin_config.AdminConfigMapResponse)
+@router.put("/admin/config", response_model=schemas_admin_config.AdminConfigMap)
 @rate_limit(global_bucket, tokens_required=1)
 def update_configs(
     configs: Dict[str, schemas_admin_config.ConfigValue],

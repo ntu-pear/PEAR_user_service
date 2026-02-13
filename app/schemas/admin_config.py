@@ -13,7 +13,7 @@ class AdminConfigValue(BaseModel):
     configValue: ConfigValue
 
 
-class AdminConfigMapResponse(RootModel[Dict[ConfigKey, ConfigValue]]):
+class AdminConfigMap(RootModel[Dict[ConfigKey, ConfigValue]]):
     """
     Full admin config response shape for GET/PUT.
     """
