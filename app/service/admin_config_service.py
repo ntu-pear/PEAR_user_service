@@ -2,7 +2,8 @@ from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.admin_config_model import AdminConfig
+from app.crud import admin_config_crud
+from app.schemas.admin_config import AdminConfigMap
 
 ConfigValue = Any
 config_cache: Optional[Dict[str, ConfigValue]] = None
@@ -19,12 +20,11 @@ def _load_config_blob(db: Session) -> Dict[str, ConfigValue]:
         Full configuration dictionary.
     """
     global config_cache
-    config_row = db.query(AdminConfig).first()
-    config_cache = dict(config_row.configBlob) if config_row and config_row.configBlob else {}
+    config_cache = admin_config_crud.get_config_blob(db)
     return config_cache
 
 
-def get_all_configs(db: Session) -> Dict[str, ConfigValue]:
+def get_all_configs(db: Session) -> AdminConfigMap:
     """
     Retrieve all configurations from cache or database.
 
@@ -39,7 +39,7 @@ def get_all_configs(db: Session) -> Dict[str, ConfigValue]:
     return config_cache
 
 
-def update_all_configs(db: Session, new_configs: Dict[str, ConfigValue], modified_by_id: str) -> Dict[str, ConfigValue]:
+def update_all_configs(db: Session, new_configs: AdminConfigMap, modified_by_id: str) -> AdminConfigMap:
     """
     Replace the full configuration JSON blob and refresh cache.
 
@@ -52,15 +52,9 @@ def update_all_configs(db: Session, new_configs: Dict[str, ConfigValue], modifie
         Updated configuration dictionary.
     """
     global config_cache
-    config_row = db.query(AdminConfig).first()
-
-    if config_row is None:
-        config_row = AdminConfig(configBlob=new_configs, modifiedById=modified_by_id)
-        db.add(config_row)
-    else:
-        config_row.configBlob = new_configs
-        config_row.modifiedById = modified_by_id
-
-    db.commit()
-    config_cache = dict(new_configs)
+    config_cache = admin_config_crud.update_config_blob(
+        db,
+        new_configs,
+        modified_by_id,
+    )
     return config_cache
