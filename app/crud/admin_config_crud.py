@@ -36,9 +36,6 @@ def _upsert_config_row(
     """
     Create or update the AdminConfig row.
 
-    Sets modifiedDate explicitly in Python before flush so SQLAlchemy
-    never expires it from __dict__ (avoids relying on server-side onupdate).
-
     Returns (config_row, event_type, original_config_dict, original_data_dict, timestamp).
     original_config_dict and original_data_dict are None for a CREATED event.
     """
@@ -64,7 +61,7 @@ def _upsert_config_row(
 
     config_row.configBlob = new_configs.root
     config_row.modifiedById = modified_by_id
-    config_row.modifiedDate = timestamp      # Python owns the value → stays in __dict__
+    config_row.modifiedDate = timestamp
     db.flush()
 
     return config_row, "USERCONFIG_UPDATED", original_config_dict, original_data_dict, timestamp
@@ -196,26 +193,37 @@ def update_config_blob(
         correlation_id = generate_correlation_id()
 
     try:
-        # 1. Persist
+        # 1. Check for an existing row BEFORE writing anything.
+        existing_row = get_admin_config_row(db)
+        if existing_row:
+            changes = _compute_config_changes(
+                _adminconfig_to_dict(existing_row), new_configs
+            )
+            if not changes:
+                logger.info(
+                    f"No changes detected for Admin config ID {existing_row.id}, skipping update"
+                )
+                return new_configs.root
+
+        # 2. Persist the new config values (either create or update) and get the event type and original config for messaging and logging.
         config_row, event_type, original_config_dict, original_data_dict, timestamp = _upsert_config_row(
             db, new_configs, modified_by_id
         )
 
-        # 2. Compute changes (only relevant for updates)
-        changes = {}
-        if event_type == "USERCONFIG_UPDATED":
-            changes = _compute_config_changes(original_config_dict, new_configs)
+        # 3. For the CREATE path changes is always empty (nothing to diff).
+        if event_type == "USERCONFIG_CREATED":
+            changes = {}
 
-        # 3. Write outbox event
+        # 4. Write outbox event
         outbox_event = _create_outbox_event(
             db, event_type, config_row, changes,
             original_config_dict, modified_by_id, timestamp, correlation_id,
         )
 
-        # 4. Audit log
+        # 5. Audit log
         _log_config_action(event_type, config_row, original_data_dict, modified_by_id)
 
-        # 5. Commit
+        # 6. Commit both the config row and outbox event atomically
         db.commit()
 
         if event_type == "USERCONFIG_UPDATED":
