@@ -33,16 +33,70 @@ def validate_password_format(password: str):
             )
         )
 
-#Check for valid NRIC format
-def validate_nric(nric):
-    # NRIC regex pattern
-    nric_pattern = r'^[STFG]\d{7}[A-Z]$'
+
+def validate_nric(nric: str):
+    """
+    Validate NRIC format and checksum.
+    """
+    nric = nric.strip().upper()
+
+    nric_pattern = r"^[STFGM]\d{7}[A-Z]$"
     if not re.match(nric_pattern, nric):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=("Invalid NRIC Format")
-            )
-#Check for contact No format
+            detail="Invalid NRIC format. Expected format: [STFGM]XXXXXXXC (e.g., S1234567D)",
+        )
+
+    first_char = nric[0]
+    digits = nric[1:8]
+    checksum = nric[8]
+
+    calculated_checksum = _calculate_nric_checksum(first_char, digits)
+
+    if checksum != calculated_checksum:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid NRIC checksum"
+        )
+
+
+def _calculate_nric_checksum(first_char: str, digits_str: str) -> str:
+    """
+    Calculate the NRIC checksum based on Singapore NRIC algorithm.
+    """
+    weights = [2, 7, 6, 5, 4, 3, 2]
+    digits = [int(d) for d in digits_str]
+
+    weighted_sum = sum(digit * weight for digit, weight in zip(digits, weights))
+
+    if first_char in ("T", "G"):
+        offset = 4
+    elif first_char == "M":
+        offset = 3
+    else:
+        offset = 0
+
+    index = (offset + weighted_sum) % 11
+
+    checksum_table = _get_checksum_table(first_char)
+
+    return checksum_table[index]
+
+
+def _get_checksum_table(first_char: str) -> list[str]:
+    """
+    Get the checksum table based on the first character.
+    """
+    checksums = {
+        "ST": ["J", "Z", "I", "H", "G", "F", "E", "D", "C", "B", "A"],
+        "FGM": ["X", "W", "U", "T", "R", "Q", "P", "N", "M", "L", "K"],
+    }
+
+    for key, table in checksums.items():
+        if first_char in key:
+            return table
+
+    raise ValueError(f"Unable to find checksum table for '{first_char}'")
+
 def validate_contactNo(contactNo):
     #Contact No regex pattern
     contactNo_pattern = r'^[89]\d{7}$'
