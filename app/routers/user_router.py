@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException,UploadFile, File,status,Se
 from fastapi.responses import FileResponse 
 from sqlalchemy.orm import Session
 
-from create_db import username
 from ..crud.user_crud import get_changed_fields
 from ..database import get_db
 from ..crud import user_crud as crud_user
