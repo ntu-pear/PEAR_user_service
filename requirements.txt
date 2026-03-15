@@ -27,3 +27,4 @@ cloudinary
 apscheduler
 pytz
 cachetools
+email-validator

@@ -17,6 +17,7 @@ import cloudinary
 import cloudinary.uploader
 from typing import Optional
 from app.logger.logger_utils import log_crud_action, ActionType
+from app.utils.error_utils import add_error, raise_if_errors
 
 
 # whitelist of sortable columns for get_users_by_fields
@@ -169,39 +170,146 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
     return updated_user
 
 #Admin update other user's account
-def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Admin, modified_by):
-    stmt = update(User).where(User.id == userId)
+def update_user_Admin(
+    db: Session,
+    userId: str,
+    user: schemas_User.UserUpdate_Admin,
+    modified_by
+):
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        return None
 
-    # update modified by who
-    stmt = stmt.values(modifiedById=modified_by)
+    update_data = user.model_dump(exclude_unset=True)
+    errors = []
 
-    if user.email:
-        # Check for conflicting email before updating
-        existing_user_email = db.query(User).filter(User.email == user.email).first()
-        if existing_user_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this email already exists."
+    # email
+    if "email" in update_data and update_data["email"]:
+        try:
+            update_data["email"] = Validation_Service.validate_email(update_data["email"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "email", str(e.detail))
+
+        if "email" in update_data and not any(err["loc"][-1] == "email" for err in errors):
+            existing_user_email = (
+                db.query(User)
+                .filter(
+                    func.lower(User.email) == update_data["email"],
+                    User.id != userId
+                )
+                .first()
             )
-        stmt = stmt.values(email=user.email)
+            if existing_user_email:
+                add_error(errors, "email", "A user with this email already exists.")
 
-    for field, value in user.model_dump(exclude_unset=True).items():
-        # Need to addd in format checking for various fields
-        if field =="nric":
-            Validation_Service.validate_nric(value)
-        if field =="nric_DateOfBirth":
-            Validation_Service.validate_dob(value)
-        if field=="contactNo":
-            Validation_Service.validate_contactNo(value)
-        if field != "email":
-            stmt = stmt.values({field: value})
+    # nric
+    if "nric" in update_data and update_data["nric"]:
+        try:
+            update_data["nric"] = Validation_Service.validate_nric(update_data["nric"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric", str(e.detail))
+
+        if "nric" in update_data and not any(err["loc"][-1] == "nric" for err in errors):
+            existing_user_nric = (
+                db.query(User)
+                .filter(
+                    func.upper(User.nric) == update_data["nric"],
+                    User.id != userId
+                )
+                .first()
+            )
+            if existing_user_nric:
+                add_error(errors, "nric", "A user with this NRIC already exists.")
+
+    # contact number
+    if "contactNo" in update_data:
+        try:
+            update_data["contactNo"] = Validation_Service.validate_contactNo(update_data["contactNo"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "contactNo", str(e.detail))
+
+        if (
+            "contactNo" in update_data
+            and update_data["contactNo"]
+            and not any(err["loc"][-1] == "contactNo" for err in errors)
+        ):
+            existing_user_contact = (
+                db.query(User)
+                .filter(
+                    User.contactNo == update_data["contactNo"],
+                    User.id != userId
+                )
+                .first()
+            )
+            if existing_user_contact:
+                add_error(errors, "contactNo", "A user with this contact number already exists.")
+
+    # date of birth
+    if "nric_DateOfBirth" in update_data and update_data["nric_DateOfBirth"]:
+        try:
+            update_data["nric_DateOfBirth"] = Validation_Service.validate_dob(
+                update_data["nric_DateOfBirth"]
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_DateOfBirth", str(e.detail))
+
+    # preferred name
+    if "preferredName" in update_data and update_data["preferredName"]:
+        try:
+            update_data["preferredName"] = Validation_Service.validate_uppercase_name(
+                update_data["preferredName"],
+                "preferredName"
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "preferredName", str(e.detail))
+
+    # full name
+    if "nric_FullName" in update_data and update_data["nric_FullName"]:
+        try:
+            update_data["nric_FullName"] = Validation_Service.validate_uppercase_name(
+                update_data["nric_FullName"],
+                "nric_FullName"
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_FullName", str(e.detail))
+
+    # optional extra check for required lockout reason when enabled
+    if update_data.get("lockOutEnabled") is True:
+        lockout_reason = update_data.get("lockOutReason", db_user.lockOutReason)
+        if not lockout_reason or not str(lockout_reason).strip():
+            add_error(errors, "lockOutReason", "Lockout Reason is required when Lockout Enabled is Yes.")
+
+    raise_if_errors(errors)
+
+    stmt = (
+        update(User)
+        .where(User.id == userId)
+        .values(modifiedById=modified_by, **update_data)
+    )
 
     db.execute(stmt)
     db.commit()
 
-    # Fetch the updated user to return it
-    db_user = db.query(User).filter(User.id == userId).first()
-    return db_user
+    updated_user = db.query(User).filter(User.id == userId).first()
+    return updated_user
 
 #Admin update selected users role
 def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by):
@@ -310,56 +418,129 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
     return db_user
 
 def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
-    # Check NRIC Format
-    Validation_Service.validate_nric(user.nric)
-    # Combine checks for email and NRIC into a single query
-    existing_user = db.query(User).filter(
-        (User.email == user.email) | (User.nric == user.nric)
-    ).first()
+    create_data = user.model_dump()
+    errors = []
 
-    if existing_user:
-        if existing_user.email == user.email:
-            logger.error(f"Email conflict: {user.email} already exists.")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this email already exists."
-            )
-        if existing_user.nric == user.nric:
-            logger.error(f"NRIC conflict: {user.nric} already exists.")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this nric already exists."
-            )
+    # Validate + normalize NRIC
+    if create_data.get("nric"):
+        try:
+            create_data["nric"] = Validation_Service.validate_nric(create_data["nric"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric", str(e.detail))
 
-    # Generate a unique ID with a fixed length of 12
+    # Validate + normalize email
+    if create_data.get("email"):
+        try:
+            create_data["email"] = Validation_Service.validate_email(create_data["email"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "email", str(e.detail))
+
+    # Validate + normalize contact number
+    if "contactNo" in create_data:
+        try:
+            create_data["contactNo"] = Validation_Service.validate_contactNo(create_data["contactNo"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "contactNo", str(e.detail))
+
+    # Validate DOB
+    if create_data.get("nric_DateOfBirth"):
+        try:
+            create_data["nric_DateOfBirth"] = Validation_Service.validate_dob(
+                create_data["nric_DateOfBirth"]
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_DateOfBirth", str(e.detail))
+
+    # Validate uppercase full name
+    if create_data.get("nric_FullName"):
+        try:
+            create_data["nric_FullName"] = Validation_Service.validate_uppercase_name(
+                create_data["nric_FullName"],
+                "nric_FullName"
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_FullName", str(e.detail))
+
+    # Duplicate checks only if field passed validation
+    if create_data.get("email") and not any(err["loc"][-1] == "email" for err in errors):
+        existing_email = (
+            db.query(User)
+            .filter(func.lower(User.email) == create_data["email"])
+            .first()
+        )
+        if existing_email:
+            add_error(errors, "email", "A user with this email already exists.")
+
+    if create_data.get("nric") and not any(err["loc"][-1] == "nric" for err in errors):
+        existing_nric = (
+            db.query(User)
+            .filter(func.upper(User.nric) == create_data["nric"])
+            .first()
+        )
+        if existing_nric:
+            add_error(errors, "nric", "A user with this NRIC already exists.")
+
+    if (
+        create_data.get("contactNo")
+        and not any(err["loc"][-1] == "contactNo" for err in errors)
+    ):
+        existing_contact = (
+            db.query(User)
+            .filter(User.contactNo == create_data["contactNo"])
+            .first()
+        )
+        if existing_contact:
+            add_error(errors, "contactNo", "A user with this contact number already exists.")
+
+    # Stop here if any validation errors collected
+    raise_if_errors(errors)
+
+    # Generate unique user id
     while True:
         unique_id = "U" + str(uuid.uuid4().hex[:11])
-        # Ensure the total length is 12 characters
-        userId =unique_id[:11]  # Truncate to 11 if necessary
+        userId = unique_id[:11]
         existing_user_id = db.query(User).filter(User.id == userId).first()
         if not existing_user_id:
             break
-    # Check ContactNo Format
-    Validation_Service.validate_contactNo(user.contactNo)
-    # Check DOB Format
-    Validation_Service.validate_dob(user.nric_DateOfBirth)
 
-    # Use a transaction to ensure rollback on error
     try:
-        db_user = User(**user.model_dump(), createdById = created_by, modifiedById= created_by, id=userId)
+        db_user = User(
+            **create_data,
+            createdById=created_by,
+            modifiedById=created_by,
+            id=userId
+        )
 
-        # Begin transaction
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
 
-    except IntegrityError as e:
-        # Rollback transaction if any IntegrityError occurs
+    except IntegrityError:
         db.rollback()
-        print(e.orig)
+        # fallback for DB-level uniqueness/race conditions
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An error occurred: possibly a duplicate unique field."
+            detail=[
+                {
+                    "loc": ["body", "non_field"],
+                    "msg": "An error occurred: possibly a duplicate unique field."
+                }
+            ]
         )
 
     return db_user
