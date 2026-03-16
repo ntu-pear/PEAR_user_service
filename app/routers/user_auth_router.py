@@ -27,18 +27,17 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/login")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     # Get User
     user = db.query(User).filter(User.email == form_data.username).first()
-    
+
     # Check is user is verified
     if not user or not user_auth_service.verify_password(form_data.password, user.password):
         raise user_auth_service.user_credentials_exception
     if not user.verified:
         raise user_auth_service.user_verify_exception
-    
+
     #check is user enabled 2FA
     if user.twoFactorEnabled:
         await verification.request_otp(user.email, db)  # Send OTP email
         return {"msg": "2FA required", "email": user.email}  # Prompt to enter OTP
-    
     #Update Login Time stamp
     user.loginTimeStamp = datetime.now(sgt_tz)
     db.commit()
@@ -65,10 +64,10 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     payload = user_auth_service.decode_refresh_token(refresh_token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
-    
+
     data={
-            "userId": payload["userId"], 
-            "fullName": payload["fullName"], 
+            "userId": payload["userId"],
+            "fullName": payload["fullName"],
             "roleName": payload["roleName"],
             "email": payload["email"]
         }
@@ -80,7 +79,7 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     user_auth_service.check_refresh_token(session_id=payload["sessionId"], token=refresh_token, db=db)
     #update session
     user_Session.update_session(session_id=payload["sessionId"],access_Token= new_access_token["token"],db=db)
-    
+
     return {
         "access_token": new_access_token["token"],
         "refresh_token": refresh_token,
@@ -95,17 +94,14 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
 def logout_user(access_token: str = Depends(oauth2_scheme),db: Session = Depends(get_db)):
     token = user_auth_service.decode_access_token(access_token)
     user_id = token["userId"]
-    logout= user_Session.delete_user_sessions(userId=user_id, db=db)
+    user_full_name = token.get("fullName", "")
+    user_role = token.get("roleName", "")
+    logout = user_Session.delete_user_sessions(userId=user_id, db=db)
     if logout:
-        # log the logout
-        log_user_logout(
-            user_id=user_id,
-            user_full_name=token["fullName"],
-            role=token["roleName"],
-        )
+        log_user_logout(user_id, user_full_name, user_role)
         return {"msg":"Successful Log Out"}
     return{"msg":"Invalid User"}
-    
+
 
 @router.get("/current_user/", response_model=user_auth.TokenData)
 def read_current_user(current_access: user_auth.TokenData = Depends(user_auth_service.get_current_user)):
