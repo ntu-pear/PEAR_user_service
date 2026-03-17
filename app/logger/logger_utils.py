@@ -11,14 +11,28 @@ class ActionType(Enum):
     DELETE = "delete"
     LOGIN = "login"
     LOGOUT = "logout"
+    PASSWORD_CHANGE = "password_change"
 
 
 EXCLUDED_KEYS = {"CreatedById", "ModifiedById", "ModifiedDate", "CreatedDate", "IsDeleted", "isDeleted"}
 
+# Sensitive fields that should be redacted in logs
+SENSITIVE_KEYS = {"password", "currentPassword", "newPassword", "confirmPassword", "passwordHash", "token", "refresh_token", "access_token", "session_id"}
+
 
 def filter_data(data: dict) -> dict:
-    """Removes unwanted keys from the given dictionary."""
-    return {k: v for k, v in data.items() if k not in EXCLUDED_KEYS} if data else {}
+    """Removes unwanted keys and redacts sensitive fields from the given dictionary."""
+    if not data:
+        return {}
+    result = {}
+    for k, v in data.items():
+        if k in EXCLUDED_KEYS:
+            continue
+        if k in SENSITIVE_KEYS:
+            result[k] = "[REDACTED]"
+        else:
+            result[k] = v
+    return result
 
 
 def serialize_data(data):
@@ -32,9 +46,20 @@ def serialize_data(data):
     return data
 
 
-# structured audit logger for CREATE/UPDATE/DELETE
-def log_crud_action(action: ActionType, user: str, role: str, message: str,user_full_name: str = "", entity_id: Optional[str] = None,
-                    original_data: Optional[dict] = None, updated_data: Optional[dict] = None, table='user'):
+# structured audit logger for CREATE/UPDATE/DELETE/AUTH events
+def log_crud_action(
+    action: ActionType,
+    user: str,
+    role: str,
+    message: str,
+    user_full_name: str = "",
+    entity_id: Optional[str] = None,
+    original_data: Optional[dict] = None,
+    updated_data: Optional[dict] = None,
+    table: str = 'user',
+    log_type: str = "data",
+    is_system_config: bool = False
+):
     """Logs a CRUD operation with consistent structured JSON fields."""
     if action == ActionType.CREATE:
         original_data = None
@@ -55,41 +80,38 @@ def log_crud_action(action: ActionType, user: str, role: str, message: str,user_
         "table": table,
         "log_data": log_data,
         "user_full_name": user_full_name,
+        "log_type": log_type,
+        "is_system_config": is_system_config,
     }
 
     logger.info("", extra=extra)
 
 
-#To log when a user logins in
 def log_user_login(user_id: str, user_full_name: str, role: str, session_id: str):
-    """Logs a user login event with session metadata."""
-    extra = {
-        "user": user_id,
-        "user_full_name": user_full_name,
-        "role": role,
-        "action": ActionType.LOGIN.value,
-        "log_text": "User logged in",
-        "log_data": {
-            #"session_id": session_id,
-            "loginTimeStamp": datetime.now().isoformat(),
-        },
-    }
+    """Logs a user login event with human-readable message."""
+    log_crud_action(
+        action=ActionType.LOGIN,
+        user=user_id,
+        user_full_name=user_full_name,
+        role=role,
+        entity_id=user_id,
+        table="user",
+        message=f"{user_full_name} logged in",
+        log_type="auth",
+        is_system_config=False,
+    )
 
-    logger.info("", extra=extra)
 
-#To log when a user logout
 def log_user_logout(user_id: str, user_full_name: str, role: str):
-    """Logs a user logout event with session metadata."""
-    extra = {
-        "user": user_id,
-        "user_full_name": user_full_name,
-        "role": role,
-        "action": ActionType.LOGOUT.value,
-        "log_text": "User logged out",
-        "log_data": {
-            #"session_id": session_id,
-            "logoutTimeStamp": datetime.now().isoformat(),
-        },
-    }
-
-    logger.info("", extra=extra)
+    """Logs a user logout event with human-readable message."""
+    log_crud_action(
+        action=ActionType.LOGOUT,
+        user=user_id,
+        user_full_name=user_full_name,
+        role=role,
+        entity_id=user_id,
+        table="user",
+        message=f"{user_full_name} logged out",
+        log_type="auth",
+        is_system_config=False,
+    )
