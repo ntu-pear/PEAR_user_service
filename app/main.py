@@ -29,8 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
-
+def init_db():
+    Base.metadata.create_all(bind=engine)
+if __name__ == "__main__":
+    init_db()
 
 global_bucket = TokenBucket(rate=1, capacity=2)
 
