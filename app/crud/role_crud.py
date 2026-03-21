@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from fastapi import HTTPException, status
 import uuid
 from ..logger.logger_utils import log_crud_action, ActionType, serialize_data
+from ..models.access_level_model import AccessLevel
 #Currently the role sensitivity is causing issue, so need to use sqlachemy to dict conversion.
 def sqlalchemy_to_dict(obj):
     """Convert SQLAlchemy model to dict, handling enums and datetimes"""
@@ -22,31 +23,41 @@ def sqlalchemy_to_dict(obj):
         result[c.name] = val
     return result
 
+def enrich_access_level(access_level):
+    access_level.isEditable = not access_level.isSystem
+    access_level.isDeletable = not access_level.isSystem
+    return access_level
+
 
 def get_role_by_id(db: Session, roleId: str):
-    return db.query(Role).filter(Role.roleName == roleId).first()
+    return db.query(Role).filter(Role.id == roleId).first()
 
 def get_role_by_name(db: Session, roleName: str):
     return db.query(Role).filter(Role.roleName == roleName).first()
 
 
+from sqlalchemy.orm import joinedload
+
 def get_roles(db: Session, page:int, page_size:int): 
-    # Maximum page size limit to prevent excessively large queries
     max_page_size = 100
-    page_size = min(page_size, max_page_size)  # Enforce max page size
-    page = max(page, 0)  # Default to page 0 if the page number is less than 0
-    offset = page* page_size  # Calculate the offset
+    page_size = min(page_size, max_page_size)
+    page = max(page, 0)
+    offset = page * page_size
 
-    # Query to get all roles (no filters applied)
-    query = db.query(Role)
+    query = db.query(Role)\
+        .options(joinedload(Role.accessLevel))\
+        .filter(Role.isDeleted == False)
 
-    # Total count of roles (without pagination)
     total_count = query.count()
 
-    # Get the roles with pagination
-    roles= query.order_by(Role.id).offset(offset).limit(page_size).all()
+    roles = query.order_by(Role.roleName)\
+        .offset(offset)\
+        .limit(page_size)\
+        .all()
+    for role in roles:
+        if role.accessLevel:
+            role.accessLevel = enrich_access_level(role.accessLevel)
 
-    # Return the paginated response
     return {
         "total": total_count,
         "page": page,
@@ -62,6 +73,12 @@ def create_role(db: Session, role: RoleBase, current_user: dict):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="A role with this name already exists."
+        )
+    db_access_level = db.query(AccessLevel).filter(AccessLevel.id == role.accessLevelId).first()
+    if not db_access_level:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Selected access level does not exist."
         )
 
     # Generate a unique ID with a fixed length of 8
@@ -103,6 +120,23 @@ def create_role(db: Session, role: RoleBase, current_user: dict):
 
 def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):
     db_role = db.query(Role).filter(Role.id == roleId).first()
+    if role.roleName is not None:
+        existing_role = db.query(Role).filter(
+            Role.roleName == role.roleName,
+            Role.id != roleId
+        ).first()
+        if existing_role:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A role with this name already exists."
+            )
+    if role.accessLevelId is not None:
+        db_access_level = db.query(AccessLevel).filter(AccessLevel.id == role.accessLevelId).first()
+        if not db_access_level:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Selected access level does not exist."
+            )
     if db_role:
         #update modified by Who
         db_role.modifiedById = modified_by
@@ -116,20 +150,24 @@ def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):
 
 def delete_role(db: Session, roleId: str):
     db_role = db.query(Role).filter(Role.id == roleId).first()
+
     if not db_role:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Role not found."
         )
-    #Check if any user has the role, if so stop the deletion of the role
-    db_users= db.query(User).filter(User.roleName==db_role.roleName).first()
+
+    db_users = db.query(User).filter(User.roleName == db_role.roleName).first()
     if db_users:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="There are users with the role"
         )
-    db.delete(db_role)
+
+    db_role.isDeleted = True
     db.commit()
+    db.refresh(db_role)
+
     return db_role
 
 def get_users_by_role(role_name: str, page: int, page_size: int, db: Session):
