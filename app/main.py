@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from app.database import engine, Base
-from app.routers import admin_router,user_auth_router,supervisor_router, doctor_router, user_router,role_router,email_router,verification_router
+from app.routers import admin_router,user_auth_router,supervisor_router, doctor_router, user_router,role_router,email_router,verification_router, access_level_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -60,6 +60,7 @@ app.include_router(role_router.router, prefix="/api/v1", tags=["role"])
 app.include_router(user_auth_router.router, prefix="/api/v1", tags=["authentication"])
 app.include_router(email_router.router, prefix="/api/v1", tags=["email"])
 app.include_router(verification_router.router, prefix="/api/v1", tags=["2FA"])
+app.include_router(access_level_router.router, prefix="/api/v1", tags=["2FA"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the User API hello"} 
