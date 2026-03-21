@@ -5,8 +5,14 @@ from ..schemas.access_level import AccessLevelCreate, AccessLevelUpdate
 
 RESERVED_SYSTEM_CODES = {"NONE", "LOW", "MEDIUM", "HIGH"}
 
+def enrich_access_level(access_level):
+    access_level.isEditable = not access_level.isSystem
+    access_level.isDeletable = not access_level.isSystem
+    return access_level
+
 def get_all_access_levels(db: Session):
-    return db.query(AccessLevel).order_by(AccessLevel.levelRank.asc()).all()
+    levels = db.query(AccessLevel).order_by(AccessLevel.levelRank.asc()).all()
+    return [enrich_access_level(lvl) for lvl in levels]
 
 def get_access_level_by_id(db: Session, access_level_id: str):
     return db.query(AccessLevel).filter(AccessLevel.id == access_level_id).first()
