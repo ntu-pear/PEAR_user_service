@@ -102,7 +102,7 @@ def make_access_level(
 
 
 # -----------------------------
-# GET /access-levels/
+# GET /access_levels/
 # -----------------------------
 def test_read_access_levels_success(client, db_session_mock):
     level1 = make_access_level(
@@ -126,7 +126,7 @@ def test_read_access_levels_success(client, db_session_mock):
         level2,
     ]
 
-    response = client.get("/api/v1/access-levels/")
+    response = client.get("/api/v1/access_levels/")
 
     assert response.status_code == 200
     data = response.json()
@@ -136,7 +136,7 @@ def test_read_access_levels_success(client, db_session_mock):
 
 
 # -----------------------------
-# GET /access-levels/{id}
+# GET /access_levels/{id}
 # -----------------------------
 def test_read_access_level_success(client, db_session_mock):
     level = make_access_level(
@@ -150,7 +150,7 @@ def test_read_access_level_success(client, db_session_mock):
 
     db_session_mock.query.return_value.filter.return_value.first.return_value = level
 
-    response = client.get("/api/v1/access-levels/ACL00003")
+    response = client.get("/api/v1/access_levels/ACL00003")
 
     assert response.status_code == 200
     data = response.json()
@@ -162,14 +162,14 @@ def test_read_access_level_success(client, db_session_mock):
 def test_read_access_level_not_found(client, db_session_mock):
     db_session_mock.query.return_value.filter.return_value.first.return_value = None
 
-    response = client.get("/api/v1/access-levels/ACL99999")
+    response = client.get("/api/v1/access_levels/ACL99999")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Access level not found."
 
 
 # -----------------------------
-# POST /access-levels/create
+# POST /access_levels/create
 # -----------------------------
 def test_create_access_level_success(client, db_session_mock):
     # create_access_level query sequence:
@@ -196,7 +196,7 @@ def test_create_access_level_success(client, db_session_mock):
         "description": "Restricted internal access",
     }
 
-    response = client.post("/api/v1/access-levels/create", json=payload)
+    response = client.post("/api/v1/access_levels/create", json=payload)
 
     assert response.status_code == 200
     db_session_mock.add.assert_called_once()
@@ -221,7 +221,7 @@ def test_create_access_level_forbidden_for_non_admin(client_non_admin):
         "description": "Restricted internal access",
     }
 
-    response = client_non_admin.post("/api/v1/access-levels/create", json=payload)
+    response = client_non_admin.post("/api/v1/access_levels/create", json=payload)
 
     assert response.status_code == 403
     assert response.json()["detail"] == "User is not authorised"
@@ -242,14 +242,14 @@ def test_create_access_level_duplicate_code(client, db_session_mock):
         "description": "Restricted internal access",
     }
 
-    response = client.post("/api/v1/access-levels/create", json=payload)
+    response = client.post("/api/v1/access_levels/create", json=payload)
 
     assert response.status_code == 400
     assert "reserved" in response.json()["detail"].lower()
 
 
 # -----------------------------
-# PUT /access-levels/update/{id}
+# PUT /access_levels/update/{id}
 # -----------------------------
 def test_update_access_level_success_custom(client, db_session_mock):
     level = make_access_level(
@@ -276,7 +276,7 @@ def test_update_access_level_success_custom(client, db_session_mock):
         "description": "Updated custom level",
     }
 
-    response = client.put("/api/v1/access-levels/update/ACL99999", json=payload)
+    response = client.put("/api/v1/access_levels/update/ACL99999", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -302,7 +302,7 @@ def test_update_access_level_system_description_only_success(client, db_session_
         "description": "Updated system description"
     }
 
-    response = client.put("/api/v1/access-levels/update/ACL00004", json=payload)
+    response = client.put("/api/v1/access_levels/update/ACL00004", json=payload)
 
     assert response.status_code == 200
     data = response.json()
@@ -325,7 +325,7 @@ def test_update_access_level_system_forbidden_field(client, db_session_mock):
         "levelName": "Super High"
     }
 
-    response = client.put("/api/v1/access-levels/update/ACL00004", json=payload)
+    response = client.put("/api/v1/access_levels/update/ACL00004", json=payload)
 
     assert response.status_code == 403
     assert "only allow description updates" in response.json()["detail"].lower()
@@ -336,14 +336,14 @@ def test_update_access_level_not_found(client, db_session_mock):
 
     payload = {"description": "Updated description"}
 
-    response = client.put("/api/v1/access-levels/update/ACL99999", json=payload)
+    response = client.put("/api/v1/access_levels/update/ACL99999", json=payload)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Access level not found."
 
 
 # -----------------------------
-# DELETE /access-levels/delete/{id}
+# DELETE /access_levels/delete/{id}
 # -----------------------------
 def test_delete_access_level_success(client, db_session_mock):
     level = make_access_level(
@@ -358,7 +358,7 @@ def test_delete_access_level_success(client, db_session_mock):
 
     db_session_mock.query.return_value.filter.return_value.first.return_value = level
 
-    response = client.delete("/api/v1/access-levels/delete/ACL99999")
+    response = client.delete("/api/v1/access_levels/delete/ACL99999")
 
     assert response.status_code == 200
     db_session_mock.delete.assert_called_once_with(level)
@@ -376,7 +376,7 @@ def test_delete_access_level_system_forbidden(client, db_session_mock):
 
     db_session_mock.query.return_value.filter.return_value.first.return_value = level
 
-    response = client.delete("/api/v1/access-levels/delete/ACL00001")
+    response = client.delete("/api/v1/access_levels/delete/ACL00001")
 
     assert response.status_code == 403
     assert "cannot be deleted" in response.json()["detail"].lower()
@@ -394,7 +394,7 @@ def test_delete_access_level_in_use(client, db_session_mock):
 
     db_session_mock.query.return_value.filter.return_value.first.return_value = level
 
-    response = client.delete("/api/v1/access-levels/delete/ACL99999")
+    response = client.delete("/api/v1/access_levels/delete/ACL99999")
 
     assert response.status_code == 400
     assert "assigned to roles" in response.json()["detail"].lower()
@@ -403,7 +403,7 @@ def test_delete_access_level_in_use(client, db_session_mock):
 def test_delete_access_level_not_found(client, db_session_mock):
     db_session_mock.query.return_value.filter.return_value.first.return_value = None
 
-    response = client.delete("/api/v1/access-levels/delete/ACL99999")
+    response = client.delete("/api/v1/access_levels/delete/ACL99999")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Access level not found."
