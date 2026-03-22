@@ -174,7 +174,7 @@ def validate_email(email: str) -> str:
     email = email.strip()
 
     try:
-        validated = ev_validate_email(email, check_deliverability=True)
+        validated = ev_validate_email(email, check_deliverability=False)
         return validated.normalized
     except EmailNotValidError as e:
         raise HTTPException(

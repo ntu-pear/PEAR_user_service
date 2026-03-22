@@ -172,59 +172,89 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
         raise HTTPException(status_code=404, detail="User not found")
     return schemas_user.AdminRead.from_orm(db_user)
 
-
 @router.put("/admin/reset_and_update_users_role/")
 def reset_and_update_users_role(
     request: schemas_user.UpdateUsersRoleRequest,
     current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db),
 ):
-    # 1. Authorization & Role Protection
     if current_user["roleName"] != "ADMIN":
         raise HTTPException(status_code=403, detail="User is not authorised")
-    
-    if request.role == "ADMIN":
-        raise HTTPException(status_code=400, detail="ADMIN role cannot be modified via bulk workbench")
 
     updated_users = []
-    orphaned_users = [] # To help the frontend trigger the "Force Assign" modal
-    
-    # 2. Sync Logic
-    # Get all users currently assigned to this specific role in the DB
-    db_roster = crud_role.get_users_by_role(
+    failed_updates = []
+
+    # Always copy
+    update_list = list(request.users_Id)
+
+    # Block updates for ADMIN role
+    if request.role == "ADMIN":
+        raise HTTPException(status_code=400, detail="ADMIN role cannot be updated")
+
+    if update_list:
+        selected_users = db.query(User).filter(User.id.in_(update_list)).all()
+        selected_by_id = {u.id: u for u in selected_users}
+
+        missing_ids = [uid for uid in update_list if uid not in selected_by_id]
+        if missing_ids:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "USER_NOT_FOUND",
+                    "message": "One or more users were not found.",
+                    "missing_users": missing_ids,
+                },
+            )
+
+        conflicts = []
+        for uid in update_list:
+            u = selected_by_id[uid]
+            if u.roleName is not None and u.roleName != request.role:
+                conflicts.append(
+                    {
+                        "users_id": u.id,
+                        "FullName": u.nric_FullName,
+                        "current_role": u.roleName,
+                        "requested_role": request.role,
+                        "error": f"{u.nric_FullName} already has role {u.roleName}.",
+                    }
+                )
+
+        if conflicts:
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "code": "USER_ALREADY_HAS_ROLE",
+                    "message": "One or more selected users are already assigned a role.",
+                    "conflicts": conflicts,  # list of {FullName, current_role, error, ...}
+                },
+            )
+
+    db_users = crud_role.get_users_by_role(
         role_name=request.role,
         page=0,
         page_size=100000,
         db=db,
     )
-    
-    current_ids_in_db = {u["id"] for u in db_roster.get("users", [])}
-    requested_ids = set(request.users_Id)
 
-    # A. REMOVAL LOGIC: Users in DB but NOT in the new request
-    to_remove = current_ids_in_db - requested_ids
-    for userId in to_remove:
-        db_user = crud_user.update_users_role_admin(
-            db=db,
-            userId=userId,
-            roleName=None, # User is now orphaned
-            modified_by=current_user["userId"],
-        )
-        if db_user:
-            res_data = {
-                "users_id": db_user.id, 
-                "FullName": db_user.nric_FullName, 
-                "role": None,
-                "status": "ORPHANED" 
-            }
-            updated_users.append(res_data)
-            orphaned_users.append(res_data)
+    update_set = set(update_list)
 
-    # B. ADDITION/UPDATE LOGIC: Users in request but NOT already in this role in DB
-    # We remove the 409 conflict check to allow seamless role switching
-    to_add = requested_ids # We process the whole list to ensure sync
-    for userId in to_add:
-        # If user is already in this role, this update is redundant but safe
+    # Remove role from users who currently have it but are NOT selected
+    for user in db_users.get("users", []):
+        if user["id"] not in update_set:
+            db_user = crud_user.update_users_role_admin(
+                db=db,
+                userId=user["id"],
+                roleName=None,
+                modified_by=current_user["userId"],
+            )
+            if db_user:
+                updated_users.append(
+                    {"users_id": db_user.id, "FullName": db_user.nric_FullName, "role": db_user.roleName}
+                )
+
+    # Assign role to selected users
+    for userId in update_list:
         db_user = crud_user.update_users_role_admin(
             db=db,
             userId=userId,
@@ -232,19 +262,13 @@ def reset_and_update_users_role(
             modified_by=current_user["userId"],
         )
         if db_user:
-            updated_users.append({
-                "users_id": db_user.id, 
-                "FullName": db_user.nric_FullName, 
-                "role": db_user.roleName,
-                "status": "ASSIGNED"
-            })
+            updated_users.append(
+                {"users_id": db_user.id, "FullName": db_user.nric_FullName, "role": db_user.roleName}
+            )
+        else:
+            failed_updates.append({"users_id": userId, "error": "User not found"})
 
-    return {
-        "role": request.role,
-        "total_updated": len(updated_users),
-        "orphaned_users": orphaned_users, # Frontend watches this to pop the modal
-        "updated_users": updated_users
-    }
+    return {"Updated Users": updated_users, "Failed Updates": failed_updates}
 
 
 @router.delete("/admin/{userId}", response_model=schemas_user.AdminRead)
