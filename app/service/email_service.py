@@ -29,6 +29,8 @@ def confirm_token(token: str, expiration=600): #600 sec 10min expiry
 
 async def send_confirmation_email(email: str, token: str):
     validate_email_format(email)
+    print("EMAIL_LINK_BASEURL used:", EMAIL_LINK_BASEURL)
+    print("EMAIL_LINK_BASEURL =", os.getenv("EMAIL_LINK_BASEURL"))
     confirmation_url = f"{EMAIL_LINK_BASEURL}/confirm-email/{token}"
     
     email = {

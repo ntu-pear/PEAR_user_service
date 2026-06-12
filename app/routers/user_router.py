@@ -30,7 +30,9 @@ from cachetools import TTLCache
 # import cache and event listener
 from sqlalchemy import event
 from cachetools import TTLCache
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 sgt_tz = pytz.timezone("Asia/Singapore")
@@ -59,7 +61,7 @@ MAX_SIZE = (300, 300)  # Max image size (300x300)
 def get_cached_user(user_id: int, db: Session):
     if user_id in user_cache:
         return user_cache[user_id]
-    
+
     # otherwise fetch from DB
     db_user = crud_user.get_user(db=db, userId=user_id)
     if db_user:
@@ -69,7 +71,7 @@ def get_cached_user(user_id: int, db: Session):
 def get_cached_user(user_id: int, db: Session):
     if user_id in user_cache:
         return user_cache[user_id]
-    
+
     # otherwise fetch from DB
     db_user = crud_user.get_user(db=db, userId=user_id)
     if db_user:
@@ -110,7 +112,7 @@ def create_success_response(data: dict):
 @rate_limit(global_bucket, tokens_required=1)
 async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
     try:
-        userDetails = EmailService.confirm_token(token) 
+        userDetails = EmailService.confirm_token(token)
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
@@ -118,7 +120,7 @@ async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = D
     #return user
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     db_user = crud_user.verify_user(db=db, user=user)
     return db_user
 
@@ -130,7 +132,7 @@ def read_user(current_user: user_auth.TokenData = Depends(AuthService.get_curren
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     return schemas_user.UserRead.from_orm(db_user)
 
 @router.get("/user/username/{user_id}", response_model=schemas_user.UsernameResponse)
@@ -143,7 +145,7 @@ def get_username_by_id(
     result = crud_user.get_user(db=db, userId=user_id)
     if result is None:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     return schemas_user.UsernameResponse(
         id=result.id,
         preferredName=result.preferredName,
@@ -174,19 +176,22 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
 
+        logger.info(f"Password changed for {userName}")
+
         update_data = {
-            "password": "[PROTECTED]",
             "lastPasswordChanged": user.lastPasswordChanged.isoformat(),
         }
         log_crud_action(
-            action=ActionType.UPDATE,
+            action=ActionType.PASSWORD_CHANGE,
             user=current_user["userId"],
             user_full_name=current_user["fullName"],
             role=current_user["roleName"],
             entity_id=userId,
             table="user",
-            message=f"Changed password for user: {userName}",
+            message=f"{userName} changed their password",
             updated_data=update_data,
+            log_type="auth",
+            is_system_config=False,
         )
     except IntegrityError:
         # Rollback transaction if any IntegrityError occurs
@@ -202,10 +207,10 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
 @rate_limit(global_bucket, tokens_required=1)
 def user_change_email(token: str, db: Session = Depends(get_db)):
     try:
-        userDetails = EmailService.confirm_token(token) 
+        userDetails = EmailService.confirm_token(token)
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
+
     user = db.query(User).filter(User.id == userDetails.get("userId")).first()
     #return user
     if not user:
@@ -218,7 +223,7 @@ def user_change_email(token: str, db: Session = Depends(get_db)):
 
 
 #Resend account confirmation email
-@router.post("/user/request/resend_registration_email") 
+@router.post("/user/request/resend_registration_email")
 @rate_limit(global_bucket, tokens_required=1)
 async def resend_registration_email(account: schemas_account.ResendEmail, db: Session = Depends(get_db)):
     user = crud_user.get_user_by_email(db=db, email=account.email)
@@ -227,12 +232,12 @@ async def resend_registration_email(account: schemas_account.ResendEmail, db: Se
     #check if user is already verified
     if user.verified:
         raise HTTPException(status_code=404, detail="User is already verified")
-    
+
     fields_to_check = ["nric", "nric_DateOfBirth","email", "roleName"]
     for field in fields_to_check:
         if getattr(user, field) != getattr(account, field):
             raise HTTPException(status_code=404, detail="Invalid Details")
-  
+
     #Send registration Email
     token = EmailService.generate_email_token(user.id, user.email)
     await EmailService.send_registration_email(user.email, token)
@@ -247,27 +252,27 @@ async def request_reset_password(account: schemas_account.RequestResetPasswordBa
     user = crud_user.get_user_by_email(db=db, email=account.email)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     fields_to_check = ["nric", "nric_DateOfBirth","email", "roleName"]
     for field in fields_to_check:
         if getattr(user, field) != getattr(account, field):
             raise HTTPException(status_code=404, detail="Invalid Details")
-        
+
     token = EmailService.generate_email_token(user.id, user.email)
     await EmailService.send_reset_password_email(user.email, token)
-  
+
     return {"msg": "Reset password email sent"}
 
 #Change password
 @router.put("/user/reset_user_password/{token}")
 async def reset_user_password(token: str, userResetPassword: schemas_account.UserResetPassword , db: Session = Depends(get_db)):
     try:
-        userDetails = EmailService.confirm_token(token) 
+        userDetails = EmailService.confirm_token(token)
     except:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     if (userResetPassword.newPassword != userResetPassword.confirmPassword):
         raise HTTPException(status_code=404, detail="Password do not match")
-    
+
     user = db.query(User).filter(User.email == userDetails.get("email")).first()
     #return user
     if not user:
@@ -344,7 +349,7 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
         image_url = upload_response.get("secure_url")
         # Update ModifiedById
         db_user.modifiedById = db_user.id
-        
+
         db_user.profilePicture = image_url
         db.commit()
         db.refresh(db_user)

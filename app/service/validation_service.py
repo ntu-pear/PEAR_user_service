@@ -3,6 +3,7 @@ import os
 from fastapi import HTTPException, status, File
 from datetime import date,datetime, timedelta
 import pytz
+from email_validator import validate_email as ev_validate_email, EmailNotValidError
 
 # Set timezone to Singapore Time (SGT)
 sgt_tz = pytz.timezone("Asia/Singapore")
@@ -34,14 +35,62 @@ def validate_password_format(password: str):
         )
 
 #Check for valid NRIC format
-def validate_nric(nric):
-    # NRIC regex pattern
-    nric_pattern = r'^[STFG]\d{7}[A-Z]$'
-    if not re.match(nric_pattern, nric):
+
+def validate_nric(nric: str) -> str:
+    if not nric:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=("Invalid NRIC Format")
-            )
+            detail="NRIC is required."
+        )
+
+    nric = nric.strip().upper()
+
+    pattern = r"^[STFGM]\d{7}[A-Z]$"
+    if not re.match(pattern, nric):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid NRIC format"
+        )
+
+    weights = [2, 7, 6, 5, 4, 3, 2]
+    digits = [int(char) for char in nric[1:8]]
+
+    total = sum(d * w for d, w in zip(digits, weights))
+
+    prefix = nric[0]
+    suffix = nric[-1]
+
+    if prefix in ["T", "G"]:
+        total += 4
+    elif prefix == "M":
+        total += 3
+
+    st_table = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "Z", "J"]
+    gf_table = ["K", "L", "M", "N", "P", "Q", "R", "T", "U", "W", "X"]
+    m_table = ["K", "L", "J", "N", "P", "Q", "R", "T", "U", "W", "X"]
+
+    remainder = total % 11
+    check_index = 11 - (remainder + 1)
+
+    if prefix in ["S", "T"]:
+        expected_suffix = st_table[check_index]
+    elif prefix in ["F", "G"]:
+        expected_suffix = gf_table[check_index]
+    elif prefix == "M":
+        expected_suffix = m_table[check_index]
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid NRIC prefix."
+        )
+
+    if suffix != expected_suffix:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid NRIC. Please check the last letter"
+        )
+
+    return nric
 #Check for contact No format
 def validate_contactNo(contactNo):
     #Contact No regex pattern
@@ -51,6 +100,7 @@ def validate_contactNo(contactNo):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid Contact No. Format. Contact No. must start with 8 or 9 and contain 8 digits."
         )
+    return contactNo
     
 # Check for Date of Birth format and constraints
 def validate_dob(DOB: date):
@@ -71,6 +121,7 @@ def validate_dob(DOB: date):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Date of Birth indicates the person is older than 150 years old."
         )
+    return DOB
     
 # Constants for file size limits
 MIN_FILE_SIZE = 5 * 1024        # 5 KB
@@ -112,3 +163,37 @@ def validate_profile_picture_format(file: File):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB."
         )
+
+def validate_email(email: str) -> str:
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required."
+        )
+
+    email = email.strip()
+
+    try:
+        validated = ev_validate_email(email, check_deliverability=True)
+        return validated.normalized
+    except EmailNotValidError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+# Check for uppercase name format
+def validate_uppercase_name(name: str, field_name: str = "Name") -> str:
+    if not name:
+        return name
+
+    name = name.strip().upper()
+
+    name_pattern = r'^[A-Z\s]+$'
+    if not re.match(name_pattern, name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"{field_name} can only contain uppercase letters and spaces."
+        )
+
+    return name

@@ -26,7 +26,7 @@ def get_role_by_name(roleName: str , db: Session = Depends(get_db)):
 def read_role(roleId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_role = role_crud.get_role_by_id(db, roleId=roleId)
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")
@@ -36,7 +36,7 @@ def read_role(roleId: str, current_user: user_auth.TokenData = Depends(AuthServi
 def read_roles(page: Optional[int] = 0, page_size: Optional[int]=10, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     
     roles = role_crud.get_roles(db, page=page, page_size=page_size)
     return roles
@@ -45,7 +45,7 @@ def read_roles(page: Optional[int] = 0, page_size: Optional[int]=10, current_use
 def create_new_role(role: RoleBase,  current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     
     return role_crud.create_role(db=db, role=role, current_user=current_user)
 
@@ -53,7 +53,7 @@ def create_new_role(role: RoleBase,  current_user: user_auth.TokenData = Depends
 def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_role = role_crud.update_role(db, roleId=roleId, role=role, modified_by=current_user["userId"])
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")
@@ -63,7 +63,7 @@ def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.
 def delete_existing_role(roleId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_role = role_crud.delete_role(db, roleId=roleId)
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")
@@ -73,7 +73,7 @@ def delete_existing_role(roleId: str,current_user: user_auth.TokenData = Depends
 def get_users_by_role(role_name: str,page:Optional[int]=0, page_size:Optional[int]=10,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     users = role_crud.get_users_by_role(role_name=role_name,page=page,page_size=page_size, db=db)
     if "error" in users:
         raise HTTPException(status_code=404, detail=users["error"])
