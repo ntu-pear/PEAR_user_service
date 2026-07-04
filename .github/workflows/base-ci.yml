@@ -1,0 +1,107 @@
+name: Base CI
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      runner-label:
+        required: true
+        type: string
+      python-version:
+        required: true
+        type: string
+        default: '3.9.19'
+
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.environment }}
+
+    env:
+      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+      DB_DRIVER_DEV: ${{ secrets.DB_DRIVER_DEV }}
+      DB_SERVER_DEV: ${{ secrets.DB_SERVER_DEV }}
+      DB_DATABASE_DEV: ${{ secrets.DB_DATABASE_DEV }}
+      DB_DATABASE_PORT: ${{ secrets.DB_DATABASE_PORT }}
+      DB_USERNAME_DEV: ${{ secrets.DB_USERNAME_DEV }}
+      DB_PASSWORD_DEV: ${{ secrets.DB_PASSWORD_DEV }}
+      SENDPULSE_API_KEY: ${{ secrets.SENDPULSE_API_KEY }}
+      SENDPULSE_SECRET_KEY: ${{ secrets.SENDPULSE_SECRET_KEY }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      WEB_FE_ORIGIN: "${{ secrets.WEB_FE_ORIGIN }}"
+      WEB_FE_ORIGIN_STAGING: "${{ secrets.WEB_FE_ORIGIN_STAGING }}"
+      RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+      RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+      RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+      RABBITMQ_PASS: ${{ secrets.RABBITMQ_PASS }}
+      RABBITMQ_VIRTUAL_HOST: ${{ secrets.RABBITMQ_VIRTUAL_HOST }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Test unit tests with pytest
+        run: |
+          python -m pytest tests/unit
+  
+  integration-test:
+    runs-on: [self-hosted, Linux, X64, "${{ inputs.runner-label }}"]
+    needs: build
+    environment: ${{ inputs.environment }}
+    timeout-minutes: 10
+
+    env:
+      SERVICE_NAME: ${{ vars.SERVICE_NAME }}
+      DB_DRIVER_DEV: ${{ secrets.DB_DRIVER_DEV }}
+      DB_SERVER_DEV: ${{ secrets.DB_SERVER_DEV }}
+      DB_DATABASE_DEV: ${{ secrets.DB_DATABASE_DEV }}
+      DB_DATABASE_PORT: ${{ secrets.DB_DATABASE_PORT }}
+      DB_USERNAME_DEV: ${{ secrets.DB_USERNAME_DEV }}
+      DB_PASSWORD_DEV: ${{ secrets.DB_PASSWORD_DEV }}
+      SENDPULSE_API_KEY: ${{ secrets.SENDPULSE_API_KEY }}
+      SENDPULSE_SECRET_KEY: ${{ secrets.SENDPULSE_SECRET_KEY }}
+      CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+      CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+      CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+      WEB_FE_ORIGIN: "${{ secrets.WEB_FE_ORIGIN }}"
+      WEB_FE_ORIGIN_STAGING: "${{ secrets.WEB_FE_ORIGIN_STAGING }}"
+      RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
+      RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
+      RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}
+      RABBITMQ_PASS: ${{ secrets.RABBITMQ_PASS }}
+      RABBITMQ_VIRTUAL_HOST: ${{ secrets.RABBITMQ_VIRTUAL_HOST }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ inputs.python-version }}
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      
+      - name: Check app imports
+        run: |
+          python -c "from app.main import app; print('All imports successful')"
+      
+      - name: Test integration tests with pytest
+        run: |
+          python -m pytest tests/integration
