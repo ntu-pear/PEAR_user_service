@@ -43,6 +43,11 @@ on:
       CLOUDINARY_API_KEY: { required: true }
       CLOUDINARY_API_SECRET: { required: true }
       MAIL_PASSWORD: { required: true }
+      RABBITMQ_HOST: { required: true }
+      RABBITMQ_PORT: { required: true }
+      RABBITMQ_USER: { required: true }
+      RABBITMQ_PASS: { required: true }
+      RABBITMQ_VIRTUAL_HOST: { required: true }
 
 jobs:
   deploy:
@@ -85,6 +90,11 @@ jobs:
           echo "CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}" >> .env
           echo "CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}" >> .env
           echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" >> .env
+          echo "RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}" >> .env
+          echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
+          echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> .env
+          echo "RABBITMQ_VIRTUAL_HOST=${{ secrets.RABBITMQ_VIRTUAL_HOST }}" >> .env
 
       - name: Delete old deployment/service (ignore if missing)
         run: |
