@@ -52,10 +52,15 @@ on:
 jobs:
   deploy:
     runs-on: ${{ fromJSON(inputs['runner-label']) }}
+    environment: ${{ inputs.environment }}
 
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Set commit SHA
+        run: |
+          echo "COMMIT_SHA=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
       - name: Create .env from GitHub Secrets
         run: |
           echo "SERVICE_NAME=${{ vars.SERVICE_NAME }}" >> .env
@@ -96,34 +101,35 @@ jobs:
           echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> .env
           echo "RABBITMQ_VIRTUAL_HOST=${{ secrets.RABBITMQ_VIRTUAL_HOST }}" >> .env
 
-      - name: Delete old deployment/service (ignore if missing)
-        run: |
-          kubectl delete deployment.apps/${{ inputs.app-name }} --ignore-not-found
-          kubectl delete service/${{ inputs.app-name }} --ignore-not-found
-
-      - name: Delete old docker images (ignore if missing)
-        run: |
-          docker rmi ${{ inputs.docker-image-name }} || true
-          docker rmi localhost:5000/${{ inputs.docker-image-name }} || true
-
       - name: Build Docker image
         run: |
-          docker build --no-cache -f ${{ inputs.dockerfile }} -t ${{ inputs.docker-image-name }} .
+          docker build --no-cache -f ${{ inputs.dockerfile }} -t ${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }} .
 
       - name: Tag Docker image
         run: |
-          docker tag ${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }} \
-                     localhost:5000/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
+          docker tag ${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }} \
+                     localhost:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
 
       - name: Push Docker image to local registry
         run: |
-          docker push localhost:5000/${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
+          docker push localhost:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
 
       - name: Deploy filebeat to kubernetes
         run: |
           kubectl apply -f '${{ inputs.kube-filebeat-file }}'
 
-      - name: Deploy to Kubernetes
+      - name: Ensure deployment exists
         run: |
-          kubectl apply -f '${{ inputs.kube-deployment-file }}'
-          
+          kubectl get deployment ${{ inputs.app-name }} || kubectl apply -f '${{ inputs.kube-deployment-file }}'
+
+      - name: Deploy to Kubernetes (rolling update)
+        run: |
+          kubectl set image deployment/${{ inputs.app-name }} \
+            user-service=host.minikube.internal:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
+          kubectl rollout status deployment/${{ inputs.app-name }} --timeout=300s
+
+      - name: Docker maintenance cleanup
+        run: |
+          docker container prune -f
+          docker image prune -f
+          minikube ssh -- "docker container prune -f && docker image prune -a -f"
