@@ -37,6 +37,8 @@ class ProducerManager:
         self.watchdog_enabled = False    # Distinguishes "stopped on purpose" from "died unexpectedly"
         self.watchdog_interval = 10      # Seconds between health checks
         self.watchdog_max_backoff = 60   # Cap on backoff when broker stays down
+        self.watchdog_restart_timeout = 30  # How long to wait for a restarted loop to actually connect
+        self.connected_event = threading.Event()  # Set by _producer_loop once it is genuinely connected
 
     def declare_exchange(self, exchange: str, exchange_type: str = 'topic'):
         """Declare an exchange (idempotent)"""
@@ -99,16 +101,15 @@ class ProducerManager:
             try:
                 # Rebuild the worker thread. _producer_loop does a fresh connect().
                 self.is_running = True
+                self.connected_event.clear()
                 self.producer_thread = threading.Thread(
                     target=self._producer_loop, daemon=self.testing
                 )
                 self.producer_thread.start()
 
-                # Give the fresh loop a moment to attempt its initial connection
-                # so we can tell whether the restart actually took hold.
-                time.sleep(2)
-
-                if self.is_running and self.producer_thread.is_alive():
+                # Wait for a real connection, not just a live thread - a failing
+                # connect() stays alive for 15-90s and would look like success.
+                if self.connected_event.wait(timeout=self.watchdog_restart_timeout):
                     logger.info("Watchdog successfully restarted producer manager")
                     backoff = self.watchdog_interval
                 else:
@@ -128,11 +129,15 @@ class ProducerManager:
         """Main loop that maintains connection and processes publish requests"""
         logger.info("Starting producer loop...")
         
+        self.connected_event.clear()          # tell the watchdog we are not connected yet
+
         # Initial connection
         if not self.client.connect():
             logger.error("Failed initial connection")
             self.is_running = False
             return
+
+        self.connected_event.set()            # connected for real
         
         last_heartbeat = time.time()
         heartbeat_interval = 15  # Send heartbeat every 15 seconds
@@ -156,6 +161,7 @@ class ProducerManager:
                 logger.error(f"Error in producer loop: {str(e)}")
                 self._handle_connection_error()
         
+        self.connected_event.clear()
         logger.info("Producer loop ended")
         self._cleanup()
 
