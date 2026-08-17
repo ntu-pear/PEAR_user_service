@@ -4,7 +4,7 @@ import threading
 from app.messaging.consumer_manager import create_user_consumer_manager
 from fastapi import FastAPI, Request
 from app.database import engine, Base
-from app.routers import admin_router,user_auth_router,supervisor_router, doctor_router, user_router,role_router,email_router,verification_router, access_level_router, integrity_router
+from app.routers import admin_router,user_auth_router,supervisor_router, doctor_router, user_router,role_router,email_router,verification_router, access_level_router, integrity_router, internal_router
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
@@ -182,6 +182,7 @@ app.include_router(email_router.router, prefix="/api/v1", tags=["email"])
 app.include_router(verification_router.router, prefix="/api/v1", tags=["2FA"])
 app.include_router(access_level_router.router, prefix="/api/v1", tags=["2FA"])
 app.include_router(integrity_router.router, prefix="/api/v1/integrity", tags=["Integrity"])
+app.include_router(internal_router.router, prefix="/api/v1", tags=["internal"])
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the User API hello"} 
