@@ -389,7 +389,6 @@ async def delete_profile_picture(current_user: user_auth.TokenData = Depends(Aut
         db_user.profilePicture = None
         # Update ModifiedById
         db_user.modifiedById = db_user.id
-        db_user.isDeleted = True
 
         db.commit()
         db.refresh(db_user)
