@@ -114,6 +114,11 @@ jobs:
         run: |
           docker push localhost:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
 
+      - name: Load image into minikube node
+        run: |
+          minikube image load ${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
+          minikube image load ${{ inputs.docker-image-name }}:${{ inputs.docker-image-tag }}
+
       - name: Deploy filebeat to kubernetes
         run: |
           kubectl apply -f '${{ inputs.kube-filebeat-file }}'
