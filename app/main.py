@@ -19,12 +19,14 @@ import logging
 
 load_dotenv()
 origins = [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://localhost:5173",
-    f"http://{os.getenv('WEB_FE_ORIGIN')}",
-    f"http://{os.getenv('WEB_FE_ORIGIN_STAGING')}"
-    # Add other origins if needed
+    origin for origin in [
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        f"http://{os.getenv('WEB_FE_ORIGIN')}" if os.getenv('WEB_FE_ORIGIN') else None,
+        f"http://{os.getenv('WEB_FE_ORIGIN_STAGING')}" if os.getenv('WEB_FE_ORIGIN_STAGING') else None,
+    ]
+    if origin is not None
 ]
 logger = logging.getLogger("uvicorn")
 
