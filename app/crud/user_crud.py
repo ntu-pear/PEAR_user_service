@@ -81,6 +81,8 @@ sort_by: Optional[str] = None, sort_dir: str = "asc",) -> tuple[list[User], int]
         filters.append(User.twoFactorEnabled == fields.twoFactorEnabled)
     if fields.roleName:
         filters.append(User.roleName == fields.roleName)
+    if fields.lockOutEnabled is not None:
+        filters.append(User.lockOutEnabled == fields.lockOutEnabled)
 
     # Pagination Logic
     # Maximum page size limit to prevent excessively large queries
