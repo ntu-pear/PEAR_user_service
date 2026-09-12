@@ -43,9 +43,6 @@ global_bucket = TokenBucket(rate=5, capacity=10)
 # Create a cache for user details (maxsize=100, TTL=300 seconds)
 user_cache = TTLCache(maxsize=100, ttl=300)
 
-# Create a cache for user details (maxsize=100, TTL=300 seconds)
-user_cache = TTLCache(maxsize=100, ttl=300)
-
 
 router = APIRouter(
     tags=["users"],
@@ -57,16 +54,6 @@ router = APIRouter(
 # Profile Picture Max Size
 MAX_SIZE = (300, 300)  # Max image size (300x300)
 
-# Retrieve User from cache
-def get_cached_user(user_id: int, db: Session):
-    if user_id in user_cache:
-        return user_cache[user_id]
-
-    # otherwise fetch from DB
-    db_user = crud_user.get_user(db=db, userId=user_id)
-    if db_user:
-        user_cache[user_id] = db_user
-    return db_user
 # Retrieve User from cache
 def get_cached_user(user_id: int, db: Session):
     if user_id in user_cache:
