@@ -56,7 +56,7 @@ def get_users(db: Session, page: int, page_size:int ):
 
     return users, total_count
 
-def get_guardian_nric(db: Session, nric= str):
+def get_guardian_nric(db: Session, nric: str):
     return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
 
 def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch,

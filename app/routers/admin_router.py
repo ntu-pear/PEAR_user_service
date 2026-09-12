@@ -54,7 +54,7 @@ def create_success_response(data: dict):
 async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user=crud_user.create_user(db=db, user=user, created_by=current_user["userId"])
     if db_user:
         #Send registration email
@@ -68,7 +68,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
 def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -80,7 +80,7 @@ def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(Auth
 def get_user_nric(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -94,7 +94,7 @@ page: int = 0, page_size: Optional[int] = 10, sort_by: Optional[str] = Query(Non
 sort_dir: str = Query("asc", description="'asc' or 'desc'"), db: Session = Depends(get_db),):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_users, total_count = crud_user.get_users_by_fields(
         db=db,
         page=page,
@@ -123,7 +123,7 @@ sort_dir: str = Query("asc", description="'asc' or 'desc'"), db: Session = Depen
 def read_guadrian_nric(nric: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_guardian_nric(db=db, nric=nric)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -136,7 +136,7 @@ def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_cu
     
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     #Only Admin can read all users
     db_users, total_count = crud_user.get_users(db=db, page=page,page_size=page_size)
     if db_users is None:
@@ -156,7 +156,7 @@ def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_cu
 async def get_user_by_email(email: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_user_by_email(db=db, email=email)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -166,7 +166,7 @@ async def get_user_by_email(email: str,current_user: user_auth.TokenData = Depen
 def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.update_user_Admin(db=db, userId=userId, user=user,modified_by=current_user["userId"])
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -251,7 +251,7 @@ def reset_and_update_users_role(
 def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     if (current_user["userId"] == userId):
         raise HTTPException(status_code=404, detail="No self delete")
 
@@ -268,7 +268,7 @@ def admin_soft_delete_user(userId: str, current_user: user_auth.TokenData = Depe
                 db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     if (current_user["userId"] == userId):
         raise HTTPException(status_code=404, detail="No self delete")
 
