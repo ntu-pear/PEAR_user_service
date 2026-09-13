@@ -14,6 +14,7 @@ from app.database import get_db
 from app.service import admin_config_service as AdminConfigService
 from app.service import user_auth_service as AuthService
 import uuid
+from ..logger.logger_utils import log_crud_action, ActionType
 # Set timezone to Singapore Time (SGT)
 sgt_tz = pytz.timezone("Asia/Singapore")
 
@@ -111,7 +112,22 @@ def delete_sessions(db: Session = Depends(get_db)):
     db_session = db.query(User_Session).all()
     #loop thru all the sessions
     for session in db_session:
-        check_session_expiry(session_id=session.id, db=db)
+        session_id = session.id
+        session_user_id = session.user_id
+        was_expired = check_session_expiry(session_id=session_id, db=db)
+        if was_expired:
+            # Cron-only cleanup path (delete_expired_sessions_task is the sole
+            # caller of this function): no human triggered this deletion, so
+            # "SYSTEM" is the correct actor here and ONLY here.
+            log_crud_action(
+                action=ActionType.DELETE,
+                user="SYSTEM",
+                role="SYSTEM",
+                message=f"Scheduled cleanup deleted expired session {session_id} for user {session_user_id}",
+                entity_id=session_id,
+                original_data={"id": session_id, "user_id": session_user_id},
+                table="session",
+            )
 
 
 #Delete 1 session
