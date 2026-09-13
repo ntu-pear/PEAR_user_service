@@ -193,7 +193,7 @@ def delete_role(db: Session, roleId: str, current_user: dict):
         entity_id=roleId,
         table='role',
         message=f"Deleted role: {db_role.roleName}",
-        original_data={"isDeleted": False},
+        original_data={"isDeleted": False, "roleName": db_role.roleName},
     )
 
     return db_role

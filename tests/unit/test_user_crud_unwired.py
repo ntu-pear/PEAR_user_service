@@ -65,8 +65,8 @@ def test_activate_user_logs_actor(mock_log_crud, db_session_mock):
     kwargs = mock_log_crud.call_args[1]
     assert kwargs["user"] == "admin1"
     assert kwargs["entity_id"] == userId
-    assert kwargs["original_data"] == {"isDeleted": True}
-    assert kwargs["updated_data"] == {"isDeleted": False}
+    assert kwargs["original_data"] == {"isDeleted": True, "status": "deleted"}
+    assert kwargs["updated_data"] == {"isDeleted": False, "status": "active"}
 
 
 @mock.patch("app.crud.user_crud.log_crud_action")
@@ -98,8 +98,8 @@ def test_deactivate_user_logs_actor(mock_log_crud, db_session_mock):
     kwargs = mock_log_crud.call_args[1]
     assert kwargs["user"] == "admin1"
     assert kwargs["entity_id"] == userId
-    assert kwargs["original_data"] == {"isDeleted": False, "lockOutReason": None}
-    assert kwargs["updated_data"] == {"isDeleted": True, "lockOutReason": "Repeated policy violations"}
+    assert kwargs["original_data"] == {"isDeleted": False, "lockOutReason": None, "status": "active"}
+    assert kwargs["updated_data"] == {"isDeleted": True, "lockOutReason": "Repeated policy violations", "status": "deleted"}
 
 
 @mock.patch("app.crud.user_crud.log_crud_action")

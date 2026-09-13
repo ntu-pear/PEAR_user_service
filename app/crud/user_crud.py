@@ -433,8 +433,8 @@ def soft_delete_admin_user(db: Session, userId: str, current_user: dict):
         entity_id=userId,
         table='user',
         message=f"Admin soft-deleted user: {db_user.nric_FullName} ({userId})",
-        original_data={"isDeleted": False},
-        updated_data={"isDeleted": True},
+        original_data={"isDeleted": False, "status": "active"},
+        updated_data={"isDeleted": True, "status": "deleted"},
     )
 
     return db_user
@@ -702,7 +702,10 @@ def activate_user(db: Session, userId: str, modified_by: str):
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    original_data = {"isDeleted": db_user.isDeleted}
+    original_data = {
+        "isDeleted": db_user.isDeleted,
+        "status": "deleted" if db_user.isDeleted else "active",
+    }
     db_user.isDeleted = False
     db_user.modifiedById = modified_by
     db.commit()
@@ -717,7 +720,10 @@ def activate_user(db: Session, userId: str, modified_by: str):
         table='user',
         message=f"Activated user: {db_user.nric_FullName} ({userId})",
         original_data=original_data,
-        updated_data={"isDeleted": db_user.isDeleted},
+        updated_data={
+            "isDeleted": db_user.isDeleted,
+            "status": "deleted" if db_user.isDeleted else "active",
+        },
     )
 
     return db_user
@@ -732,7 +738,11 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
             detail="User not found"
         )
 
-    original_data = {"isDeleted": db_user.isDeleted, "lockOutReason": db_user.lockOutReason}
+    original_data = {
+        "isDeleted": db_user.isDeleted,
+        "lockOutReason": db_user.lockOutReason,
+        "status": "deleted" if db_user.isDeleted else "active",
+    }
 
     # Set the status to inactive and add the lockout reason
     stmt = update(User).where(User.id == userId).values(
@@ -756,7 +766,11 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
         table='user',
         message=f"Deactivated user: {db_user.nric_FullName} ({userId})",
         original_data=original_data,
-        updated_data={"isDeleted": db_user.isDeleted, "lockOutReason": db_user.lockOutReason},
+        updated_data={
+            "isDeleted": db_user.isDeleted,
+            "lockOutReason": db_user.lockOutReason,
+            "status": "deleted" if db_user.isDeleted else "active",
+        },
     )
 
     return db_user

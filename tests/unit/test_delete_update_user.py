@@ -143,8 +143,8 @@ def test_admin_soft_delete_user_success(mock_log_crud, db_session_mock):
     assert kwargs["user_full_name"] == "Admin User"
     assert kwargs["role"] == "ADMIN"
     assert kwargs["entity_id"] == userId
-    assert kwargs["original_data"] == {"isDeleted": False}
-    assert kwargs["updated_data"] == {"isDeleted": True}
+    assert kwargs["original_data"] == {"isDeleted": False, "status": "active"}
+    assert kwargs["updated_data"] == {"isDeleted": True, "status": "deleted"}
 
 
 @mock.patch("app.crud.user_crud.log_crud_action")
