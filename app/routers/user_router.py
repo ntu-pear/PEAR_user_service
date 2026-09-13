@@ -291,6 +291,21 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
         #update last password changed time stamp
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
+
+        # Token-resolved actor: the account resetting its own password via the
+        # emailed link is the actor. This flow is unauthenticated (no JWT
+        # session), so "SYSTEM" must never be used here.
+        log_crud_action(
+            action=ActionType.PASSWORD_CHANGE,
+            user=user.id,
+            user_full_name=user.nric_FullName,
+            role=user.roleName,
+            entity_id=user.id,
+            table="user",
+            message=f"{user.nric_FullName} reset their password via emailed link",
+            updated_data={"lastPasswordChanged": user.lastPasswordChanged.isoformat()},
+            log_type="auth",
+        )
     except IntegrityError:
         # Rollback transaction if any IntegrityError occurs
         db.rollback()
