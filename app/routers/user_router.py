@@ -203,9 +203,26 @@ def user_change_email(token: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    original_email = user.email
+    new_email = userDetails.get("email")
+
     #Change to new email
-    user.email = userDetails.get("email")
+    user.email = new_email
     db.commit()
+
+    # Token-resolved actor: the account changing its own email is the actor.
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=user.id,
+        user_full_name=user.nric_FullName,
+        role=user.roleName,
+        entity_id=user.id,
+        table="user",
+        message=f"{user.nric_FullName} confirmed an email change",
+        original_data={"email": original_email},
+        updated_data={"email": new_email},
+    )
+
     return {"Email Updated"}
 
 
@@ -304,6 +321,8 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
     # Validate file type
     Validation_Service.validate_profile_picture_format(file)
 
+    original_picture_url = db_user.profilePicture
+
     try:
         # # Delete old profile picture from Cloudinary**
         if db_user.profilePicture:
@@ -341,6 +360,18 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
         db.commit()
         db.refresh(db_user)
 
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=user_id,
+            table="user",
+            message=f"{current_user['fullName']} updated their profile picture",
+            original_data={"profilePicture": original_picture_url},
+            updated_data={"profilePicture": db_user.profilePicture},
+        )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload profile picture: {str(e)}")
 
@@ -367,6 +398,8 @@ async def delete_profile_picture(current_user: user_auth.TokenData = Depends(Aut
     if not db_user or not db_user.profilePicture:
         raise HTTPException(status_code=404, detail="No profile picture found.")
 
+    original_picture_url = db_user.profilePicture
+
     # Extract Cloudinary public_id from image URL
     try:
         public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
@@ -379,6 +412,17 @@ async def delete_profile_picture(current_user: user_auth.TokenData = Depends(Aut
 
         db.commit()
         db.refresh(db_user)
+
+        log_crud_action(
+            action=ActionType.DELETE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=user_id,
+            table="user",
+            message=f"{current_user['fullName']} deleted their profile picture",
+            original_data={"profilePicture": original_picture_url},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting profile picture: {str(e)}")
 
