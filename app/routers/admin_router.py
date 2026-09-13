@@ -26,6 +26,7 @@ import pytz
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
+from ..logger.logger_utils import log_crud_action, ActionType
 
 global_bucket = TokenBucket(rate=5, capacity=10)
 
@@ -288,6 +289,8 @@ async def upload_profile_picture(userId: str, file: UploadFile = File(...), curr
     # Validate format
     Validation_Service.validate_profile_picture_format(file)
 
+    original_picture_url = db_user.profilePicture
+
     try:
         # Remove old picture from Cloudinary
         if db_user.profilePicture:
@@ -319,6 +322,18 @@ async def upload_profile_picture(userId: str, file: UploadFile = File(...), curr
         db.commit()
         db.refresh(db_user)
 
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=userId,
+            table="user",
+            message=f"Admin updated profile picture for user {db_user.nric_FullName} ({userId})",
+            original_data={"profilePicture": original_picture_url},
+            updated_data={"profilePicture": url},
+        )
+
     except HTTPException:
         raise
     except Exception as e:
@@ -346,6 +361,9 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     user = crud_user.get_user(db, userId)
     if not user or not user.profilePicture:
         raise HTTPException(status_code=404, detail="No profile picture found.")
+
+    original_picture_url = user.profilePicture
+
     # Delete from Cloudinary
     public_id = user.profilePicture.rsplit("/", 1)[-1].split(".")[0]
     try:
@@ -359,6 +377,17 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     user.modifiedById  = current_user["userId"]
     db.commit()
     db.refresh(user)
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table="user",
+        message=f"Admin deleted profile picture for user {user.nric_FullName} ({userId})",
+        original_data={"profilePicture": original_picture_url},
+    )
 
     return {"message": "Profile picture deleted successfully"}
 
