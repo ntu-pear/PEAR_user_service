@@ -174,8 +174,9 @@ def update_user_Admin(
     db: Session,
     userId: str,
     user: schemas_User.UserUpdate_Admin,
-    modified_by
+    current_user: dict
 ):
+    modified_by = current_user["userId"]
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         return None
@@ -299,6 +300,8 @@ def update_user_Admin(
 
     raise_if_errors(errors)
 
+    original_data = {field: getattr(db_user, field) for field in update_data.keys()}
+
     stmt = (
         update(User)
         .where(User.id == userId)
@@ -309,10 +312,32 @@ def update_user_Admin(
     db.commit()
 
     updated_user = db.query(User).filter(User.id == userId).first()
+
+    updated_data = {field: getattr(updated_user, field) for field in update_data.keys()}
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin updated user: {updated_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data=updated_data,
+    )
+
     return updated_user
 
 #Admin update selected users role
-def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by):
+def update_users_role_admin(db: Session, userId: str, roleName: str, current_user: dict):
+    modified_by = current_user["userId"]
+
+    original_user = db.query(User).filter(User.id == userId).first()
+    if not original_user:
+        return None
+    original_role = original_user.roleName
+
     stmt = update(User).where(User.id == userId)
     # update roleName and modified by who
     stmt = stmt.values(roleName=roleName, modifiedById=modified_by)
@@ -322,9 +347,22 @@ def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by
 
     # Fetch the updated user to return it
     db_user = db.query(User).filter(User.id == userId).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin updated role for user {db_user.nric_FullName} ({userId}) to {roleName}",
+        original_data={"roleName": original_role},
+        updated_data={"roleName": db_user.roleName},
+    )
+
     return db_user
 
-def delete_user(db: Session, userId: str):
+def delete_user(db: Session, userId: str, current_user: dict):
     db_user = db.query(User).filter(User.id == userId).first()
 
     # If the user does not exist, raise a 404 error
@@ -334,6 +372,13 @@ def delete_user(db: Session, userId: str):
             detail="User not found"
         )
 
+    original_data = {
+        "id": db_user.id,
+        "nric_FullName": db_user.nric_FullName,
+        "email": db_user.email,
+        "roleName": db_user.roleName,
+    }
+
     #delete user pic id from cloudinary
     if db_user.profilePicture:
         public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
@@ -342,9 +387,21 @@ def delete_user(db: Session, userId: str):
     ## Delete the user from the database
     db.delete(db_user)
     db.commit()
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin deleted user: {original_data['nric_FullName']} ({userId})",
+        original_data=original_data,
+    )
+
     return db_user
 
-def soft_delete_admin_user(db: Session, userId: str):
+def soft_delete_admin_user(db: Session, userId: str, current_user: dict):
     db_user = db.query(User).filter(User.id == userId).first()
     # If the user does not exist, raise a 404 error
     if not db_user:
@@ -367,6 +424,19 @@ def soft_delete_admin_user(db: Session, userId: str):
     #soft delete, hence it only sets the isDeleted flag to True.
     db_user.isDeleted = True
     db.commit()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin soft-deleted user: {db_user.nric_FullName} ({userId})",
+        original_data={"isDeleted": False, "status": "active"},
+        updated_data={"isDeleted": True, "status": "deleted"},
+    )
+
     return db_user
 
 def verify_user(db: Session, user: schemas_User.UserCreate):
@@ -406,6 +476,20 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
         # Begin transaction
         db.commit()
         db.refresh(db_user)
+
+        # Token-resolved actor: the account being verified IS the actor, never "SYSTEM".
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=db_user.id,
+            user_full_name=db_user.nric_FullName,
+            role=db_user.roleName,
+            entity_id=db_user.id,
+            table='user',
+            message=f"{db_user.nric_FullName} verified their account",
+            original_data={"verified": False},
+            updated_data={"verified": True},
+            log_type="auth",
+        )
 
     except IntegrityError:
         # Rollback transaction if any IntegrityError occurs
@@ -553,7 +637,13 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
 
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    original_data = db_user.__dict__.copy()
+
+    original_data = {
+        "email": db_user.email,
+        "contactNo": db_user.contactNo,
+        "nric_FullName": db_user.nric_FullName,
+    }
+
     # Update fields if provided
     update_data = user_update.model_dump(exclude_unset=True)  # Exclude unset fields
     for key, value in update_data.items():
@@ -564,27 +654,78 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
     db.commit()
     db.refresh(db_user)
 
+    updated_data = {
+        "email": db_user.email,
+        "contactNo": db_user.contactNo,
+        "nric_FullName": db_user.nric_FullName,
+    }
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=str(modified_by),
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=user_id,
+        table='user',
+        message=f"Updated user: {db_user.nric_FullName} ({user_id})",
+        original_data=original_data,
+        updated_data=updated_data,
+    )
 
     return db_user
 
-def reset_password(db: Session, userId: str, new_password: str):
+def reset_password(db: Session, userId: str, new_password: str, modified_by: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     db_user.password = user_auth_service.get_password_hash(new_password)
+    db_user.modifiedById = modified_by
     db.commit()
     db.refresh(db_user)
+
+    log_crud_action(
+        action=ActionType.PASSWORD_CHANGE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Password reset for user {db_user.nric_FullName} ({userId})",
+        log_type="auth",
+    )
+
     return db_user
 
-def activate_user(db: Session, userId: str):
+def activate_user(db: Session, userId: str, modified_by: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    original_data = {
+        "isDeleted": db_user.isDeleted,
+        "status": "deleted" if db_user.isDeleted else "active",
+    }
     db_user.isDeleted = False
+    db_user.modifiedById = modified_by
     db.commit()
     db.refresh(db_user)
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Activated user: {db_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data={
+            "isDeleted": db_user.isDeleted,
+            "status": "deleted" if db_user.isDeleted else "active",
+        },
+    )
+
     return db_user
 
 def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: str):
@@ -597,10 +738,16 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
             detail="User not found"
         )
 
+    original_data = {
+        "isDeleted": db_user.isDeleted,
+        "lockOutReason": db_user.lockOutReason,
+        "status": "deleted" if db_user.isDeleted else "active",
+    }
+
     # Set the status to inactive and add the lockout reason
     stmt = update(User).where(User.id == userId).values(
         isDeleted = True,
-        lockoutReason=lockout_reason,
+        lockOutReason=lockout_reason,
         modifiedById=modified_by
     )
 
@@ -609,9 +756,31 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
 
     # Fetch and return the updated user
     db_user = db.query(User).filter(User.id == userId).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Deactivated user: {db_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data={
+            "isDeleted": db_user.isDeleted,
+            "lockOutReason": db_user.lockOutReason,
+            "status": "deleted" if db_user.isDeleted else "active",
+        },
+    )
+
     return db_user
 
 def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional[str], modified_by: str) -> Optional[User]:
+    original_user = db.query(User).filter(User.id == user_id).first()
+    if not original_user:
+        return None
+    original_data = {"profilePicture": original_user.profilePicture}
+
     stmt = (
         update(User)
         .where(User.id == user_id)
@@ -623,7 +792,22 @@ def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional
     )
     db.execute(stmt)
     db.commit()
-    return db.query(User).filter(User.id == user_id).first()
+
+    updated_user = db.query(User).filter(User.id == user_id).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=updated_user.nric_FullName,
+        role=updated_user.roleName,
+        entity_id=user_id,
+        table='user',
+        message=f"Updated profile picture for user {updated_user.nric_FullName} ({user_id})",
+        original_data=original_data,
+        updated_data={"profilePicture": updated_user.profilePicture},
+    )
+
+    return updated_user
 
 def get_changed_fields(original_data, updated_data):
     changed = {}

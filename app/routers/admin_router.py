@@ -26,6 +26,7 @@ import pytz
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
+from ..logger.logger_utils import log_crud_action, ActionType
 
 global_bucket = TokenBucket(rate=5, capacity=10)
 
@@ -167,7 +168,7 @@ def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,curren
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=403, detail="User is not authorised")
-    db_user = crud_user.update_user_Admin(db=db, userId=userId, user=user,modified_by=current_user["userId"])
+    db_user = crud_user.update_user_Admin(db=db, userId=userId, user=user, current_user=current_user)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return schemas_user.AdminRead.from_orm(db_user)
@@ -208,7 +209,7 @@ def reset_and_update_users_role(
             db=db,
             userId=userId,
             roleName=None, # User is now orphaned
-            modified_by=current_user["userId"],
+            current_user=current_user,
         )
         if db_user:
             res_data = {
@@ -229,7 +230,7 @@ def reset_and_update_users_role(
             db=db,
             userId=userId,
             roleName=request.role,
-            modified_by=current_user["userId"],
+            current_user=current_user,
         )
         if db_user:
             updated_users.append({
@@ -256,7 +257,7 @@ def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthServ
         raise HTTPException(status_code=404, detail="No self delete")
 
     #delete user from db
-    db_user = crud_user.delete_user(db=db, userId=userId)
+    db_user = crud_user.delete_user(db=db, userId=userId, current_user=current_user)
     
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -273,7 +274,7 @@ def admin_soft_delete_user(userId: str, current_user: user_auth.TokenData = Depe
         raise HTTPException(status_code=404, detail="No self delete")
 
     # delete user from db
-    db_user = crud_user.soft_delete_admin_user(db=db, userId=userId)
+    db_user = crud_user.soft_delete_admin_user(db=db, userId=userId, current_user=current_user)
 
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -287,6 +288,8 @@ async def upload_profile_picture(userId: str, file: UploadFile = File(...), curr
         raise HTTPException(status_code=404, detail="User not found.")
     # Validate format
     Validation_Service.validate_profile_picture_format(file)
+
+    original_picture_url = db_user.profilePicture
 
     try:
         # Remove old picture from Cloudinary
@@ -319,6 +322,18 @@ async def upload_profile_picture(userId: str, file: UploadFile = File(...), curr
         db.commit()
         db.refresh(db_user)
 
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=userId,
+            table="user",
+            message=f"Admin updated profile picture for user {db_user.nric_FullName} ({userId})",
+            original_data={"profilePicture": original_picture_url},
+            updated_data={"profilePicture": url},
+        )
+
     except HTTPException:
         raise
     except Exception as e:
@@ -346,6 +361,9 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     user = crud_user.get_user(db, userId)
     if not user or not user.profilePicture:
         raise HTTPException(status_code=404, detail="No profile picture found.")
+
+    original_picture_url = user.profilePicture
+
     # Delete from Cloudinary
     public_id = user.profilePicture.rsplit("/", 1)[-1].split(".")[0]
     try:
@@ -359,6 +377,17 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     user.modifiedById  = current_user["userId"]
     db.commit()
     db.refresh(user)
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table="user",
+        message=f"Admin deleted profile picture for user {user.nric_FullName} ({userId})",
+        original_data={"profilePicture": original_picture_url},
+    )
 
     return {"message": "Profile picture deleted successfully"}
 

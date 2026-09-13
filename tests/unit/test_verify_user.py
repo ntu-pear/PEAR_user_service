@@ -10,13 +10,17 @@ from fastapi import HTTPException, status
 # Import your mock_db from tests/utils
 from tests.utils.mock_db import get_db_session_mock
 
-def test_verify_user_user_found_not_verified(db_session_mock, User_Create):
+@mock.patch("app.crud.user_crud.log_crud_action")
+def test_verify_user_user_found_not_verified(mock_log_crud, db_session_mock, User_Create):
     """Test Case for user found but not verified"""
     # Simulate a user in the DB with 'verified' status as "F"
     mock_user = mock.MagicMock()
+    mock_user.id = "U12345"
     mock_user.email = User_Create.email
     mock_user.verified = False  # Account is not verified
-  
+    mock_user.nric_FullName = "DANIEL ANG"
+    mock_user.roleName = "DOCTOR"
+
     # Simulate that the user exists in the DB with the email provided
     db_session_mock.query(User).filter(User.email == User_Create.email).first.return_value = mock_user
 
@@ -24,14 +28,23 @@ def test_verify_user_user_found_not_verified(db_session_mock, User_Create):
     with mock.patch("app.service.validation_service.verify_userDetails", return_value=True):
            # Call the function to verify the user
         result = verify_user(db_session_mock, User_Create)
-    
+
     # Assertions
     # Ensure that the account's 'verified' status is updated to True
     assert result.verified == True
-    
+
     #Commit User with password
     db_session_mock.commit.assert_called_once()
     db_session_mock.refresh.assert_called_once_with(result)
+
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == "U12345"
+    assert kwargs["user_full_name"] == "DANIEL ANG"
+    assert kwargs["role"] == "DOCTOR"
+    assert kwargs["entity_id"] == "U12345"
+    assert kwargs["original_data"] == {"verified": False}
+    assert kwargs["updated_data"] == {"verified": True}
 
 def test_verify_user_user_already_verified(db_session_mock, User_Create):
     """Test Case for user already verified"""

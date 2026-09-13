@@ -112,7 +112,8 @@ def test_create_role_access_level_not_found(db_session_mock, create_role_payload
     assert "access level" in str(excinfo.value.detail).lower()
 
 
-def test_update_role(db_session_mock, update_role_payload):
+@mock.patch("app.crud.role_crud.log_crud_action")
+def test_update_role(mock_log_crud, db_session_mock, update_role_payload):
     # Query sequence inside update_role:
     # 1) db_role by roleId -> found
     # 2) duplicate roleName check -> None
@@ -130,11 +131,18 @@ def test_update_role(db_session_mock, update_role_payload):
         mock.Mock(id="ACL00003"),
     ]
 
+    current_user = {
+        "userId": "admin1",
+        "fullName": "Admin User",
+        "roleName": "ADMIN",
+        "email": "admin@example.com",
+    }
+
     result = update_role(
         db_session_mock,
         "RO123456",
         update_role_payload,
-        modified_by="admin1",
+        current_user=current_user,
     )
 
     assert result.roleName == "CAREGIVER"
@@ -145,8 +153,19 @@ def test_update_role(db_session_mock, update_role_payload):
     db_session_mock.commit.assert_called_once()
     db_session_mock.refresh.assert_called_once_with(result)
 
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == "admin1"
+    assert kwargs["user_full_name"] == "Admin User"
+    assert kwargs["role"] == "ADMIN"
+    assert kwargs["entity_id"] == "RO123456"
+    assert kwargs["table"] == "role"
+    assert kwargs["original_data"]["roleName"] == "OLD_ROLE"
+    assert kwargs["updated_data"]["roleName"] == "CAREGIVER"
 
-def test_update_role_duplicate_name(db_session_mock):
+
+@mock.patch("app.crud.role_crud.log_crud_action")
+def test_update_role_duplicate_name(mock_log_crud, db_session_mock):
     mock_existing_role = mock.MagicMock()
     mock_existing_role.id = "RO123456"
     mock_existing_role.roleName = "OLD_ROLE"
@@ -159,15 +178,18 @@ def test_update_role_duplicate_name(db_session_mock):
     ]
 
     payload = RoleUpdate(roleName="ADMIN")
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
 
     with pytest.raises(HTTPException) as excinfo:
-        update_role(db_session_mock, "RO123456", payload, modified_by="admin1")
+        update_role(db_session_mock, "RO123456", payload, current_user=current_user)
 
     assert excinfo.value.status_code == 400
     assert "already exists" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
-def test_delete_role_success(db_session_mock):
+@mock.patch("app.crud.role_crud.log_crud_action")
+def test_delete_role_success(mock_log_crud, db_session_mock):
     mock_role = mock.MagicMock()
     mock_role.id = "RO123456"
     mock_role.roleName = "CAREGIVER"
@@ -179,14 +201,25 @@ def test_delete_role_success(db_session_mock):
         None,
     ]
 
-    result = delete_role(db_session_mock, "RO123456")
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
+    result = delete_role(db_session_mock, "RO123456", current_user=current_user)
 
     assert mock_role.isDeleted is True
     db_session_mock.commit.assert_called_once()
 
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == "admin1"
+    assert kwargs["user_full_name"] == "Admin User"
+    assert kwargs["role"] == "ADMIN"
+    assert kwargs["entity_id"] == "RO123456"
+    assert kwargs["table"] == "role"
 
 
-def test_delete_role_users_exist(db_session_mock):
+
+@mock.patch("app.crud.role_crud.log_crud_action")
+def test_delete_role_users_exist(mock_log_crud, db_session_mock):
     mock_role = mock.MagicMock()
     mock_role.id = "RO123456"
     mock_role.roleName = "CAREGIVER"
@@ -198,11 +231,14 @@ def test_delete_role_users_exist(db_session_mock):
         mock.Mock(),
     ]
 
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
     with pytest.raises(HTTPException) as excinfo:
-        delete_role(db_session_mock, "RO123456")
+        delete_role(db_session_mock, "RO123456", current_user=current_user)
 
     assert excinfo.value.status_code == 400
     assert "users with the role" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
 @pytest.fixture
