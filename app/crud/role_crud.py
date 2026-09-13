@@ -118,7 +118,7 @@ def create_role(db: Session, role: RoleBase, current_user: dict):
     )
     return db_role
 
-def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):
+def update_role(db: Session, roleId: str, role: RoleUpdate, current_user: dict):
     db_role = db.query(Role).filter(Role.id == roleId).first()
     if role.roleName is not None:
         existing_role = db.query(Role).filter(
@@ -138,17 +138,34 @@ def update_role(db: Session, roleId: str, role: RoleUpdate, modified_by:str):
                 detail="Selected access level does not exist."
             )
     if db_role:
+        update_fields = role.model_dump(exclude_unset=True)
+        original_data = {field: getattr(db_role, field) for field in update_fields.keys()}
+
         #update modified by Who
-        db_role.modifiedById = modified_by
+        db_role.modifiedById = current_user["userId"]
         #update role fields
             # Update only provided fields
-        for field, value in role.model_dump(exclude_unset=True).items():
+        for field, value in update_fields.items():
             setattr(db_role, field, value)
         db.commit()
         db.refresh(db_role)
+
+        updated_data = {field: getattr(db_role, field) for field in update_fields.keys()}
+
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=roleId,
+            table='role',
+            message=f"Updated role: {db_role.roleName}",
+            original_data=original_data,
+            updated_data=updated_data,
+        )
     return db_role
 
-def delete_role(db: Session, roleId: str):
+def delete_role(db: Session, roleId: str, current_user: dict):
     db_role = db.query(Role).filter(Role.id == roleId).first()
 
     if not db_role:
@@ -167,6 +184,17 @@ def delete_role(db: Session, roleId: str):
     db_role.isDeleted = True
     db.commit()
     db.refresh(db_role)
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=roleId,
+        table='role',
+        message=f"Deleted role: {db_role.roleName}",
+        original_data={"isDeleted": False},
+    )
 
     return db_role
 
