@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from ..models.access_level_model import AccessLevel
 from ..schemas.access_level import AccessLevelCreate, AccessLevelUpdate
+from ..logger.logger_utils import log_crud_action, ActionType
 
 RESERVED_SYSTEM_CODES = {"NONE", "LOW", "MEDIUM", "HIGH"}
 
@@ -22,7 +23,8 @@ def get_access_level_by_code(db: Session, code: str):
 def get_access_level_by_rank(db: Session, level_rank: int):
     return db.query(AccessLevel).filter(AccessLevel.levelRank == level_rank).first()
 
-def create_access_level(db: Session, data: AccessLevelCreate, new_id: str, created_by: str):
+def create_access_level(db: Session, data: AccessLevelCreate, new_id: str, current_user: dict):
+    created_by = current_user["userId"]
     normalized_code = data.code.strip().upper()
 
     if normalized_code in RESERVED_SYSTEM_CODES:
@@ -63,9 +65,31 @@ def create_access_level(db: Session, data: AccessLevelCreate, new_id: str, creat
     db.add(db_obj)
     db.commit()
     db.refresh(db_obj)
+
+    updated_data = {
+        "id": db_obj.id,
+        "code": db_obj.code,
+        "levelRank": db_obj.levelRank,
+        "levelName": db_obj.levelName,
+        "description": db_obj.description,
+        "isSystem": db_obj.isSystem,
+    }
+
+    log_crud_action(
+        action=ActionType.CREATE,
+        user=created_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=new_id,
+        table='access_level',
+        message=f"Created access level: {db_obj.levelName}",
+        updated_data=updated_data,
+    )
+
     return db_obj
 
-def update_access_level(db: Session, db_obj: AccessLevel, data: AccessLevelUpdate, modified_by: str):
+def update_access_level(db: Session, db_obj: AccessLevel, data: AccessLevelUpdate, current_user: dict):
+    modified_by = current_user["userId"]
     update_data = data.model_dump(exclude_unset=True)
 
     if db_obj.isSystem:
@@ -114,15 +138,32 @@ def update_access_level(db: Session, db_obj: AccessLevel, data: AccessLevelUpdat
     if "description" in update_data and update_data["description"] is not None:
         update_data["description"] = update_data["description"].strip()
 
+    original_data = {field: getattr(db_obj, field) for field in update_data.keys()}
+
     for field, value in update_data.items():
         setattr(db_obj, field, value)
 
     db_obj.modifiedById = modified_by
     db.commit()
     db.refresh(db_obj)
+
+    updated_data = {field: getattr(db_obj, field) for field in original_data.keys()}
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=db_obj.id,
+        table='access_level',
+        message=f"Updated access level: {db_obj.levelName}",
+        original_data=original_data,
+        updated_data=updated_data,
+    )
+
     return db_obj
 
-def delete_access_level(db: Session, db_obj: AccessLevel):
+def delete_access_level(db: Session, db_obj: AccessLevel, current_user: dict):
     if db_obj.isSystem:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -135,5 +176,24 @@ def delete_access_level(db: Session, db_obj: AccessLevel):
             detail="Cannot delete an access level that is assigned to roles."
         )
 
+    original_data = {
+        "id": db_obj.id,
+        "code": db_obj.code,
+        "levelRank": db_obj.levelRank,
+        "levelName": db_obj.levelName,
+        "description": db_obj.description,
+    }
+
     db.delete(db_obj)
     db.commit()
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=original_data["id"],
+        table='access_level',
+        message=f"Deleted access level: {original_data['levelName']}",
+        original_data=original_data,
+    )

@@ -47,7 +47,7 @@ def create_new_access_level(
         db=db,
         data=data,
         new_id=new_id,
-        created_by=current_user["userId"]
+        current_user=current_user
     )
 
 @router.put("/access_levels/update/{access_level_id}", response_model=AccessLevelRead)
@@ -68,7 +68,7 @@ def update_existing_access_level(
         db=db,
         db_obj=db_obj,
         data=data,
-        modified_by=current_user["userId"]
+        current_user=current_user
     )
 
 @router.delete("/access_levels/delete/{access_level_id}", response_model=AccessLevelRead)
@@ -84,5 +84,5 @@ def delete_existing_access_level(
     if not db_obj:
         raise HTTPException(status_code=404, detail="Access level not found.")
 
-    access_level_crud.delete_access_level(db, db_obj)
+    access_level_crud.delete_access_level(db, db_obj, current_user)
     return db_obj

@@ -58,7 +58,8 @@ def test_get_access_level_by_id(db_session_mock):
     assert result.code == "MEDIUM"
 
 
-def test_create_access_level_success(db_session_mock, create_access_level_payload):
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_create_access_level_success(mock_log_crud, db_session_mock, create_access_level_payload):
     # create_access_level query sequence:
     # 1) code lookup -> None (no duplicate)
     # 2) rank lookup -> None (no duplicate)
@@ -74,11 +75,18 @@ def test_create_access_level_success(db_session_mock, create_access_level_payloa
 
     db_session_mock.refresh.side_effect = mock_refresh
 
+    current_user = {
+        "userId": "admin1",
+        "fullName": "Admin User",
+        "roleName": "ADMIN",
+        "email": "admin@example.com",
+    }
+
     result = create_access_level(
         db=db_session_mock,
         data=create_access_level_payload,
         new_id="ACL99999",
-        created_by="admin1",
+        current_user=current_user,
     )
 
     # Verify the object passed to db.add() has the correct field values
@@ -89,24 +97,38 @@ def test_create_access_level_success(db_session_mock, create_access_level_payloa
     db_session_mock.commit.assert_called_once()
     db_session_mock.refresh.assert_called_once()
 
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == "admin1"
+    assert kwargs["user_full_name"] == "Admin User"
+    assert kwargs["role"] == "ADMIN"
+    assert kwargs["entity_id"] == "ACL99999"
+    assert kwargs["table"] == "access_level"
+    assert result is added_obj
 
-def test_create_access_level_duplicate_code(db_session_mock, create_access_level_payload):
+
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_create_access_level_duplicate_code(mock_log_crud, db_session_mock, create_access_level_payload):
     # existing code lookup -> found
     db_session_mock.query.return_value.filter.return_value.first.return_value = mock.Mock()
+
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
 
     with pytest.raises(HTTPException) as excinfo:
         create_access_level(
             db=db_session_mock,
             data=create_access_level_payload,
             new_id="ACL99999",
-            created_by="admin1",
+            current_user=current_user,
         )
 
     assert excinfo.value.status_code == 400
     assert "already exists" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
-def test_create_access_level_reserved_code(db_session_mock):
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_create_access_level_reserved_code(mock_log_crud, db_session_mock):
     payload = AccessLevelCreate(
         code="HIGH",
         levelRank=4,
@@ -114,19 +136,23 @@ def test_create_access_level_reserved_code(db_session_mock):
         description="Should fail",
     )
 
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
     with pytest.raises(HTTPException) as excinfo:
         create_access_level(
             db=db_session_mock,
             data=payload,
             new_id="ACL99999",
-            created_by="admin1",
+            current_user=current_user,
         )
 
     assert excinfo.value.status_code == 400
     assert "reserved" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
-def test_create_access_level_duplicate_rank(db_session_mock, create_access_level_payload):
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_create_access_level_duplicate_rank(mock_log_crud, db_session_mock, create_access_level_payload):
     # 1) existing code lookup -> None
     # 2) existing rank lookup -> found
     db_session_mock.query.return_value.filter.return_value.first.side_effect = [
@@ -134,19 +160,23 @@ def test_create_access_level_duplicate_rank(db_session_mock, create_access_level
         mock.Mock(),
     ]
 
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
     with pytest.raises(HTTPException) as excinfo:
         create_access_level(
             db=db_session_mock,
             data=create_access_level_payload,
             new_id="ACL99999",
-            created_by="admin1",
+            current_user=current_user,
         )
 
     assert excinfo.value.status_code == 400
     assert "rank already exists" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
-def test_update_custom_access_level_success(db_session_mock, update_access_level_payload):
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_update_custom_access_level_success(mock_log_crud, db_session_mock, update_access_level_payload):
     mock_level = mock.MagicMock()
     mock_level.id = "ACL99999"
     mock_level.code = "RESTRICTED"
@@ -164,11 +194,13 @@ def test_update_custom_access_level_success(db_session_mock, update_access_level
         None,
     ]
 
+    current_user = {"userId": "admin2", "fullName": "Second Admin", "roleName": "ADMIN", "email": "admin2@example.com"}
+
     result = update_access_level(
         db=db_session_mock,
         db_obj=mock_level,
         data=update_access_level_payload,
-        modified_by="admin2",
+        current_user=current_user,
     )
 
     assert result.code == "SPECIAL"
@@ -180,8 +212,19 @@ def test_update_custom_access_level_success(db_session_mock, update_access_level
     db_session_mock.commit.assert_called_once()
     db_session_mock.refresh.assert_called_once_with(mock_level)
 
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == "admin2"
+    assert kwargs["user_full_name"] == "Second Admin"
+    assert kwargs["role"] == "ADMIN"
+    assert kwargs["entity_id"] == "ACL99999"
+    assert kwargs["table"] == "access_level"
+    assert kwargs["original_data"]["code"] == "RESTRICTED"
+    assert kwargs["updated_data"]["code"] == "SPECIAL"
 
-def test_update_system_access_level_description_only(db_session_mock):
+
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_update_system_access_level_description_only(mock_log_crud, db_session_mock):
     mock_level = mock.MagicMock()
     mock_level.id = "ACL00004"
     mock_level.code = "HIGH"
@@ -191,20 +234,27 @@ def test_update_system_access_level_description_only(db_session_mock):
     mock_level.isSystem = True
 
     payload = AccessLevelUpdate(description="Updated system description")
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
 
     result = update_access_level(
         db=db_session_mock,
         db_obj=mock_level,
         data=payload,
-        modified_by="admin1",
+        current_user=current_user,
     )
 
     assert result.description == "Updated system description"
     db_session_mock.commit.assert_called_once()
     db_session_mock.refresh.assert_called_once_with(mock_level)
 
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["original_data"] == {"description": "Old description"}
+    assert kwargs["updated_data"] == {"description": "Updated system description"}
 
-def test_update_system_access_level_forbidden_fields(db_session_mock):
+
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_update_system_access_level_forbidden_fields(mock_log_crud, db_session_mock):
     mock_level = mock.MagicMock()
     mock_level.id = "ACL00004"
     mock_level.code = "HIGH"
@@ -214,58 +264,83 @@ def test_update_system_access_level_forbidden_fields(db_session_mock):
     mock_level.isSystem = True
 
     payload = AccessLevelUpdate(levelName="Super High")
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
 
     with pytest.raises(HTTPException) as excinfo:
         update_access_level(
             db=db_session_mock,
             db_obj=mock_level,
             data=payload,
-            modified_by="admin1",
+            current_user=current_user,
         )
 
     assert excinfo.value.status_code == 403
     assert "only allow description updates" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
-def test_delete_access_level_success(db_session_mock):
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_delete_access_level_success(mock_log_crud, db_session_mock):
     mock_level = mock.MagicMock()
     mock_level.id = "ACL99999"
     mock_level.code = "SPECIAL"
+    mock_level.levelRank = 5
+    mock_level.levelName = "Special"
+    mock_level.description = "Custom level"
     mock_level.isSystem = False
     mock_level.roles = []
 
-    delete_access_level(db_session_mock, mock_level)
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
+    delete_access_level(db_session_mock, mock_level, current_user)
 
     db_session_mock.delete.assert_called_once_with(mock_level)
     db_session_mock.commit.assert_called_once()
 
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == "admin1"
+    assert kwargs["user_full_name"] == "Admin User"
+    assert kwargs["role"] == "ADMIN"
+    assert kwargs["entity_id"] == "ACL99999"
+    assert kwargs["table"] == "access_level"
+    assert kwargs["original_data"]["code"] == "SPECIAL"
 
-def test_delete_access_level_system_forbidden(db_session_mock):
+
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_delete_access_level_system_forbidden(mock_log_crud, db_session_mock):
     mock_level = mock.MagicMock()
     mock_level.id = "ACL00001"
     mock_level.code = "NONE"
     mock_level.isSystem = True
     mock_level.roles = []
 
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
     with pytest.raises(HTTPException) as excinfo:
-        delete_access_level(db_session_mock, mock_level)
+        delete_access_level(db_session_mock, mock_level, current_user)
 
     assert excinfo.value.status_code == 403
     assert "cannot be deleted" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
-def test_delete_access_level_in_use(db_session_mock):
+@mock.patch("app.crud.access_level_crud.log_crud_action")
+def test_delete_access_level_in_use(mock_log_crud, db_session_mock):
     mock_level = mock.MagicMock()
     mock_level.id = "ACL99999"
     mock_level.code = "SPECIAL"
     mock_level.isSystem = False
     mock_level.roles = [mock.Mock()]
 
+    current_user = {"userId": "admin1", "fullName": "Admin User", "roleName": "ADMIN", "email": "admin@example.com"}
+
     with pytest.raises(HTTPException) as excinfo:
-        delete_access_level(db_session_mock, mock_level)
+        delete_access_level(db_session_mock, mock_level, current_user)
 
     assert excinfo.value.status_code == 400
     assert "assigned to roles" in str(excinfo.value.detail).lower()
+    mock_log_crud.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
