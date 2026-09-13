@@ -637,7 +637,13 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
 
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    original_data = db_user.__dict__.copy()
+
+    original_data = {
+        "email": db_user.email,
+        "contactNo": db_user.contactNo,
+        "nric_FullName": db_user.nric_FullName,
+    }
+
     # Update fields if provided
     update_data = user_update.model_dump(exclude_unset=True)  # Exclude unset fields
     for key, value in update_data.items():
@@ -648,27 +654,72 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
     db.commit()
     db.refresh(db_user)
 
+    updated_data = {
+        "email": db_user.email,
+        "contactNo": db_user.contactNo,
+        "nric_FullName": db_user.nric_FullName,
+    }
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=str(modified_by),
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=user_id,
+        table='user',
+        message=f"Updated user: {db_user.nric_FullName} ({user_id})",
+        original_data=original_data,
+        updated_data=updated_data,
+    )
 
     return db_user
 
-def reset_password(db: Session, userId: str, new_password: str):
+def reset_password(db: Session, userId: str, new_password: str, modified_by: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     db_user.password = user_auth_service.get_password_hash(new_password)
+    db_user.modifiedById = modified_by
     db.commit()
     db.refresh(db_user)
+
+    log_crud_action(
+        action=ActionType.PASSWORD_CHANGE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Password reset for user {db_user.nric_FullName} ({userId})",
+        log_type="auth",
+    )
+
     return db_user
 
-def activate_user(db: Session, userId: str):
+def activate_user(db: Session, userId: str, modified_by: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    original_data = {"isDeleted": db_user.isDeleted}
     db_user.isDeleted = False
+    db_user.modifiedById = modified_by
     db.commit()
     db.refresh(db_user)
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Activated user: {db_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data={"isDeleted": db_user.isDeleted},
+    )
+
     return db_user
 
 def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: str):
@@ -681,10 +732,12 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
             detail="User not found"
         )
 
+    original_data = {"isDeleted": db_user.isDeleted, "lockOutReason": db_user.lockOutReason}
+
     # Set the status to inactive and add the lockout reason
     stmt = update(User).where(User.id == userId).values(
         isDeleted = True,
-        lockoutReason=lockout_reason,
+        lockOutReason=lockout_reason,
         modifiedById=modified_by
     )
 
@@ -693,9 +746,27 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
 
     # Fetch and return the updated user
     db_user = db.query(User).filter(User.id == userId).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Deactivated user: {db_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data={"isDeleted": db_user.isDeleted, "lockOutReason": db_user.lockOutReason},
+    )
+
     return db_user
 
 def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional[str], modified_by: str) -> Optional[User]:
+    original_user = db.query(User).filter(User.id == user_id).first()
+    if not original_user:
+        return None
+    original_data = {"profilePicture": original_user.profilePicture}
+
     stmt = (
         update(User)
         .where(User.id == user_id)
@@ -707,7 +778,22 @@ def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional
     )
     db.execute(stmt)
     db.commit()
-    return db.query(User).filter(User.id == user_id).first()
+
+    updated_user = db.query(User).filter(User.id == user_id).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=updated_user.nric_FullName,
+        role=updated_user.roleName,
+        entity_id=user_id,
+        table='user',
+        message=f"Updated profile picture for user {updated_user.nric_FullName} ({user_id})",
+        original_data=original_data,
+        updated_data={"profilePicture": updated_user.profilePicture},
+    )
+
+    return updated_user
 
 def get_changed_fields(original_data, updated_data):
     changed = {}

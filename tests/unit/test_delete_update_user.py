@@ -10,8 +10,8 @@ from fastapi import HTTPException, status
 # Import your mock_db from tests/utils
 from tests.utils.mock_db import get_db_session_mock
 
-@mock.patch("app.models.user_model.User")
-def test_update_user(db_session_mock, User_Update):
+@mock.patch("app.crud.user_crud.log_crud_action")
+def test_update_user(mock_log_crud, db_session_mock, User_Update):
     """Test Updating User"""
 
     # Arrange
@@ -22,6 +22,9 @@ def test_update_user(db_session_mock, User_Update):
     mock_existing_user = mock.MagicMock()
     mock_existing_user.id = userId
     mock_existing_user.nric_FullName = "DANIEL TAN"
+    mock_existing_user.email = "daniel22@gmail.com"
+    mock_existing_user.contactNo = "94434567"
+    mock_existing_user.roleName = "DOCTOR"
     db_session_mock.query(User).filter(User.id == userId).first.return_value = mock_existing_user
     result = user_crud.update_user(db_session_mock, userId, User_Update, modified_by)
     #Assert
@@ -30,6 +33,12 @@ def test_update_user(db_session_mock, User_Update):
 
     assert result.nric_FullName == "DANIEL TAN"
     assert result.modifiedById == modified_by
+
+    mock_log_crud.assert_called_once()
+    kwargs = mock_log_crud.call_args[1]
+    assert kwargs["user"] == str(modified_by)
+    assert kwargs["entity_id"] == userId
+    assert kwargs["table"] == "user"
 
 def test_update_user_invalid_user(db_session_mock, User_Update):
     """Test Updating User, User no found"""
