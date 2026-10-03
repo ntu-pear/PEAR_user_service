@@ -501,7 +501,8 @@ def verify_user(db: Session, user: schemas_User.UserCreate):
 
     return db_user
 
-def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
+def create_user(db: Session, user: schemas_User.TempUserCreate, current_user: dict):
+    created_by = current_user["userId"]
     create_data = user.model_dump()
     errors = []
 
@@ -626,6 +627,17 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int)
                 }
             ]
         )
+
+    log_crud_action(
+        action=ActionType.CREATE,
+        user=created_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=db_user.id,
+        table='user',
+        message=f"Admin created user: {db_user.nric_FullName} ({db_user.id})",
+        updated_data=create_data,
+    )
 
     return db_user
 
