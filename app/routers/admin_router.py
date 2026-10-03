@@ -56,7 +56,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=403, detail="User is not authorised")
-    db_user=crud_user.create_user(db=db, user=user, created_by=current_user["userId"])
+    db_user=crud_user.create_user(db=db, user=user, current_user=current_user)
     if db_user:
         #Send registration email
         token = EmailService.generate_email_token(db_user.id, db_user.email)
