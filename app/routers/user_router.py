@@ -147,6 +147,8 @@ def get_usernames_by_ids(
     _current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db)
 ):
+    if str((_current_user or {}).get("roleName", "")).upper() == "GUARDIAN":
+        raise HTTPException(status_code=403, detail="Not permitted")
     ids = list(dict.fromkeys(body.ids))
     rows = db.query(User).filter(User.id.in_(ids)).all()
     names = {}

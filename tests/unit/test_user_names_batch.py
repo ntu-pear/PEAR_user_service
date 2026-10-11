@@ -14,14 +14,14 @@ def _user(uid, full, preferred=None):
     return SimpleNamespace(id=uid, nric_FullName=full, preferredName=preferred)
 
 
-def _make_client(rows, authed=True):
+def _make_client(rows, authed=True, role="ADMIN"):
     db = mock.MagicMock()
     db.query.return_value.filter.return_value.all.return_value = rows
     app = FastAPI()
     app.include_router(user_router.router, prefix="/api/v1")
     app.dependency_overrides[get_db] = lambda: db
     if authed:
-        app.dependency_overrides[AuthService.get_current_user] = lambda: {"userId": "U1"}
+        app.dependency_overrides[AuthService.get_current_user] = lambda: {"userId": "U1", "roleName": role}
     return TestClient(app), db
 
 
@@ -63,3 +63,15 @@ def test_accepts_exactly_100_ids():
 def test_requires_token():
     client, _ = _make_client([], authed=False)
     assert client.post("/api/v1/user/names", json={"ids": ["U1"]}).status_code == 401
+
+
+def test_guardian_is_forbidden():
+    client, db = _make_client([_user("U1", "Alice Tan")], role="GUARDIAN")
+    assert client.post("/api/v1/user/names", json={"ids": ["U1"]}).status_code == 403
+    assert db.query.call_count == 0
+
+
+def test_rejects_overlong_id():
+    client, _ = _make_client([])
+    assert client.post("/api/v1/user/names", json={"ids": ["x" * 65]}).status_code == 422
+    assert client.post("/api/v1/user/names", json={"ids": ["x" * 64]}).status_code == 200
