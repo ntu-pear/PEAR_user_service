@@ -1,8 +1,9 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints
+from typing_extensions import Annotated
 from datetime import datetime, date
 from typing import Optional
 from app.models.user_model import GenderStatus
-from typing import List
+from typing import List, Dict
 
 class UserBase(BaseModel):
     
@@ -155,3 +156,11 @@ class UsernameResponse(BaseModel):
     id: str
     preferredName: Optional[str] = None
     nric_FullName: str
+
+
+class UserNamesRequest(BaseModel):
+    ids: List[Annotated[str, StringConstraints(max_length=64)]] = Field(..., min_length=1, max_length=100)
+
+
+class UserNamesResponse(BaseModel):
+    names: Dict[str, str]

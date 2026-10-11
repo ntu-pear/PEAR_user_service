@@ -139,6 +139,25 @@ def get_username_by_id(
         nric_FullName=result.nric_FullName
     )
 
+# Batch id -> display name lookup (used by the logging service). Deliberately not
+# behind the global rate-limit bucket: one page of logs would exhaust it app-wide.
+@router.post("/user/names", response_model=schemas_user.UserNamesResponse)
+def get_usernames_by_ids(
+    body: schemas_user.UserNamesRequest,
+    _current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if str((_current_user or {}).get("roleName", "")).upper() == "GUARDIAN":
+        raise HTTPException(status_code=403, detail="Not permitted")
+    ids = list(dict.fromkeys(body.ids))
+    rows = db.query(User).filter(User.id.in_(ids)).all()
+    names = {}
+    for row in rows:
+        name = row.nric_FullName or row.preferredName
+        if name:
+            names[row.id] = name
+    return schemas_user.UserNamesResponse(names=names)
+
 #Change Password
 @router.put("/user/change_password/")
 @rate_limit(global_bucket, tokens_required=1)
