@@ -9,7 +9,22 @@ from pysendpulse.pysendpulse import PySendPulse
 OTP_EMAIL = os.getenv('OTP_EMAIL')
 SECRET_KEY = os.getenv('SECRET_KEY')
 SALT = os.getenv('SALT')
-SPApiProxy = PySendPulse(os.getenv('SENDPULSE_API_KEY'), os.getenv('SENDPULSE_SECRET_KEY'))
+_sendpulse_client = None
+
+
+def _sendpulse():
+    """Create the SendPulse client on first use, not at import.
+
+    PySendPulse authenticates against the SendPulse API as soon as it is
+    constructed. Doing that at import made the whole service fail to start
+    (and CI fail) whenever SendPulse rejected the credentials; now only the
+    email being sent fails, and the next send tries again.
+    """
+    global _sendpulse_client
+    if _sendpulse_client is None:
+        _sendpulse_client = PySendPulse(os.getenv('SENDPULSE_API_KEY'), os.getenv('SENDPULSE_SECRET_KEY'))
+    return _sendpulse_client
+
 EMAIL_LINK_BASEURL = os.getenv('EMAIL_LINK_BASEURL')
 
 def generate_email_token(userId: str, email: str) -> str:
@@ -42,7 +57,7 @@ async def send_confirmation_email(email: str, token: str):
         ],
     }
     
-    SPApiProxy.smtp_send_mail(email)
+    _sendpulse().smtp_send_mail(email)
 
 async def send_registration_email(email: str, token: str):
     validate_email_format(email)
@@ -57,7 +72,7 @@ async def send_registration_email(email: str, token: str):
         ],
     }
     
-    SPApiProxy.smtp_send_mail(email)
+    _sendpulse().smtp_send_mail(email)
 
 ## Reset Password
 async def send_reset_password_email(email: str, token: str):
@@ -72,7 +87,7 @@ async def send_reset_password_email(email: str, token: str):
         ],
     }
     
-    SPApiProxy.smtp_send_mail(email)
+    _sendpulse().smtp_send_mail(email)
     
 ## Send 2FA email
 async def send_2fa_email(email: str, code: int):
@@ -87,7 +102,7 @@ async def send_2fa_email(email: str, code: int):
         ],
     }
     
-    SPApiProxy.smtp_send_mail(email)
+    _sendpulse().smtp_send_mail(email)
     
 #Check for valid email format
 def validate_email_format(email: str):
