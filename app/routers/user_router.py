@@ -163,7 +163,7 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
 
-        logger.info(f"Password changed for {userName}")
+        logger.info(f"Password changed for user {user.id}")
 
         update_data = {
             "lastPasswordChanged": user.lastPasswordChanged.isoformat(),
