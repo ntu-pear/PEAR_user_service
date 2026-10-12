@@ -19,6 +19,13 @@ def db_session_mock():
     return get_db_session_mock()
 
 
+@pytest.fixture(autouse=True)
+def mock_log_crud_action():
+    from unittest import mock
+    with mock.patch("app.crud.access_level_crud.log_crud_action") as m:
+        yield m
+
+
 @pytest.fixture
 def admin_user():
     return {

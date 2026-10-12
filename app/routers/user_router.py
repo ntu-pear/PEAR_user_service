@@ -43,9 +43,6 @@ global_bucket = TokenBucket(rate=5, capacity=10)
 # Create a cache for user details (maxsize=100, TTL=300 seconds)
 user_cache = TTLCache(maxsize=100, ttl=300)
 
-# Create a cache for user details (maxsize=100, TTL=300 seconds)
-user_cache = TTLCache(maxsize=100, ttl=300)
-
 
 router = APIRouter(
     tags=["users"],
@@ -57,16 +54,6 @@ router = APIRouter(
 # Profile Picture Max Size
 MAX_SIZE = (300, 300)  # Max image size (300x300)
 
-# Retrieve User from cache
-def get_cached_user(user_id: int, db: Session):
-    if user_id in user_cache:
-        return user_cache[user_id]
-
-    # otherwise fetch from DB
-    db_user = crud_user.get_user(db=db, userId=user_id)
-    if db_user:
-        user_cache[user_id] = db_user
-    return db_user
 # Retrieve User from cache
 def get_cached_user(user_id: int, db: Session):
     if user_id in user_cache:
@@ -152,6 +139,25 @@ def get_username_by_id(
         nric_FullName=result.nric_FullName
     )
 
+# Batch id -> display name lookup (used by the logging service). Deliberately not
+# behind the global rate-limit bucket: one page of logs would exhaust it app-wide.
+@router.post("/user/names", response_model=schemas_user.UserNamesResponse)
+def get_usernames_by_ids(
+    body: schemas_user.UserNamesRequest,
+    _current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if str((_current_user or {}).get("roleName", "")).upper() == "GUARDIAN":
+        raise HTTPException(status_code=403, detail="Not permitted")
+    ids = list(dict.fromkeys(body.ids))
+    rows = db.query(User).filter(User.id.in_(ids)).all()
+    names = {}
+    for row in rows:
+        name = row.nric_FullName or row.preferredName
+        if name:
+            names[row.id] = name
+    return schemas_user.UserNamesResponse(names=names)
+
 #Change Password
 @router.put("/user/change_password/")
 @rate_limit(global_bucket, tokens_required=1)
@@ -176,7 +182,7 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
 
-        logger.info(f"Password changed for {userName}")
+        logger.info(f"Password changed for user {user.id}")
 
         update_data = {
             "lastPasswordChanged": user.lastPasswordChanged.isoformat(),
@@ -216,9 +222,26 @@ def user_change_email(token: str, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    original_email = user.email
+    new_email = userDetails.get("email")
+
     #Change to new email
-    user.email = userDetails.get("email")
+    user.email = new_email
     db.commit()
+
+    # Token-resolved actor: the account changing its own email is the actor.
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=user.id,
+        user_full_name=user.nric_FullName,
+        role=user.roleName,
+        entity_id=user.id,
+        table="user",
+        message=f"{user.nric_FullName} confirmed an email change",
+        original_data={"email": original_email},
+        updated_data={"email": new_email},
+    )
+
     return {"Email Updated"}
 
 
@@ -287,6 +310,21 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
         #update last password changed time stamp
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
+
+        # Token-resolved actor: the account resetting its own password via the
+        # emailed link is the actor. This flow is unauthenticated (no JWT
+        # session), so "SYSTEM" must never be used here.
+        log_crud_action(
+            action=ActionType.PASSWORD_CHANGE,
+            user=user.id,
+            user_full_name=user.nric_FullName,
+            role=user.roleName,
+            entity_id=user.id,
+            table="user",
+            message=f"{user.nric_FullName} reset their password via emailed link",
+            updated_data={"lastPasswordChanged": user.lastPasswordChanged.isoformat()},
+            log_type="auth",
+        )
     except IntegrityError:
         # Rollback transaction if any IntegrityError occurs
         db.rollback()
@@ -316,6 +354,8 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
         raise HTTPException(status_code=404, detail="User not found.")
     # Validate file type
     Validation_Service.validate_profile_picture_format(file)
+
+    original_picture_url = db_user.profilePicture
 
     try:
         # # Delete old profile picture from Cloudinary**
@@ -354,6 +394,18 @@ async def upload_profile_picture(file: UploadFile = File(...),current_user: user
         db.commit()
         db.refresh(db_user)
 
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=user_id,
+            table="user",
+            message=f"{current_user['fullName']} updated their profile picture",
+            original_data={"profilePicture": original_picture_url},
+            updated_data={"profilePicture": db_user.profilePicture},
+        )
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload profile picture: {str(e)}")
 
@@ -380,6 +432,8 @@ async def delete_profile_picture(current_user: user_auth.TokenData = Depends(Aut
     if not db_user or not db_user.profilePicture:
         raise HTTPException(status_code=404, detail="No profile picture found.")
 
+    original_picture_url = db_user.profilePicture
+
     # Extract Cloudinary public_id from image URL
     try:
         public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
@@ -389,10 +443,20 @@ async def delete_profile_picture(current_user: user_auth.TokenData = Depends(Aut
         db_user.profilePicture = None
         # Update ModifiedById
         db_user.modifiedById = db_user.id
-        db_user.isDeleted = True
 
         db.commit()
         db.refresh(db_user)
+
+        log_crud_action(
+            action=ActionType.DELETE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=user_id,
+            table="user",
+            message=f"{current_user['fullName']} deleted their profile picture",
+            original_data={"profilePicture": original_picture_url},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting profile picture: {str(e)}")
 

@@ -109,18 +109,24 @@ jobs:
         run: |
           docker tag ${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }} \
                      localhost:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
+          docker tag ${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }} \
+                     host.minikube.internal:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
 
       - name: Push Docker image to local registry
         run: |
           docker push localhost:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
 
+      - name: Load image into minikube node
+        run: |
+          minikube image load host.minikube.internal:5000/${{ inputs.docker-image-name }}:${{ env.COMMIT_SHA }}
+
       - name: Deploy filebeat to kubernetes
         run: |
           kubectl apply -f '${{ inputs.kube-filebeat-file }}'
 
-      - name: Ensure deployment exists
+      - name: Sync deployment with manifest
         run: |
-          kubectl get deployment ${{ inputs.app-name }} || kubectl apply -f '${{ inputs.kube-deployment-file }}'
+          kubectl apply -f '${{ inputs.kube-deployment-file }}'
 
       - name: Deploy to Kubernetes (rolling update)
         run: |

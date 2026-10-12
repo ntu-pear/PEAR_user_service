@@ -54,7 +54,7 @@ def update_existing_role(roleId: str, role: RoleUpdate, current_user: user_auth.
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=403, detail="User is not authorised")
-    db_role = role_crud.update_role(db, roleId=roleId, role=role, modified_by=current_user["userId"])
+    db_role = role_crud.update_role(db, roleId=roleId, role=role, current_user=current_user)
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role
@@ -64,7 +64,7 @@ def delete_existing_role(roleId: str,current_user: user_auth.TokenData = Depends
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
         raise HTTPException(status_code=403, detail="User is not authorised")
-    db_role = role_crud.delete_role(db, roleId=roleId)
+    db_role = role_crud.delete_role(db, roleId=roleId, current_user=current_user)
     if db_role is None:
         raise HTTPException(status_code=404, detail="Role not found")
     return db_role

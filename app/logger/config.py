@@ -47,11 +47,7 @@ class ConditionalFormatter(logging.Formatter):
         else:
             log_dict["message"] = getattr(record, "message", record.getMessage())
 
-        # Ensure message is valid JSON if it is a dict
-        if isinstance(log_dict.get("message"), dict):
-            log_dict["message"] = json.dumps(log_dict["message"], default=str)
-
-        return json.dumps(log_dict)
+        return json.dumps(log_dict, default=str)
 
 # Handlers
 file_handler = logging.FileHandler(log_file)
