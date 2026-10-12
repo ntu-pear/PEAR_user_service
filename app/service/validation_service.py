@@ -7,14 +7,6 @@ from email_validator import validate_email as ev_validate_email, EmailNotValidEr
 
 # Set timezone to Singapore Time (SGT)
 sgt_tz = pytz.timezone("Asia/Singapore")
-### Check new user details
-def verify_userDetails(db_user, user):
-    # Define the fields to compare
-    fields_to_check = ["nric_FullName","nric", "email", "nric_DateOfBirth", "contactNo", "roleName"]
-    for field in fields_to_check:
-        if getattr(db_user, field) != getattr(user, field):
-            return False
-    return True
 
 #Check for valid password format
 def validate_password_format(password: str):

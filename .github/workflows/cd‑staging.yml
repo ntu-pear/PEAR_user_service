@@ -26,28 +26,14 @@ jobs:
       WEB_FE_ORIGIN: ${{ secrets.WEB_FE_ORIGIN }}
       WEB_FE_ORIGIN_STAGING: ${{ secrets.WEB_FE_ORIGIN_STAGING }}
       REFRESH_SECRET_KEY: ${{ secrets.REFRESH_SECRET_KEY }}
-      MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-      MAIL_FROM: ${{ secrets.MAIL_FROM }}
-      MAIL_PORT: ${{ secrets.MAIL_PORT }}
-      MAIL_SERVER: ${{ secrets.MAIL_SERVER }}
-      MAIL_STARTTLS: ${{ secrets.MAIL_STARTTLS }}
-      MAIL_SSL_TLS: ${{ secrets.MAIL_SSL_TLS }}
-      MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
-      USE_CREDENTIALS: ${{ secrets.USE_CREDENTIALS }}
-      VALIDATE_CERTS: ${{ secrets.VALIDATE_CERTS }}
       SALT: ${{ secrets.SALT }}
       SECRET_KEY: ${{ secrets.SECRET_KEY }}
-      OTP_EMAIL: ${{ secrets.OTP_EMAIL }}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
       REFRESH_TOKEN_EXPIRE_MINUTES: ${{ secrets.REFRESH_TOKEN_EXPIRE_MINUTES }}
       SESSION_EXPIRE_MINUTES: ${{ secrets.SESSION_EXPIRE_MINUTES }}
-      EMAIL_LINK_BASEURL: ${{ secrets.EMAIL_LINK_BASEURL }}
-      SENDPULSE_API_KEY: ${{ secrets.SENDPULSE_API_KEY }}
-      SENDPULSE_SECRET_KEY: ${{ secrets.SENDPULSE_SECRET_KEY }}
       CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
       CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
       CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-      MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
       RABBITMQ_HOST: ${{ secrets.RABBITMQ_HOST }}
       RABBITMQ_PORT: ${{ secrets.RABBITMQ_PORT }}
       RABBITMQ_USER: ${{ secrets.RABBITMQ_USER }}

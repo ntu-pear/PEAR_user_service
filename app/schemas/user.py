@@ -17,10 +17,6 @@ class UserBase(BaseModel):
     roleName: Optional[str] = None
     profilePicture: Optional[HttpUrl] = None
 
-class UserCreate(UserBase):
-    password:str
-    confirm_Password: str
-    
 class TempUserCreate(UserBase):
     pass
 

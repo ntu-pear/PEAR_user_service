@@ -10,7 +10,6 @@ from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.service import validation_service as Validation_Service
-from app.service import email_service as EmailService
 from sqlalchemy import and_
 import uuid
 import cloudinary
@@ -130,14 +129,10 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
     for field, value in user.model_dump(exclude_unset=True).items():
         if field =="contactNo":
             Validation_Service.validate_contactNo(value)
-        if field != "email":
-            stmt = stmt.values({field: value})
-        if field == "email":
-            #Send confirmation email if email is changed
-            email_Token = EmailService.generate_email_token(userId, value)
-            await EmailService.send_confirmation_email(value, email_Token)
-        else:
-            updated_fields[field] = value
+        # Email changes apply immediately, same as every other field - there's
+        # no confirmation-email step anymore.
+        stmt = stmt.values({field: value})
+        updated_fields[field] = value
     updated_fields['modifiedById'] = modified_by
 
 
@@ -439,68 +434,6 @@ def soft_delete_admin_user(db: Session, userId: str, current_user: dict):
 
     return db_user
 
-def verify_user(db: Session, user: schemas_User.UserCreate):
-    #Verify Info with User DB
-    db_user= db.query(User).filter(User.email == user.email).first()
-    if db_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    if db_user.verified == False:
-        if not Validation_Service.verify_userDetails(db_user, user):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Details do not match with pre-registered details"
-    )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Account has already been verified"
-        )
-    if (user.password != user.confirm_Password):
-        raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Password does not match"
-        )
-
-    # Use a transaction to ensure rollback on error
-    try:
-        #Check password format
-        Validation_Service.validate_password_format(user.password)
-        # Hashes the password
-        db_user.password = user_auth_service.get_password_hash(user.password)
-        #Set Account as Verified
-        db_user.verified = True
-
-        # Begin transaction
-        db.commit()
-        db.refresh(db_user)
-
-        # Token-resolved actor: the account being verified IS the actor, never "SYSTEM".
-        log_crud_action(
-            action=ActionType.UPDATE,
-            user=db_user.id,
-            user_full_name=db_user.nric_FullName,
-            role=db_user.roleName,
-            entity_id=db_user.id,
-            table='user',
-            message=f"{db_user.nric_FullName} verified their account",
-            original_data={"verified": False},
-            updated_data={"verified": True},
-            log_type="auth",
-        )
-
-    except IntegrityError:
-        # Rollback transaction if any IntegrityError occurs
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An error occurred: possibly a duplicate unique field."
-        )
-
-    return db_user
-
 def create_user(db: Session, user: schemas_User.TempUserCreate, current_user: dict):
     created_by = current_user["userId"]
     create_data = user.model_dump()
@@ -608,7 +541,10 @@ def create_user(db: Session, user: schemas_User.TempUserCreate, current_user: di
             **create_data,
             createdById=created_by,
             modifiedById=created_by,
-            id=userId
+            id=userId,
+            # No email verification step anymore - accounts are usable
+            # immediately once an admin creates them.
+            verified=True,
         )
 
         db.add(db_user)

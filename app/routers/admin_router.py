@@ -10,8 +10,7 @@ from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..schemas import user_auth
 from ..schemas import admin_config as schemas_admin_config
-from ..service import email_service as EmailService
-from ..service import user_auth_service as AuthService 
+from ..service import user_auth_service as AuthService
 from ..service import admin_config_service as AdminConfigService
 from app.service import validation_service as Validation_Service
 from app.models.user_model import User
@@ -49,7 +48,7 @@ def assert_admin(token_data: dict):
 def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
-#Create Acc, unverified
+#Create Acc - active immediately, no email verification step
 @router.post("/admin/create_account/", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
@@ -57,11 +56,7 @@ async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth
     if not is_admin:
         raise HTTPException(status_code=403, detail="User is not authorised")
     db_user=crud_user.create_user(db=db, user=user, current_user=current_user)
-    if db_user:
-        #Send registration email
-        token = EmailService.generate_email_token(db_user.id, db_user.email)
-        await EmailService.send_registration_email(db_user.email, token)
-   
+
     return schemas_user.AdminRead.from_orm(db_user)
 
 @router.get("/admin/user/{userId}", response_model=schemas_user.AdminRead)

@@ -7,8 +7,7 @@ from ..crud import role_crud as crud_role
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..schemas import user_auth
-from ..service import email_service as EmailService
-from ..service import user_auth_service as AuthService 
+from ..service import user_auth_service as AuthService
 from app.models.user_model import User
 from typing import Optional
 
