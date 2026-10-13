@@ -19,8 +19,6 @@ def make_payload(**overrides):
     fields = {
         "nric": "S1234567A",
         "nric_DateOfBirth": date(1990, 1, 1),
-        "email": "user@example.com",
-        "roleName": "DOCTOR",
         "newPassword": "ILoVEFYP!123",
         "confirmPassword": "ILoVEFYP!123",
     }
@@ -34,7 +32,6 @@ def make_matching_user():
     mock_user.nric_FullName = "DANIEL ANG"
     mock_user.nric = "S1234567A"
     mock_user.nric_DateOfBirth = date(1990, 1, 1)
-    mock_user.email = "user@example.com"
     mock_user.roleName = "DOCTOR"
     return mock_user
 

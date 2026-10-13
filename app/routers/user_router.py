@@ -196,14 +196,12 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
 @router.put("/user/request_reset_password/")
 @rate_limit(global_bucket, tokens_required=1)
 def request_reset_password(account: schemas_account.RequestResetPasswordBase, db: Session = Depends(get_db)):
-    user = crud_user.get_user_by_email(db=db, email=account.email)
+    user = crud_user.get_user_by_nric(db=db, nric=account.nric)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    fields_to_check = ["nric", "nric_DateOfBirth","email", "roleName"]
-    for field in fields_to_check:
-        if getattr(user, field) != getattr(account, field):
-            raise HTTPException(status_code=404, detail="Invalid Details")
+    if user.nric_DateOfBirth != account.nric_DateOfBirth:
+        raise HTTPException(status_code=404, detail="Invalid Details")
 
     if account.newPassword != account.confirmPassword:
         raise HTTPException(status_code=404, detail="Password do not match")

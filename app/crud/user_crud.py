@@ -36,6 +36,9 @@ def get_user(db: Session, userId: str):
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
 
+def get_user_by_nric(db: Session, nric: str):
+    return db.query(User).filter(User.nric == nric).first()
+
 
 def get_users(db: Session, page: int, page_size:int ):
     # Maximum page size limit to prevent excessively large queries
