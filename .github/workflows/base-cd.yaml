@@ -100,6 +100,8 @@ jobs:
           echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
           echo "RABBITMQ_PASS=${{ secrets.RABBITMQ_PASS }}" >> .env
           echo "RABBITMQ_VIRTUAL_HOST=${{ secrets.RABBITMQ_VIRTUAL_HOST }}" >> .env
+          echo "OPS_LOGGING=${{ vars.OPS_LOGGING || 'false' }}" >> .env
+          echo "OPS_DEBUG_ROUTES=${{ vars.OPS_DEBUG_ROUTES || 'false' }}" >> .env
 
       - name: Build Docker image
         run: |
