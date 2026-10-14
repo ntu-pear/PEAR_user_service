@@ -13,7 +13,9 @@ The auth event name is written as "auth_event", never "event": Filebeat and
 Logstash documents already carry an ECS "event" object, so a string "event"
 makes Elasticsearch reject the line with a mapping conflict. For the same
 reason no key named after an ECS object (event, log, host, agent, ecs, input,
-fields, error) may be added to a line.
+fields, error) may be added to a line. Logstash also strips or overwrites
+the names path, host, type, tags and @version, so the request path is written
+as "http_path" and none of those names may be used as a key.
 
 This file is copied, unchanged, into every PEAR backend service. Keep the
 copies identical.
@@ -84,6 +86,10 @@ MAX_STACK_CHARS = 8000
 MAX_BODY_SNIFF = 2048
 AUDIT_FIELDS = ("user", "table", "action", "log_text")
 OPTIONAL_FIELDS = ("method", "path", "query", "status", "duration_ms", "auth_event", "reason")
+# Output key for a field whose own name Logstash would strip or overwrite.
+OUTPUT_KEYS = {"path": "http_path"}
+# Third-party loggers that are chatty below ERROR (python-multipart logs on every form login).
+NOISY_LOGGER_PREFIXES = ("python_multipart",)
 
 _APP_MARKER = "_pear_ops_logging_handler"
 _request_id = contextvars.ContextVar("pear_request_id", default=None)
@@ -243,7 +249,7 @@ class OpsJsonFormatter(logging.Formatter):
         for field in OPTIONAL_FIELDS:
             value = getattr(record, "ops_" + field, None)
             if value is not None:
-                line[field] = value
+                line[OUTPUT_KEYS.get(field, field)] = value
         if line["ops_type"] == "request":
             line.setdefault("status", None)  # null when no response was started
         if hasattr(record, "auth_event"):
@@ -253,7 +259,7 @@ class OpsJsonFormatter(logging.Formatter):
             line.setdefault("reason", _scrub(str(auth_reason))[:MAX_REASON_CHARS] if auth_reason is not None else None)
             endpoint = getattr(record, "auth_endpoint", None)
             if endpoint:
-                line.setdefault("path", mask_path(str(endpoint)))
+                line.setdefault("http_path", mask_path(str(endpoint)))
         if record.exc_info and record.exc_info[0] is not None:
             line["exception_type"] = record.exc_info[0].__name__
             stack = "".join(traceback.format_exception(*record.exc_info))
@@ -275,6 +281,16 @@ class _NotAuditFilter(logging.Filter):
         return not all(hasattr(record, field) for field in AUDIT_FIELDS)
 
 
+class _NoisyLoggerFilter(logging.Filter):
+    """Drops records below ERROR from known chatty third-party loggers."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if record.levelno >= logging.ERROR:
+            return True
+        name = record.name
+        return not any(name == prefix or name.startswith(prefix + ".") for prefix in NOISY_LOGGER_PREFIXES)
+
+
 class _ForwardHandler(logging.Handler):
     """Root-logger handler (WARNING and up) that writes through the one ops file handler.
 
@@ -286,6 +302,7 @@ class _ForwardHandler(logging.Handler):
         super().__init__(level=logging.WARNING)
         self.target = target
         self.addFilter(_NotAuditFilter())
+        self.addFilter(_NoisyLoggerFilter())
 
     def emit(self, record: logging.LogRecord) -> None:
         try:

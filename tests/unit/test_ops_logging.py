@@ -121,7 +121,7 @@ def test_request_line_shape_and_query_masking(ops):
     assert line["schema"] == "pear-app-v1"
     assert line["ops_type"] == "request"
     assert line["service"] == SERVICE and line["environment"] == "test"
-    assert line["method"] == "GET" and line["path"] == "/api/v1/patients/1" and line["status"] == 200
+    assert line["method"] == "GET" and line["http_path"] == "/api/v1/patients/1" and line["status"] == 200
     assert line["query"] == "name=***&mask=false&NRIC=***&pageSize=5&userEmail=***"
     assert "John" not in json.dumps(line) and "S1234567A" not in json.dumps(line)
     assert line["user_id"] == "U7"
@@ -167,7 +167,7 @@ def test_sensitive_path_values_are_masked(ops):
     _call(_endpoint(), path="/api/v1/internal/user/check-nric/S1234567A")
     _call(_endpoint(), path="/api/v1/admin/get_email/someone@example.com")
     _call(_endpoint(), path="/api/v1/admin/get_nric/U12")
-    paths = [line["path"] for line in _lines(ops)]
+    paths = [line["http_path"] for line in _lines(ops)]
     assert paths == [
         "/api/v1/internal/user/check-nric/***",
         "/api/v1/admin/get_email/***",
@@ -256,7 +256,7 @@ def test_token_verifier_events_become_auth_lines(ops):
     (line,) = _lines(ops)
     assert line["ops_type"] == "auth" and line["auth_event"] == "would_reject"
     assert line["reason"] == "token_rejected"
-    assert line["path"] == "/api/v1/patients/1" and line["user_id"] == "U1"
+    assert line["http_path"] == "/api/v1/patients/1" and line["user_id"] == "U1"
 
 
 def test_auth_event_helper(ops):
@@ -269,6 +269,8 @@ def test_auth_event_helper(ops):
 
 
 ECS_OBJECT_FIELDS = {"event", "log", "host", "agent", "ecs", "input", "fields", "error", "file", "process"}
+# Names Logstash strips or overwrites.
+LOGSTASH_RESERVED_FIELDS = {"path", "host", "type", "tags", "@version"}
 
 
 def test_lines_never_use_a_top_level_key_that_is_an_ecs_object(ops):
@@ -279,6 +281,27 @@ def test_lines_never_use_a_top_level_key_that_is_an_ecs_object(ops):
     for line in _lines(ops):
         assert line["ops_type"] == "auth" and "auth_event" in line
         assert not ECS_OBJECT_FIELDS & set(line)
+        assert not LOGSTASH_RESERVED_FIELDS & set(line)
+
+
+def test_request_and_auth_lines_use_http_path_not_path(ops):
+    _call(_endpoint(), path="/api/v1/patients/1")
+    ops_logging.auth_event("login_failed", method="POST", path="/api/v1/auth/login")
+    lines = _lines(ops)
+    assert [line["http_path"] for line in lines if line["ops_type"] == "request"] == ["/api/v1/patients/1"]
+    assert [line["http_path"] for line in lines if line["ops_type"] == "auth"] == ["/api/v1/auth/login"]
+    for line in lines:
+        assert not LOGSTASH_RESERVED_FIELDS & set(line)
+
+
+def test_python_multipart_noise_below_error_is_not_forwarded(ops):
+    for name in ("python_multipart", "python_multipart.multipart"):
+        noisy = logging.getLogger(name)
+        noisy.setLevel(logging.DEBUG)
+        noisy.warning("Skipping data after last boundary")
+        noisy.error("real multipart failure")
+    messages = [line["message"] for line in _lines(ops)]
+    assert messages == ["real multipart failure"] * 2
 
 
 def test_auth_event_reason_is_truncated(ops):
@@ -362,7 +385,7 @@ def test_real_fastapi_app_sync_endpoint_sees_the_request_id(tmp_path, monkeypatc
         ops_logging.shutdown_ops_logging()
     assert sent[0]["status"] == 200
     assert json.loads(sent[1]["body"]) == {"X-Request-ID": "rid-sync"}
-    assert _lines(tmp_path)[0]["path"] == "/echo"
+    assert _lines(tmp_path)[0]["http_path"] == "/echo"
 
 
 # ------------------------------------------------------------ fix round --
@@ -406,7 +429,7 @@ def test_auth_event_reason_is_scrubbed_and_path_masked(ops):
     )
     (line,) = _lines(ops)
     assert line["reason"] == "unknown ***"
-    assert line["path"] == "/api/v1/admin/get_email/***"
+    assert line["http_path"] == "/api/v1/admin/get_email/***"
 
 
 @pytest.mark.parametrize("query,expected", [
