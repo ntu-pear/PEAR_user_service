@@ -12,6 +12,8 @@ from dotenv import load_dotenv
 from .rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 from .routers.__init__ import scheduler, lifespan  # Import the scheduler and lifespan from your __init__.py
 from app.service.background_processor import get_processor
+from app.logger.config import LOG_DIR
+from app.ops_logging import setup_ops_logging
 from contextlib import asynccontextmanager
 
 import logging
@@ -185,6 +187,11 @@ app.include_router(verification_router.router, prefix="/api/v1", tags=["2FA"])
 app.include_router(access_level_router.router, prefix="/api/v1", tags=["2FA"])
 app.include_router(integrity_router.router, prefix="/api/v1/integrity", tags=["Integrity"])
 app.include_router(internal_router.router, prefix="/api/v1", tags=["internal"])
+
+# Operational logs (errors, requests, auth events). Dark unless OPS_LOGGING is on.
+# Last middleware added, so it is the outermost one.
+setup_ops_logging(app, service="user", log_dir=LOG_DIR)
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the User API hello"} 
