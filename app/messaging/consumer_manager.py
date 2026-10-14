@@ -26,13 +26,13 @@ class ConsumerManager:
         self._watchdog_enabled = False
         self._watchdog_interval = 10       # seconds between health checks
         self._watchdog_max_backoff = 60    # cap on per-consumer restart backoff
-        self._watchdog_max_restarts = 5    # give up after this many consecutive failures
+        self._watchdog_alert_after = 5     # log an ERROR once after this many consecutive failed restarts
         self._watchdog_stable_after = 30   # seconds alive before a restart counts as success
         self._restart_backoff = {}         # name -> current backoff seconds
         self._next_restart_at = {}         # name -> earliest epoch time to retry
         self._restart_attempts = {}        # name -> consecutive failed restarts
         self._alive_since = {}             # name -> epoch when consumer was first seen alive
-        self._given_up = set()             # names abandoned by the watchdog (left DOWN)
+        self._alerted = set()              # names already reported as persistently failing
 
     def set_shutdown_event(self, shutdown_event: threading.Event):
         """Set the shutdown event for graceful shutdown"""
@@ -77,9 +77,9 @@ class ConsumerManager:
         """Every interval, restart any consumer whose thread has died (unless we
         are shutting down), with per-consumer exponential backoff.
 
-        After _watchdog_max_restarts consecutive failures the consumer is
-        abandoned: it stays DOWN until something restarts it (pod restart or a
-        manual start_consumer call).
+        It never gives up: a broker that is down for a few minutes looks the same
+        as one that is down for longer. After _watchdog_alert_after consecutive
+        failures it logs an ERROR once, then keeps retrying at the capped backoff.
         """
         while self._watchdog_enabled:
             time.sleep(self._watchdog_interval)
@@ -100,31 +100,29 @@ class ConsumerManager:
                     first_seen = self._alive_since.setdefault(name, now)
                     if now - first_seen >= self._watchdog_stable_after:
                         # survived the stability window -> forgive past failures
+                        if name in self._alerted:
+                            logger.info(f"Watchdog: consumer '{name}' recovered")
                         self._restart_backoff.pop(name, None)
                         self._next_restart_at.pop(name, None)
                         self._restart_attempts.pop(name, None)
-                        self._given_up.discard(name)
+                        self._alerted.discard(name)
                     continue
 
                 self._alive_since.pop(name, None)
-
-                if name in self._given_up:
-                    continue
 
                 if now < self._next_restart_at.get(name, 0):
                     continue
 
                 attempts = self._restart_attempts.get(name, 0)
-                if attempts >= self._watchdog_max_restarts:
-                    self._given_up.add(name)
-                    logger.error(f"Watchdog: consumer '{name}' failed {attempts} consecutive "
-                                 f"restarts - giving up. It will stay DOWN until restarted "
-                                 f"manually or by a process restart.")
-                    continue
+                if attempts >= self._watchdog_alert_after and name not in self._alerted:
+                    self._alerted.add(name)
+                    logger.error(f"Watchdog: consumer '{name}' still failing after {attempts} "
+                                 f"consecutive restarts - RabbitMQ may be down. Will keep "
+                                 f"retrying every {self._watchdog_max_backoff}s.")
 
                 self._log_consumer_death(name, future)
                 logger.warning(f"Watchdog: consumer '{name}' is not running - restarting "
-                               f"(attempt {attempts + 1}/{self._watchdog_max_restarts})")
+                               f"(attempt {attempts + 1})")
                 self.start_consumer(name)
                 self._restart_attempts[name] = attempts + 1
 
@@ -195,7 +193,7 @@ class ConsumerManager:
             self._watchdog_thread.join(timeout=self._watchdog_interval + 2)
 
         # First, stop all consumer instances gracefully
-        for name, consumer in self.consumer_instances.items():
+        for name, consumer in list(self.consumer_instances.items()):
             try:
                 logger.info(f"Stopping consumer: {name}")
                 consumer.stop()
@@ -226,7 +224,7 @@ class ConsumerManager:
         self._next_restart_at.clear()
         self._restart_attempts.clear()
         self._alive_since.clear()
-        self._given_up.clear()
+        self._alerted.clear()
         self.running = False
         logger.info("All consumers stopped")
     
@@ -235,9 +233,7 @@ class ConsumerManager:
         status = {}
         for name, future in self.threads.items():
             if future.done():
-                if name in self._given_up:
-                    status[name] = "Down (watchdog gave up)"
-                elif future.exception():
+                if future.exception():
                     status[name] = f"Error: {future.exception()}"
                 else:
                     status[name] = "Completed"
