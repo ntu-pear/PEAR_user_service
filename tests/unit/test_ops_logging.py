@@ -11,7 +11,7 @@ from fastapi import FastAPI
 
 from app import ops_logging
 
-SERVICE = "user"
+SERVICE = "patient"
 UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 
 
@@ -350,3 +350,128 @@ def test_real_fastapi_app_sync_endpoint_sees_the_request_id(tmp_path, monkeypatc
     assert sent[0]["status"] == 200
     assert json.loads(sent[1]["body"]) == {"X-Request-ID": "rid-sync"}
     assert _lines(tmp_path)[0]["path"] == "/echo"
+
+
+# ------------------------------------------------------------ fix round --
+
+def test_scrub_replaces_nric_email_and_sql_tails():
+    scrub = ops_logging._scrub
+    assert scrub("bad s1234567a and T7654321Z here") == "bad *** and *** here"
+    assert scrub("mail someone@example.com now") == "mail *** now"
+    assert scrub("fine S12345678A") == "fine S12345678A"
+    out = scrub("boom [SQL: SELECT * FROM T WHERE nric=?]\n[parameters: ('S1234567A',)]\n(Background)")
+    assert out == "boom" and "SELECT" not in out and "S1234567A" not in out
+
+
+def test_exception_text_is_scrubbed_in_message_and_stack(ops):
+    async def broken(scope, receive, send):
+        raise RuntimeError("no patient S1234567A for jane@example.com [parameters: ('S1234567A',)]")
+
+    with pytest.raises(RuntimeError):
+        _call(broken)
+    error_line = _lines(ops)[0]
+    dumped = json.dumps(error_line)
+    assert "S1234567A" not in dumped and "jane@example.com" not in dumped and "parameters" not in dumped
+    assert "***" in error_line["stack_trace"]
+
+
+def test_logged_error_message_is_scrubbed(ops):
+    logging.getLogger("tests.ops.pii").error("lookup failed for %s", "S1234567A")
+    assert _lines(ops)[0]["message"] == "lookup failed for ***"
+
+
+def test_401_detail_is_scrubbed(ops):
+    _call(_endpoint(status=401, body=b'{"detail": "No account for jane@example.com"}'))
+    auth_line = _lines(ops)[1]
+    assert auth_line["reason"] == "No account for ***"
+    assert "jane@example.com" not in json.dumps(_lines(ops))
+
+
+def test_auth_event_reason_is_scrubbed_and_path_masked(ops):
+    ops_logging.auth_event(
+        "login_failed", reason="unknown S1234567A", method="GET", path="/api/v1/admin/get_email/a@b.com", status=401
+    )
+    (line,) = _lines(ops)
+    assert line["reason"] == "unknown ***"
+    assert line["path"] == "/api/v1/admin/get_email/***"
+
+
+@pytest.mark.parametrize("query,expected", [
+    ("S1234567A", "***"),
+    ("page=1&S1234567A&size=5", "page=1&***&size=5"),
+    ("a=1;nric=S1234567A", "***"),
+    ("page=1;x=2&size=5", "***&size=5"),
+    ("tag=a&tag=b&name=x&name=y", "tag=a&tag=b&name=***&name=***"),
+    ("%4Eame=Jo%20Tan&n%61me=Al", "Name=***&name=***"),
+    ("NaMe=x&eMAIL=y&PhOnE=z&TOKEN=t&PassWord=p", "NaMe=***&eMAIL=***&PhOnE=***&TOKEN=***&PassWord=***"),
+    ("q=S1234567A&r=jane%40example.com", "q=***&r=***"),
+])
+def test_mask_query_edge_cases(query, expected):
+    assert ops_logging.mask_query(query) == expected
+
+
+def test_setup_failure_part_way_leaves_nothing_installed(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPS_LOGGING", "true")
+    root_handlers = list(logging.getLogger().handlers)
+
+    class Exploding(FakeApp):
+        def add_middleware(self, cls, **kwargs):
+            raise RuntimeError("cannot add middleware")
+
+    try:
+        assert ops_logging.setup_ops_logging(Exploding(), service=SERVICE, log_dir=str(tmp_path)) is False
+        assert ops_logging._state["installed"] is False and ops_logging._state["handler"] is None
+        assert logging.getLogger().handlers == root_handlers
+        assert logging.getLogger(ops_logging.OPS_LOGGER_NAME).handlers == []
+        assert ops_logging.outbound_headers() == {}
+    finally:
+        ops_logging.shutdown_ops_logging()
+
+
+def test_setup_is_idempotent_per_app(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPS_LOGGING", "true")
+    monkeypatch.setenv("OPS_DEBUG_ROUTES", "true")
+    app = FakeApp()
+    other = FakeApp()
+    try:
+        assert ops_logging.setup_ops_logging(app, service=SERVICE, log_dir=str(tmp_path)) is True
+        assert ops_logging.setup_ops_logging(app, service=SERVICE, log_dir=str(tmp_path)) is True
+        assert ops_logging.setup_ops_logging(other, service=SERVICE, log_dir=str(tmp_path)) is True
+    finally:
+        ops_logging.shutdown_ops_logging()
+    assert app.middleware == [ops_logging.OpsRequestMiddleware]
+    assert app.routes == ["/ops-debug/error", "/ops-debug/forbidden"]
+    assert other.middleware == [ops_logging.OpsRequestMiddleware]
+
+
+def test_no_response_started_logs_null_status(ops):
+    async def silent(scope, receive, send):
+        return
+
+    _call(silent)
+    (line,) = _lines(ops)
+    assert line["ops_type"] == "request" and "status" in line and line["status"] is None
+    assert line["level"] == "INFO"
+
+
+def test_client_disconnect_is_not_an_unhandled_error(ops):
+    from starlette.requests import ClientDisconnect
+
+    async def gone(scope, receive, send):
+        raise ClientDisconnect()
+
+    with pytest.raises(ClientDisconnect):
+        _call(gone)
+    (line,) = _lines(ops)
+    assert line["ops_type"] == "request" and line["status"] is None
+
+
+def test_a_file_handler_that_cannot_write_never_breaks_the_request(ops, monkeypatch):
+    def disk_full(record):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(ops_logging._state["handler"], "emit", disk_full)
+    monkeypatch.setattr(logging, "raiseExceptions", False)
+    sent = _call(_endpoint(before=lambda: logging.getLogger("tests.ops.full").error("x")))
+    assert sent[0]["status"] == 200 and sent[1]["body"] == b'{"ok": true}'
+    _call(_endpoint(status=403))

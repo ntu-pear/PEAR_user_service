@@ -25,7 +25,7 @@ import uuid
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from typing import Any, Dict, Optional
-from urllib.parse import parse_qsl, urlencode
+from urllib.parse import quote_plus, unquote_plus
 
 SCHEMA = "pear-app-v1"
 OPS_LOGGER_NAME = "pear.ops"
@@ -62,6 +62,12 @@ EXCLUDED_PATHS = frozenset({
 VERIFIER_PATH_SUFFIX = "/current_user"
 LIBRARY_USER_AGENTS = ("python-httpx/", "python-requests/")
 
+# Personal data that can turn up in free text (exception messages, 401 details).
+NRIC_PATTERN = re.compile(r"\b[STFGM]\d{7}[A-Z]\b", re.IGNORECASE)
+EMAIL_PATTERN = re.compile(r"[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+")
+# SQLAlchemy appends the statement and its bound values to database errors.
+SQL_TAIL_PATTERN = re.compile(r"\s*\[(?:SQL|parameters):.*", re.IGNORECASE | re.DOTALL)
+
 REQUEST_ID_HEADER = "x-request-id"
 REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._-]{1,64}")
 MAX_MESSAGE_CHARS = 2000
@@ -73,6 +79,7 @@ MAX_BODY_SNIFF = 2048
 AUDIT_FIELDS = ("user", "table", "action", "log_text")
 OPTIONAL_FIELDS = ("method", "path", "query", "status", "duration_ms", "event", "reason")
 
+_APP_MARKER = "_pear_ops_logging_handler"
 _request_id = contextvars.ContextVar("pear_request_id", default=None)
 _state: Dict[str, Any] = {"installed": False, "handler": None, "forwarder": None}
 
@@ -119,12 +126,30 @@ def _is_sensitive_key(key: str) -> bool:
     return any(word in lowered for word in SENSITIVE_QUERY_KEYS)
 
 
+def _scrub(text: str) -> str:
+    """Remove personal data from free text: NRIC/FIN, emails, SQL statements and bound values."""
+    text = SQL_TAIL_PATTERN.sub("", text)
+    text = EMAIL_PATTERN.sub(MASK, text)
+    return NRIC_PATTERN.sub(MASK, text)
+
+
 def mask_query(query_string: str) -> str:
+    """Mask a query string. Anything that is not a plain key=value pair (a bare
+    token, or an item with ';' in it) is masked whole."""
     if not query_string:
         return ""
-    pairs = parse_qsl(query_string, keep_blank_values=True)
-    masked = [(key, MASK if _is_sensitive_key(key) else value) for key, value in pairs]
-    return urlencode(masked, safe="*")[:MAX_QUERY_CHARS]
+    items = []
+    for item in query_string.split("&"):
+        if not item:
+            continue
+        key, separator, value = item.partition("=")
+        if not separator or ";" in item:
+            items.append(MASK)
+            continue
+        key = unquote_plus(key)
+        value = MASK if _is_sensitive_key(key) else _scrub(unquote_plus(value))
+        items.append(f"{quote_plus(_scrub(key), safe='*')}={quote_plus(value, safe='*')}")
+    return _scrub("&".join(items))[:MAX_QUERY_CHARS]
 
 
 def mask_path(path: str) -> str:
@@ -168,7 +193,7 @@ def _message(record: logging.LogRecord) -> str:
         text = record.getMessage()
     except Exception:
         text = str(record.msg)
-    return text[:MAX_MESSAGE_CHARS]
+    return _scrub(text)[:MAX_MESSAGE_CHARS]
 
 
 def _ops_type(record: logging.LogRecord) -> str:
@@ -213,17 +238,20 @@ class OpsJsonFormatter(logging.Formatter):
             value = getattr(record, "ops_" + field, None)
             if value is not None:
                 line[field] = value
+        if line["ops_type"] == "request":
+            line.setdefault("status", None)  # null when no response was started
         if hasattr(record, "auth_event"):
             # Shadow-mode events from app/auth/token_verifier.py (logger "pear.auth").
             line.setdefault("event", getattr(record, "auth_event", None))
-            line.setdefault("reason", getattr(record, "auth_reason", None))
+            auth_reason = getattr(record, "auth_reason", None)
+            line.setdefault("reason", _scrub(str(auth_reason))[:MAX_REASON_CHARS] if auth_reason is not None else None)
             endpoint = getattr(record, "auth_endpoint", None)
             if endpoint:
                 line.setdefault("path", mask_path(str(endpoint)))
         if record.exc_info and record.exc_info[0] is not None:
             line["exception_type"] = record.exc_info[0].__name__
             stack = "".join(traceback.format_exception(*record.exc_info))
-            line["stack_trace"] = stack[-MAX_STACK_CHARS:]
+            line["stack_trace"] = _scrub(stack)[-MAX_STACK_CHARS:]
         return json.dumps(line, default=str)
 
 
@@ -318,13 +346,18 @@ def setup_ops_logging(app: Any, service: str, log_dir: str) -> bool:
     if not is_enabled():
         return False
     try:
+        handler = _state["handler"]
+        if handler is not None and getattr(app, _APP_MARKER, None) is handler:
+            return True  # this app is already set up
         if not _state["installed"]:
             _install_handlers(service, log_dir)
         app.add_middleware(OpsRequestMiddleware)
         if _flag("OPS_DEBUG_ROUTES"):
             _register_debug_routes(app)
+        setattr(app, _APP_MARKER, _state["handler"])
         return True
     except Exception:
+        _safe(shutdown_ops_logging)
         logging.getLogger(__name__).warning("Ops logging could not be set up; continuing without it", exc_info=True)
         return False
 
@@ -356,7 +389,7 @@ def auth_event(
     if not _state["installed"]:
         return
     try:
-        reason_text = str(reason)[:MAX_REASON_CHARS] if reason is not None else None
+        reason_text = _scrub(str(reason))[:MAX_REASON_CHARS] if reason is not None else None
         extra: Dict[str, Any] = {
             "ops_type": "auth",
             "user_id": user_id,
@@ -365,7 +398,7 @@ def auth_event(
         }
         for key in ("method", "path", "status"):
             if fields.get(key) is not None:
-                extra["ops_" + key] = fields[key]
+                extra["ops_" + key] = mask_path(str(fields[key])) if key == "path" else fields[key]
         message = f"Auth {event}: {reason_text}" if reason_text else f"Auth {event}"
         logging.getLogger(OPS_LOGGER_NAME).log(level, message, extra=extra)
     except Exception:
@@ -408,7 +441,7 @@ def _detail(body: bytes) -> Optional[str]:
     if detail is None:
         return None
     text = detail if isinstance(detail, str) else json.dumps(detail, default=str)
-    return text[:MAX_REASON_CHARS]
+    return _scrub(text)[:MAX_REASON_CHARS]
 
 
 def _observe(message: Dict[str, Any], seen: Dict[str, Any], request_id: str) -> Dict[str, Any]:
@@ -432,13 +465,15 @@ def _observe(message: Dict[str, Any], seen: Dict[str, Any], request_id: str) -> 
 
 
 def _log_request(scope: Dict[str, Any], headers: Dict[str, str], seen: Dict[str, Any], started: float) -> None:
-    status = int(seen["status"])
+    status = seen["status"]  # None when no response was started (e.g. client disconnect)
     method = str(scope.get("method", ""))
     path = mask_path(str(scope.get("path", "")))
     query = mask_query(bytes(scope.get("query_string", b"")).decode("latin-1"))
     user_id = claimed_user_id(headers.get("authorization"))
     duration_ms = round((time.perf_counter() - started) * 1000, 1)
-    if status >= 500:
+    if status is None:
+        level = logging.INFO
+    elif status >= 500:
         level = logging.ERROR
     elif status >= 400:
         level = logging.WARNING
@@ -446,7 +481,7 @@ def _log_request(scope: Dict[str, Any], headers: Dict[str, str], seen: Dict[str,
         level = logging.INFO
     logging.getLogger(OPS_LOGGER_NAME).log(
         level,
-        f"{method} {path} -> {status} ({duration_ms} ms)",
+        f"{method} {path} -> {status if status is not None else 'no response'} ({duration_ms} ms)",
         extra={
             "ops_type": "request",
             "user_id": user_id,
@@ -459,6 +494,14 @@ def _log_request(scope: Dict[str, Any], headers: Dict[str, str], seen: Dict[str,
     )
     if status in (401, 403):
         auth_event(f"http_{status}", reason=_detail(seen["body"]), user_id=user_id, method=method, path=path, status=status)
+
+
+def _is_client_disconnect(exc: BaseException) -> bool:
+    try:
+        from starlette.requests import ClientDisconnect
+        return isinstance(exc, ClientDisconnect)
+    except Exception:
+        return type(exc).__name__ == "ClientDisconnect"
 
 
 def _log_unhandled(scope: Dict[str, Any], headers: Dict[str, str], exc: BaseException) -> None:
@@ -502,7 +545,7 @@ class OpsRequestMiddleware:
 
         token = _request_id.set(request_id)
         started = time.perf_counter()
-        seen: Dict[str, Any] = {"status": 500, "body": b""}
+        seen: Dict[str, Any] = {"status": None, "body": b""}
 
         async def send_wrapper(message: Dict[str, Any]) -> None:
             await send(_observe(message, seen, request_id))
@@ -510,8 +553,11 @@ class OpsRequestMiddleware:
         try:
             await self.app(scope, receive, send_wrapper)
         except Exception as exc:
-            if not skip:
-                _safe(_log_unhandled, scope, headers, exc)
+            if not _is_client_disconnect(exc):
+                if seen["status"] is None:
+                    seen["status"] = 500
+                if not skip:
+                    _safe(_log_unhandled, scope, headers, exc)
             raise
         finally:
             if not skip:
