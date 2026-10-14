@@ -185,7 +185,7 @@ def test_401_and_403_write_an_auth_event(ops, status):
     assert request_line["ops_type"] == "request" and request_line["status"] == status
     assert request_line["level"] == "WARNING"
     assert auth_line["ops_type"] == "auth"
-    assert auth_line["event"] == f"http_{status}"
+    assert auth_line["auth_event"] == f"http_{status}"
     assert auth_line["reason"] == "Invalid or expired session"
     assert auth_line["user_id"] == "U9" and auth_line["status"] == status
     assert auth_line["request_id"] == request_line["request_id"]
@@ -194,7 +194,7 @@ def test_401_and_403_write_an_auth_event(ops, status):
 def test_401_with_a_non_json_body_still_logs_without_reason(ops):
     _call(_endpoint(status=401, body=b"Unauthorized"))
     auth_line = _lines(ops)[1]
-    assert auth_line["event"] == "http_401" and "reason" not in auth_line
+    assert auth_line["auth_event"] == "http_401" and "reason" not in auth_line
 
 
 def test_unhandled_exception_is_logged_and_re_raised(ops):
@@ -254,7 +254,7 @@ def test_token_verifier_events_become_auth_lines(ops):
         },
     )
     (line,) = _lines(ops)
-    assert line["ops_type"] == "auth" and line["event"] == "would_reject"
+    assert line["ops_type"] == "auth" and line["auth_event"] == "would_reject"
     assert line["reason"] == "token_rejected"
     assert line["path"] == "/api/v1/patients/1" and line["user_id"] == "U1"
 
@@ -262,10 +262,23 @@ def test_token_verifier_events_become_auth_lines(ops):
 def test_auth_event_helper(ops):
     ops_logging.auth_event("login_failed", reason="wrong_password", user_id="U3")
     (line,) = _lines(ops)
-    assert line["ops_type"] == "auth" and line["event"] == "login_failed"
+    assert line["ops_type"] == "auth" and line["auth_event"] == "login_failed"
     assert line["reason"] == "wrong_password" and line["user_id"] == "U3"
     assert line["level"] == "WARNING" and line["message"] == "Auth login_failed: wrong_password"
     assert not {"user", "table", "action", "log_text"} & set(line)
+
+
+ECS_OBJECT_FIELDS = {"event", "log", "host", "agent", "ecs", "input", "fields", "error", "file", "process"}
+
+
+def test_lines_never_use_a_top_level_key_that_is_an_ecs_object(ops):
+    ops_logging.auth_event("login_failed", reason="wrong_password", user_id="U3")
+    logging.getLogger("pear.auth").warning(
+        "Auth would_reject", extra={"auth_event": "would_reject", "auth_reason": "r"}
+    )
+    for line in _lines(ops):
+        assert line["ops_type"] == "auth" and "auth_event" in line
+        assert not ECS_OBJECT_FIELDS & set(line)
 
 
 def test_auth_event_reason_is_truncated(ops):

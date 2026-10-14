@@ -9,6 +9,12 @@ logs/ops_<service>_<host>-<pid>.log (50 MB x 5 rotation). A line never
 carries user, table, action or log_text, the fields the logging service uses
 to find audit entries, so ops lines can never appear in the audit log views.
 
+The auth event name is written as "auth_event", never "event": Filebeat and
+Logstash documents already carry an ECS "event" object, so a string "event"
+makes Elasticsearch reject the line with a mapping conflict. For the same
+reason no key named after an ECS object (event, log, host, agent, ecs, input,
+fields, error) may be added to a line.
+
 This file is copied, unchanged, into every PEAR backend service. Keep the
 copies identical.
 """
@@ -77,7 +83,7 @@ MAX_REASON_CHARS = 200
 MAX_STACK_CHARS = 8000
 MAX_BODY_SNIFF = 2048
 AUDIT_FIELDS = ("user", "table", "action", "log_text")
-OPTIONAL_FIELDS = ("method", "path", "query", "status", "duration_ms", "event", "reason")
+OPTIONAL_FIELDS = ("method", "path", "query", "status", "duration_ms", "auth_event", "reason")
 
 _APP_MARKER = "_pear_ops_logging_handler"
 _request_id = contextvars.ContextVar("pear_request_id", default=None)
@@ -242,7 +248,7 @@ class OpsJsonFormatter(logging.Formatter):
             line.setdefault("status", None)  # null when no response was started
         if hasattr(record, "auth_event"):
             # Shadow-mode events from app/auth/token_verifier.py (logger "pear.auth").
-            line.setdefault("event", getattr(record, "auth_event", None))
+            line.setdefault("auth_event", getattr(record, "auth_event", None))
             auth_reason = getattr(record, "auth_reason", None)
             line.setdefault("reason", _scrub(str(auth_reason))[:MAX_REASON_CHARS] if auth_reason is not None else None)
             endpoint = getattr(record, "auth_endpoint", None)
@@ -393,7 +399,7 @@ def auth_event(
         extra: Dict[str, Any] = {
             "ops_type": "auth",
             "user_id": user_id,
-            "ops_event": event,
+            "ops_auth_event": event,
             "ops_reason": reason_text,
         }
         for key in ("method", "path", "status"):
