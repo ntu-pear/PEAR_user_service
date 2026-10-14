@@ -15,6 +15,7 @@ from ..routers import verification_router as verification
 from ..crud import session_crud as user_Session
 import os
 from ..logger.logger_utils import log_user_login, log_user_logout
+from ..ops_logging import auth_event
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit, rate_limit_by_ip
 sgt_tz = pytz.timezone("Asia/Singapore")
@@ -29,9 +30,14 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     user = db.query(User).filter(User.email == form_data.username).first()
 
     # Check is user is verified
-    if not user or not user_auth_service.verify_password(form_data.password, user.password):
+    if not user:
+        auth_event("login_failed", reason="unknown_user")
+        raise user_auth_service.user_credentials_exception
+    if not user_auth_service.verify_password(form_data.password, user.password):
+        auth_event("login_failed", reason="wrong_password", user_id=str(user.id))
         raise user_auth_service.user_credentials_exception
     if not user.verified:
+        auth_event("login_failed", reason="unverified_account", user_id=str(user.id))
         raise user_auth_service.user_verify_exception
 
     #check is user enabled 2FA
@@ -58,11 +64,17 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     refresh_token = body.get("refresh_token")
 
     if not refresh_token:
+        auth_event("refresh_failed", reason="missing_refresh_token")
         raise HTTPException(status_code=400, detail="Refresh token is required")
 
     # Decode and validate refresh token
-    payload = user_auth_service.decode_refresh_token(refresh_token)
+    try:
+        payload = user_auth_service.decode_refresh_token(refresh_token)
+    except HTTPException as exc:
+        auth_event("refresh_failed", reason=str(exc.detail))
+        raise
     if not payload:
+        auth_event("refresh_failed", reason="invalid_refresh_token")
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
     data={
@@ -76,7 +88,11 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     # Generate a new access token
     new_access_token = user_auth_service.create_access_token(data={"sub": serialized_data})
     #check if refresh mapped to session
-    user_auth_service.check_refresh_token(session_id=payload["sessionId"], token=refresh_token, db=db)
+    try:
+        user_auth_service.check_refresh_token(session_id=payload["sessionId"], token=refresh_token, db=db)
+    except HTTPException as exc:
+        auth_event("refresh_failed", reason=str(exc.detail), user_id=str(payload.get("userId")))
+        raise
     #update session
     user_Session.update_session(session_id=payload["sessionId"],access_Token= new_access_token["token"],db=db)
 
