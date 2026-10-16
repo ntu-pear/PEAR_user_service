@@ -61,6 +61,12 @@ user_credentials_exception = HTTPException(
     headers={"WWW-Authenticate": "Bearer"},
 )
 
+user_deactivated_exception = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="This account has been deactivated",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
 user_verify_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="User is not verified",
@@ -165,6 +171,8 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
     if not user:
         raise user_credentials_exception
+    if user.isDeleted:
+        raise user_deactivated_exception
     #Check if token's details matches with user's details in DB
     if ((userDetails["roleName"]!=user.roleName)| (userDetails["userId"]!=user.id) | (userDetails["fullName"]!=user.nric_FullName) | (userDetails["email"]!= user.email)):
         raise HTTPException(status_code=404, detail="Token value does not match with database")

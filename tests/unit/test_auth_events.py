@@ -45,7 +45,7 @@ def test_unknown_user_is_logged_without_the_email(events):
 
 def test_wrong_password(events, monkeypatch):
     monkeypatch.setattr(user_auth_service, "verify_password", lambda plain, hashed: False)
-    user = SimpleNamespace(id="U5", password="hash", verified=True)
+    user = SimpleNamespace(id="U5", password="hash", verified=True, isDeleted=False)
     with pytest.raises(HTTPException) as exc:
         _login(_db_returning(user))
     assert exc.value is user_auth_service.user_credentials_exception
@@ -54,7 +54,7 @@ def test_wrong_password(events, monkeypatch):
 
 def test_unverified_account(events, monkeypatch):
     monkeypatch.setattr(user_auth_service, "verify_password", lambda plain, hashed: True)
-    user = SimpleNamespace(id="U5", password="hash", verified=False)
+    user = SimpleNamespace(id="U5", password="hash", verified=False, isDeleted=False)
     with pytest.raises(HTTPException) as exc:
         _login(_db_returning(user))
     assert exc.value is user_auth_service.user_verify_exception
@@ -89,7 +89,7 @@ def test_refresh_token_not_matching_the_session(events, monkeypatch):
 
     monkeypatch.setattr(user_auth_service, "check_refresh_token", mismatch)
     with pytest.raises(HTTPException) as exc:
-        _refresh({"refresh_token": "r"})
+        _refresh({"refresh_token": "r"}, db=_db_returning(SimpleNamespace(isDeleted=False)))
     assert exc.value.status_code == 404
     assert events == [("refresh_failed", "Invalid Token or Session", "U5")]
 
@@ -100,5 +100,26 @@ def test_successful_refresh_logs_no_auth_event(events, monkeypatch):
     monkeypatch.setattr(user_auth_service, "create_access_token", lambda data: {"token": "t", "expires_at": None})
     monkeypatch.setattr(user_auth_service, "check_refresh_token", lambda session_id, token, db: None)
     monkeypatch.setattr(user_auth_router.user_Session, "update_session", lambda **kwargs: None)
-    assert _refresh({"refresh_token": "r"})["access_token"] == "t"
+    db = _db_returning(SimpleNamespace(isDeleted=False))
+    assert _refresh({"refresh_token": "r"}, db=db)["access_token"] == "t"
     assert events == []
+
+
+def test_deactivated_account_cannot_log_in(events, monkeypatch):
+    monkeypatch.setattr(user_auth_service, "verify_password", lambda plain, hashed: True)
+    user = SimpleNamespace(id="U5", password="hash", verified=True, isDeleted=True)
+    with pytest.raises(HTTPException) as exc:
+        _login(_db_returning(user))
+    assert exc.value is user_auth_service.user_deactivated_exception
+    assert events == [("login_failed", "deactivated_account", "U5")]
+
+
+def test_deactivated_account_cannot_refresh(events, monkeypatch):
+    payload = {"userId": "U5", "fullName": "A", "roleName": "GUARDIAN", "email": "a@b.c", "sessionId": "S1"}
+    monkeypatch.setattr(user_auth_service, "decode_refresh_token", lambda token: payload)
+    monkeypatch.setattr(user_auth_service, "create_access_token", lambda data: {"token": "t", "expires_at": None})
+    monkeypatch.setattr(user_auth_service, "check_refresh_token", lambda session_id, token, db: None)
+    with pytest.raises(HTTPException) as exc:
+        _refresh({"refresh_token": "r"}, db=_db_returning(SimpleNamespace(isDeleted=True)))
+    assert exc.value is user_auth_service.user_deactivated_exception
+    assert events == [("refresh_failed", "deactivated_account", "U5")]
