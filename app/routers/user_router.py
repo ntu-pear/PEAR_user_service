@@ -10,8 +10,7 @@ from ..crud import user_crud as crud_user
 from ..logger.logger_utils import log_crud_action, ActionType
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
-from ..service import email_service as EmailService
-from ..service import user_auth_service as AuthService 
+from ..service import user_auth_service as AuthService
 from app.service import validation_service as Validation_Service
 from app.models.user_model import User
 from sqlalchemy.exc import IntegrityError
@@ -93,23 +92,6 @@ event.listen(User, "after_delete", remove_cache)   # Remove from cache on delete
 # standardise successful responses
 def create_success_response(data: dict):
     return {"status": "success", "data": data}
-
-#Verify Acc, add password
-@router.post("/user/verify_account/{token}", response_model=schemas_user.UserRead)
-@rate_limit(global_bucket, tokens_required=1)
-async def verify_user(token: str, user: schemas_user.UserCreate, db: Session = Depends(get_db)):
-    try:
-        userDetails = EmailService.confirm_token(token)
-    except:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    db_user = db.query(User).filter(User.email == userDetails.get("email")).first()
-    #return user
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    db_user = crud_user.verify_user(db=db, user=user)
-    return db_user
 
 #fetch user details (Cached) (Cached)
 @router.get("/user/get_user/", response_model=schemas_user.UserRead)
@@ -208,112 +190,36 @@ def user_change_password(password:schemas_account.UserChangePassword,current_use
         )
     return {"Password Updated"}
 
-#Change Email
-@router.put("/user/confirm_email/{token}")
+#Reset password - identity proven via NRIC + DOB (no email step). Rate-limited
+#because this is now the ONLY factor gating a reset, not a second factor
+#alongside an emailed link like before.
+@router.put("/user/request_reset_password/")
 @rate_limit(global_bucket, tokens_required=1)
-def user_change_email(token: str, db: Session = Depends(get_db)):
-    try:
-        userDetails = EmailService.confirm_token(token)
-    except:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    user = db.query(User).filter(User.id == userDetails.get("userId")).first()
-    #return user
+def request_reset_password(account: schemas_account.RequestResetPasswordBase, db: Session = Depends(get_db)):
+    user = crud_user.get_user_by_nric(db=db, nric=account.nric)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    original_email = user.email
-    new_email = userDetails.get("email")
+    if user.nric_DateOfBirth != account.nric_DateOfBirth:
+        raise HTTPException(status_code=404, detail="Invalid Details")
 
-    #Change to new email
-    user.email = new_email
-    db.commit()
-
-    # Token-resolved actor: the account changing its own email is the actor.
-    log_crud_action(
-        action=ActionType.UPDATE,
-        user=user.id,
-        user_full_name=user.nric_FullName,
-        role=user.roleName,
-        entity_id=user.id,
-        table="user",
-        message=f"{user.nric_FullName} confirmed an email change",
-        original_data={"email": original_email},
-        updated_data={"email": new_email},
-    )
-
-    return {"Email Updated"}
-
-
-#Resend account confirmation email
-@router.post("/user/request/resend_registration_email")
-@rate_limit(global_bucket, tokens_required=1)
-async def resend_registration_email(account: schemas_account.ResendEmail, db: Session = Depends(get_db)):
-    user = crud_user.get_user_by_email(db=db, email=account.email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    #check if user is already verified
-    if user.verified:
-        raise HTTPException(status_code=404, detail="User is already verified")
-
-    fields_to_check = ["nric", "nric_DateOfBirth","email", "roleName"]
-    for field in fields_to_check:
-        if getattr(user, field) != getattr(account, field):
-            raise HTTPException(status_code=404, detail="Invalid Details")
-
-    #Send registration Email
-    token = EmailService.generate_email_token(user.id, user.email)
-    await EmailService.send_registration_email(user.email, token)
-
-    return {"Message":"Registration Email Sent"}
-
-
-# Request password reset
-@router.post("/user/request_reset_password/")
-async def request_reset_password(account: schemas_account.RequestResetPasswordBase, db: Session = Depends(get_db)):
-
-    user = crud_user.get_user_by_email(db=db, email=account.email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    fields_to_check = ["nric", "nric_DateOfBirth","email", "roleName"]
-    for field in fields_to_check:
-        if getattr(user, field) != getattr(account, field):
-            raise HTTPException(status_code=404, detail="Invalid Details")
-
-    token = EmailService.generate_email_token(user.id, user.email)
-    await EmailService.send_reset_password_email(user.email, token)
-
-    return {"msg": "Reset password email sent"}
-
-#Change password
-@router.put("/user/reset_user_password/{token}")
-async def reset_user_password(token: str, userResetPassword: schemas_account.UserResetPassword , db: Session = Depends(get_db)):
-    try:
-        userDetails = EmailService.confirm_token(token)
-    except:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    if (userResetPassword.newPassword != userResetPassword.confirmPassword):
+    if account.newPassword != account.confirmPassword:
         raise HTTPException(status_code=404, detail="Password do not match")
 
-    user = db.query(User).filter(User.email == userDetails.get("email")).first()
-    #return user
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
     try:
         #Check password format
-        Validation_Service.validate_password_format(userResetPassword.newPassword)
+        Validation_Service.validate_password_format(account.newPassword)
         #Hash password
-        user.password = AuthService.get_password_hash(userResetPassword.newPassword)
+        user.password = AuthService.get_password_hash(account.newPassword)
         #update modifiedById
         user.modifiedById=user.id
         #update last password changed time stamp
         user.lastPasswordChanged=datetime.now(sgt_tz)
         db.commit()
 
-        # Token-resolved actor: the account resetting its own password via the
-        # emailed link is the actor. This flow is unauthenticated (no JWT
-        # session), so "SYSTEM" must never be used here.
+        # NRIC/DOB-resolved actor: the account resetting its own password via
+        # identity verification is the actor. This flow is unauthenticated (no
+        # JWT session), so "SYSTEM" must never be used here.
         log_crud_action(
             action=ActionType.PASSWORD_CHANGE,
             user=user.id,
@@ -321,7 +227,7 @@ async def reset_user_password(token: str, userResetPassword: schemas_account.Use
             role=user.roleName,
             entity_id=user.id,
             table="user",
-            message=f"{user.nric_FullName} reset their password via emailed link",
+            message=f"{user.nric_FullName} reset their password via NRIC/DOB verification",
             updated_data={"lastPasswordChanged": user.lastPasswordChanged.isoformat()},
             log_type="auth",
         )

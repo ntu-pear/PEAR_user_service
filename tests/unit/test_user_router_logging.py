@@ -6,8 +6,6 @@ import pytest
 from PIL import Image
 
 from app.routers import user_router
-from app.models.user_model import User
-from app.schemas import account as schemas_account
 
 from tests.utils.mock_db import get_db_session_mock
 
@@ -36,49 +34,6 @@ def _make_png_bytes() -> bytes:
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
-
-
-@mock.patch("app.routers.user_router.log_crud_action")
-@mock.patch("app.routers.user_router.EmailService.confirm_token")
-def test_user_change_email_logs_token_resolved_actor(mock_confirm_token, mock_log_crud, db_session_mock):
-    mock_confirm_token.return_value = {"userId": "U12345", "email": "new@example.com"}
-
-    mock_user = mock.MagicMock()
-    mock_user.id = "U12345"
-    mock_user.nric_FullName = "DANIEL ANG"
-    mock_user.roleName = "DOCTOR"
-    mock_user.email = "old@example.com"
-    db_session_mock.query(User).filter(User.id == "U12345").first.return_value = mock_user
-    db_session_mock.query.return_value.filter.return_value.first.return_value = mock_user
-
-    result = user_router.user_change_email(token="tok", db=db_session_mock)
-
-    assert result == {"Email Updated"}
-    assert mock_user.email == "new@example.com"
-    db_session_mock.commit.assert_called_once()
-
-    mock_log_crud.assert_called_once()
-    kwargs = mock_log_crud.call_args[1]
-    assert kwargs["user"] == "U12345"
-    assert kwargs["user_full_name"] == "DANIEL ANG"
-    assert kwargs["role"] == "DOCTOR"
-    assert kwargs["entity_id"] == "U12345"
-    assert kwargs["original_data"] == {"email": "old@example.com"}
-    assert kwargs["updated_data"] == {"email": "new@example.com"}
-
-
-@mock.patch("app.routers.user_router.log_crud_action")
-@mock.patch("app.routers.user_router.EmailService.confirm_token")
-def test_user_change_email_user_not_found(mock_confirm_token, mock_log_crud, db_session_mock):
-    mock_confirm_token.return_value = {"userId": "missing", "email": "new@example.com"}
-    db_session_mock.query.return_value.filter.return_value.first.return_value = None
-
-    from fastapi import HTTPException
-    with pytest.raises(HTTPException) as excinfo:
-        user_router.user_change_email(token="tok", db=db_session_mock)
-
-    assert excinfo.value.status_code == 404
-    mock_log_crud.assert_not_called()
 
 
 @mock.patch("app.routers.user_router.log_crud_action")

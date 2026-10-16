@@ -1,17 +1,6 @@
-import sys
 from unittest.mock import MagicMock
 
 import pytest
-
-# app/service/email_service.py constructs a real PySendPulse client at import
-# time, which makes a live network call to authenticate. That's unreachable in
-# this dev sandbox and breaks collection for any test file that transitively
-# imports email_service (e.g. via app.crud.user_crud). Stub the module before
-# anything imports it so collection succeeds without a real network call.
-_fake_pysendpulse_module = MagicMock()
-_fake_pysendpulse_module.PySendPulse = MagicMock(return_value=MagicMock())
-sys.modules.setdefault("pysendpulse", MagicMock())
-sys.modules["pysendpulse.pysendpulse"] = _fake_pysendpulse_module
 
 
 @pytest.fixture(autouse=True)
