@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..service.service_auth import verify_service_api_key
 from ..models.user_model import User
+from ..crud import user_crud as crud_user
 from ..rate_limiter import TokenBucket, rate_limit
 
 global_bucket = TokenBucket(rate=5, capacity=10)
@@ -28,3 +29,14 @@ def check_nric(
     if not user:
         raise HTTPException(status_code=404, detail="NRIC not found")
     return {"found": True}
+
+
+@router.post("/internal/user/{user_id}/deactivate-guardian")
+@rate_limit(global_bucket, tokens_required=1)
+def deactivate_guardian(
+    user_id: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(verify_service_api_key),
+):
+    user = crud_user.deactivate_guardian_user(db=db, userId=user_id)
+    return {"id": user.id, "isDeleted": user.isDeleted}

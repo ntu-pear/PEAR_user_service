@@ -35,6 +35,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     if not user_auth_service.verify_password(form_data.password, user.password):
         auth_event("login_failed", reason="wrong_password", user_id=str(user.id))
         raise user_auth_service.user_credentials_exception
+    if user.isDeleted:
+        auth_event("login_failed", reason="deactivated_account", user_id=str(user.id))
+        raise user_auth_service.user_deactivated_exception
     if not user.verified:
         auth_event("login_failed", reason="unverified_account", user_id=str(user.id))
         raise user_auth_service.user_verify_exception
@@ -87,6 +90,10 @@ async def refresh_access_token(request: Request, db: Session = Depends(get_db)):
     except HTTPException as exc:
         auth_event("refresh_failed", reason=str(exc.detail), user_id=str(payload.get("userId")))
         raise
+    db_user = db.query(User).filter(User.id == payload["userId"]).first()
+    if db_user is None or db_user.isDeleted:
+        auth_event("refresh_failed", reason="deactivated_account", user_id=str(payload.get("userId")))
+        raise user_auth_service.user_deactivated_exception
     #update session
     user_Session.update_session(session_id=payload["sessionId"],access_Token= new_access_token["token"],db=db)
 

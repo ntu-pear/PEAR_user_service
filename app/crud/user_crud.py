@@ -767,3 +767,36 @@ def get_changed_fields(original_data, updated_data):
         if old_value != new_value:
             changed[key] = {"old": old_value, "new": new_value}
     return changed
+
+def deactivate_guardian_user(db: Session, userId: str):
+    """Soft-delete a guardian's account once they no longer have any patients.
+
+    Called service-to-service by the patient service, so it only ever touches
+    GUARDIAN accounts. Already-deactivated accounts are returned as-is.
+    """
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if db_user.roleName != "GUARDIAN":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not a guardian")
+    if db_user.isDeleted:
+        return db_user
+
+    db_user.isDeleted = True
+    db.commit()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user="SYSTEM",
+        user_full_name="System",
+        role="SYSTEM",
+        entity_id=userId,
+        table='user',
+        message=f"Guardian account deactivated after last patient was unassigned: {db_user.nric_FullName} ({userId})",
+        original_data={"isDeleted": False, "status": "active"},
+        updated_data={"isDeleted": True, "status": "deleted"},
+        is_system_config=True,
+        log_type="system",
+    )
+
+    return db_user
