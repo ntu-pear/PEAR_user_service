@@ -136,6 +136,7 @@ class AdminSearch(BaseModel):
     isDeleted:Optional[bool]=None
     twoFactorEnabled:Optional[bool]=None
     roleName: Optional[str]=None
+    lockOutEnabled: Optional[bool] = None  
 class PaginationResponse(BaseModel):
     total: int
     page: int
