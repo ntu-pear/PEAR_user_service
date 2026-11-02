@@ -1,3 +1,41 @@
+# Production Filebeat for User service. Ships the log files the prod pod writes
+# (hostPath in deployment-prod.yaml) to Logstash on 192.168.188.172, tagged
+# environment: production so the Logging service's production pages show them
+# and staging's pages do not.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      k8s-app: filebeat
+  template:
+    metadata:
+      labels:
+        k8s-app: filebeat
+    spec:
+      containers:
+      - name: filebeat
+        image: docker.elastic.co/beats/filebeat:7.17.14
+        args: ["-c", "/etc/filebeat.yml", "-e"]
+        volumeMounts:
+        - name: config
+          mountPath: /etc/filebeat.yml
+          subPath: filebeat.yml
+        - name: logs
+          mountPath: /home/VMadmin/FYP_microservices/PEAR_user_service/logs
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: filebeat-config
+      - name: logs
+        hostPath:
+          path: /home/VMadmin/FYP_microservices/PEAR_user_service/logs
+          type: DirectoryOrCreate
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -7,13 +45,16 @@ data:
   filebeat.yml: |-
     filebeat.inputs:
       - type: filestream
-        id: pear-user-service-logs
+        id: user-production-logs
         enabled: true
         paths:
           - /home/VMadmin/FYP_microservices/PEAR_user_service/logs/*.log
         ignore_older: 24h
-        
+        fields:
+          environment: production
+          service: user
+
     logging.level: warning
-    
+
     output.logstash:
       hosts: ["192.168.188.172:5044"]
