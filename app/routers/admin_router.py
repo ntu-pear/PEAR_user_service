@@ -9,11 +9,12 @@ from ..crud import role_crud as crud_role
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..schemas import user_auth
-from ..service import email_service as EmailService
-from ..service import user_auth_service as AuthService 
+from ..schemas import admin_config as schemas_admin_config
+from ..service import user_auth_service as AuthService
+from ..service import admin_config_service as AdminConfigService
 from app.service import validation_service as Validation_Service
 from app.models.user_model import User
-from typing import List, Optional
+from typing import List, Optional, Dict
 import cloudinary
 import cloudinary.uploader
 from PIL import Image
@@ -24,6 +25,7 @@ import pytz
 
 # import rate limiter
 from ..rate_limiter import TokenBucket, rate_limit
+from ..logger.logger_utils import log_crud_action, ActionType
 
 global_bucket = TokenBucket(rate=5, capacity=10)
 
@@ -46,27 +48,23 @@ def assert_admin(token_data: dict):
 def create_success_response(data: dict):
     return {"status": "success", "data": data}
 
-#Create Acc, unverified
+#Create Acc - active immediately, no email verification step
 @router.post("/admin/create_account/", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
 async def create_user(user: schemas_user.TempUserCreate, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user=crud_user.create_user(db=db, user=user, created_by=current_user["userId"])
-    if db_user:
-        #Send registration email
-        token = EmailService.generate_email_token(db_user.id, db_user.email)
-        await EmailService.send_registration_email(db_user.email, token)
-   
+        raise HTTPException(status_code=403, detail="User is not authorised")
+    db_user=crud_user.create_user(db=db, user=user, current_user=current_user)
+
     return schemas_user.AdminRead.from_orm(db_user)
 
-@router.get("/admin/{userId}", response_model=schemas_user.AdminRead)
+@router.get("/admin/user/{userId}", response_model=schemas_user.AdminRead)
 @rate_limit(global_bucket, tokens_required=1)
 def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -78,7 +76,7 @@ def get_user_by_id(userId: str, current_user: user_auth.TokenData = Depends(Auth
 def get_user_nric(userId: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_user(db=db, userId=userId)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -92,7 +90,7 @@ page: int = 0, page_size: Optional[int] = 10, sort_by: Optional[str] = Query(Non
 sort_dir: str = Query("asc", description="'asc' or 'desc'"), db: Session = Depends(get_db),):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_users, total_count = crud_user.get_users_by_fields(
         db=db,
         page=page,
@@ -121,7 +119,7 @@ sort_dir: str = Query("asc", description="'asc' or 'desc'"), db: Session = Depen
 def read_guadrian_nric(nric: str, current_user: user_auth.TokenData = Depends(AuthService.get_current_user),db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_guardian_nric(db=db, nric=nric)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -134,7 +132,7 @@ def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_cu
     
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     #Only Admin can read all users
     db_users, total_count = crud_user.get_users(db=db, page=page,page_size=page_size)
     if db_users is None:
@@ -154,21 +152,22 @@ def get_all_users(current_user: user_auth.TokenData = Depends(AuthService.get_cu
 async def get_user_by_email(email: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user = crud_user.get_user_by_email(db=db, email=email)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return schemas_user.AdminRead.from_orm(db_user)
 
-@router.put("/admin/{userId}", response_model=schemas_user.AdminRead)
+@router.put("/admin/user/{userId}", response_model=schemas_user.AdminRead)
 def update_user_by_admin(userId: str, user: schemas_user.UserUpdate_Admin,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
-    db_user = crud_user.update_user_Admin(db=db, userId=userId, user=user,modified_by=current_user["userId"])
+        raise HTTPException(status_code=403, detail="User is not authorised")
+    db_user = crud_user.update_user_Admin(db=db, userId=userId, user=user, current_user=current_user)
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
     return schemas_user.AdminRead.from_orm(db_user)
+
 
 @router.put("/admin/reset_and_update_users_role/")
 def reset_and_update_users_role(
@@ -176,109 +175,84 @@ def reset_and_update_users_role(
     current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
     db: Session = Depends(get_db),
 ):
+    # 1. Authorization & Role Protection
     if current_user["roleName"] != "ADMIN":
         raise HTTPException(status_code=403, detail="User is not authorised")
+    
+    if request.role == "ADMIN":
+        raise HTTPException(status_code=400, detail="ADMIN role cannot be modified via bulk workbench")
 
     updated_users = []
-    failed_updates = []
-
-    # Always copy
-    update_list = list(request.users_Id)
-
-    # Block updates for ADMIN role
-    if request.role == "ADMIN":
-        raise HTTPException(status_code=400, detail="ADMIN role cannot be updated")
-
-    if update_list:
-        selected_users = db.query(User).filter(User.id.in_(update_list)).all()
-        selected_by_id = {u.id: u for u in selected_users}
-
-        missing_ids = [uid for uid in update_list if uid not in selected_by_id]
-        if missing_ids:
-            raise HTTPException(
-                status_code=404,
-                detail={
-                    "code": "USER_NOT_FOUND",
-                    "message": "One or more users were not found.",
-                    "missing_users": missing_ids,
-                },
-            )
-
-        conflicts = []
-        for uid in update_list:
-            u = selected_by_id[uid]
-            if u.roleName is not None and u.roleName != request.role:
-                conflicts.append(
-                    {
-                        "users_id": u.id,
-                        "FullName": u.nric_FullName,
-                        "current_role": u.roleName,
-                        "requested_role": request.role,
-                        "error": f"{u.nric_FullName} already has role {u.roleName}.",
-                    }
-                )
-
-        if conflicts:
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "code": "USER_ALREADY_HAS_ROLE",
-                    "message": "One or more selected users are already assigned a role.",
-                    "conflicts": conflicts,  # list of {FullName, current_role, error, ...}
-                },
-            )
-
-    db_users = crud_role.get_users_by_role(
+    orphaned_users = [] # To help the frontend trigger the "Force Assign" modal
+    
+    # 2. Sync Logic
+    # Get all users currently assigned to this specific role in the DB
+    db_roster = crud_role.get_users_by_role(
         role_name=request.role,
         page=0,
         page_size=100000,
         db=db,
     )
+    
+    current_ids_in_db = {u["id"] for u in db_roster.get("users", [])}
+    requested_ids = set(request.users_Id)
 
-    update_set = set(update_list)
+    # A. REMOVAL LOGIC: Users in DB but NOT in the new request
+    to_remove = current_ids_in_db - requested_ids
+    for userId in to_remove:
+        db_user = crud_user.update_users_role_admin(
+            db=db,
+            userId=userId,
+            roleName=None, # User is now orphaned
+            current_user=current_user,
+        )
+        if db_user:
+            res_data = {
+                "users_id": db_user.id, 
+                "FullName": db_user.nric_FullName, 
+                "role": None,
+                "status": "ORPHANED" 
+            }
+            updated_users.append(res_data)
+            orphaned_users.append(res_data)
 
-    # Remove role from users who currently have it but are NOT selected
-    for user in db_users.get("users", []):
-        if user["id"] not in update_set:
-            db_user = crud_user.update_users_role_admin(
-                db=db,
-                userId=user["id"],
-                roleName=None,
-                modified_by=current_user["userId"],
-            )
-            if db_user:
-                updated_users.append(
-                    {"users_id": db_user.id, "FullName": db_user.nric_FullName, "role": db_user.roleName}
-                )
-
-    # Assign role to selected users
-    for userId in update_list:
+    # B. ADDITION/UPDATE LOGIC: Users in request but NOT already in this role in DB
+    # We remove the 409 conflict check to allow seamless role switching
+    to_add = requested_ids # We process the whole list to ensure sync
+    for userId in to_add:
+        # If user is already in this role, this update is redundant but safe
         db_user = crud_user.update_users_role_admin(
             db=db,
             userId=userId,
             roleName=request.role,
-            modified_by=current_user["userId"],
+            current_user=current_user,
         )
         if db_user:
-            updated_users.append(
-                {"users_id": db_user.id, "FullName": db_user.nric_FullName, "role": db_user.roleName}
-            )
-        else:
-            failed_updates.append({"users_id": userId, "error": "User not found"})
+            updated_users.append({
+                "users_id": db_user.id, 
+                "FullName": db_user.nric_FullName, 
+                "role": db_user.roleName,
+                "status": "ASSIGNED"
+            })
 
-    return {"Updated Users": updated_users, "Failed Updates": failed_updates}
+    return {
+        "role": request.role,
+        "total_updated": len(updated_users),
+        "orphaned_users": orphaned_users, # Frontend watches this to pop the modal
+        "updated_users": updated_users
+    }
 
 
 @router.delete("/admin/{userId}", response_model=schemas_user.AdminRead)
 def delete_user(userId: str,current_user: user_auth.TokenData = Depends(AuthService.get_current_user), db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     if (current_user["userId"] == userId):
         raise HTTPException(status_code=404, detail="No self delete")
 
     #delete user from db
-    db_user = crud_user.delete_user(db=db, userId=userId)
+    db_user = crud_user.delete_user(db=db, userId=userId, current_user=current_user)
     
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -290,12 +264,12 @@ def admin_soft_delete_user(userId: str, current_user: user_auth.TokenData = Depe
                 db: Session = Depends(get_db)):
     is_admin = current_user["roleName"] == "ADMIN"
     if not is_admin:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     if (current_user["userId"] == userId):
         raise HTTPException(status_code=404, detail="No self delete")
 
     # delete user from db
-    db_user = crud_user.soft_delete_admin_user(db=db, userId=userId)
+    db_user = crud_user.soft_delete_admin_user(db=db, userId=userId, current_user=current_user)
 
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -309,6 +283,8 @@ async def upload_profile_picture(userId: str, file: UploadFile = File(...), curr
         raise HTTPException(status_code=404, detail="User not found.")
     # Validate format
     Validation_Service.validate_profile_picture_format(file)
+
+    original_picture_url = db_user.profilePicture
 
     try:
         # Remove old picture from Cloudinary
@@ -341,6 +317,18 @@ async def upload_profile_picture(userId: str, file: UploadFile = File(...), curr
         db.commit()
         db.refresh(db_user)
 
+        log_crud_action(
+            action=ActionType.UPDATE,
+            user=current_user["userId"],
+            user_full_name=current_user["fullName"],
+            role=current_user["roleName"],
+            entity_id=userId,
+            table="user",
+            message=f"Admin updated profile picture for user {db_user.nric_FullName} ({userId})",
+            original_data={"profilePicture": original_picture_url},
+            updated_data={"profilePicture": url},
+        )
+
     except HTTPException:
         raise
     except Exception as e:
@@ -368,6 +356,9 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     user = crud_user.get_user(db, userId)
     if not user or not user.profilePicture:
         raise HTTPException(status_code=404, detail="No profile picture found.")
+
+    original_picture_url = user.profilePicture
+
     # Delete from Cloudinary
     public_id = user.profilePicture.rsplit("/", 1)[-1].split(".")[0]
     try:
@@ -381,6 +372,17 @@ def delete_profile_picture(userId: str, current_user=Depends(AuthService.get_cur
     user.modifiedById  = current_user["userId"]
     db.commit()
     db.refresh(user)
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table="user",
+        message=f"Admin deleted profile picture for user {user.nric_FullName} ({userId})",
+        original_data={"profilePicture": original_picture_url},
+    )
 
     return {"message": "Profile picture deleted successfully"}
 
@@ -439,3 +441,41 @@ def export_users_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+@router.get("/admin/config", response_model=schemas_admin_config.AdminConfigMap)
+@rate_limit(global_bucket, tokens_required=1)
+def get_all_configs(
+    current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.get("roleName") != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not authorised")
+    
+    configs = AdminConfigService.get_all_configs(db)
+
+    return configs
+
+
+@router.put("/admin/config", response_model=schemas_admin_config.AdminConfigMap)
+@rate_limit(global_bucket, tokens_required=1)
+def update_configs(
+    configs:schemas_admin_config.AdminConfigMap,
+    current_user: user_auth.TokenData = Depends(AuthService.get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.get("roleName") != "ADMIN":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not authorised")
+    
+    try:
+        updated_configs = AdminConfigService.update_all_configs(
+            db,
+            configs,
+            current_user["userId"],
+        )
+        return updated_configs
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update configurations: {str(e)}"
+        )

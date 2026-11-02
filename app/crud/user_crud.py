@@ -10,13 +10,13 @@ from ..service import user_auth_service
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.service import validation_service as Validation_Service
-from app.service import email_service as EmailService
 from sqlalchemy import and_
 import uuid
 import cloudinary
 import cloudinary.uploader
 from typing import Optional
 from app.logger.logger_utils import log_crud_action, ActionType
+from app.utils.error_utils import add_error, raise_if_errors
 
 
 # whitelist of sortable columns for get_users_by_fields
@@ -35,6 +35,9 @@ def get_user(db: Session, userId: str):
 
 def get_user_by_email(db: Session, email: str):
     return db.query(User).filter(User.email == email).first()
+
+def get_user_by_nric(db: Session, nric: str):
+    return db.query(User).filter(User.nric == nric).first()
 
 
 def get_users(db: Session, page: int, page_size:int ):
@@ -55,7 +58,7 @@ def get_users(db: Session, page: int, page_size:int ):
 
     return users, total_count
 
-def get_guardian_nric(db: Session, nric= str):
+def get_guardian_nric(db: Session, nric: str):
     return db.query(User).filter((User.nric==nric) &(User.roleName=="GUARDIAN")).first()
 
 def get_users_by_fields(db: Session, page: int, page_size: int, fields: schemas_User.AdminSearch,
@@ -129,14 +132,10 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
     for field, value in user.model_dump(exclude_unset=True).items():
         if field =="contactNo":
             Validation_Service.validate_contactNo(value)
-        if field != "email":
-            stmt = stmt.values({field: value})
-        if field == "email":
-            #Send confirmation email if email is changed
-            email_Token = EmailService.generate_email_token(userId, value)
-            await EmailService.send_confirmation_email(value, email_Token)
-        else:
-            updated_fields[field] = value
+        # Email changes apply immediately, same as every other field - there's
+        # no confirmation-email step anymore.
+        stmt = stmt.values({field: value})
+        updated_fields[field] = value
     updated_fields['modifiedById'] = modified_by
 
 
@@ -169,42 +168,174 @@ async def update_user_User(db: Session, userId: str, user: schemas_User.UserUpda
     return updated_user
 
 #Admin update other user's account
-def update_user_Admin(db: Session, userId: str, user: schemas_User.UserUpdate_Admin, modified_by):
-    stmt = update(User).where(User.id == userId)
+def update_user_Admin(
+    db: Session,
+    userId: str,
+    user: schemas_User.UserUpdate_Admin,
+    current_user: dict
+):
+    modified_by = current_user["userId"]
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        return None
 
-    # update modified by who
-    stmt = stmt.values(modifiedById=modified_by)
+    update_data = user.model_dump(exclude_unset=True)
+    errors = []
 
-    if user.email:
-        # Check for conflicting email before updating
-        existing_user_email = db.query(User).filter(User.email == user.email).first()
-        if existing_user_email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this email already exists."
+    # email
+    if "email" in update_data and update_data["email"]:
+        try:
+            update_data["email"] = Validation_Service.validate_email(update_data["email"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "email", str(e.detail))
+
+        if "email" in update_data and not any(err["loc"][-1] == "email" for err in errors):
+            existing_user_email = (
+                db.query(User)
+                .filter(
+                    func.lower(User.email) == update_data["email"],
+                    User.id != userId
+                )
+                .first()
             )
-        stmt = stmt.values(email=user.email)
+            if existing_user_email:
+                add_error(errors, "email", "A user with this email already exists.")
 
-    for field, value in user.model_dump(exclude_unset=True).items():
-        # Need to addd in format checking for various fields
-        if field =="nric":
-            Validation_Service.validate_nric(value)
-        if field =="nric_DateOfBirth":
-            Validation_Service.validate_dob(value)
-        if field=="contactNo":
-            Validation_Service.validate_contactNo(value)
-        if field != "email":
-            stmt = stmt.values({field: value})
+    # nric
+    if "nric" in update_data and update_data["nric"]:
+        try:
+            update_data["nric"] = Validation_Service.validate_nric(update_data["nric"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric", str(e.detail))
+
+        if "nric" in update_data and not any(err["loc"][-1] == "nric" for err in errors):
+            existing_user_nric = (
+                db.query(User)
+                .filter(
+                    func.upper(User.nric) == update_data["nric"],
+                    User.id != userId
+                )
+                .first()
+            )
+            if existing_user_nric:
+                add_error(errors, "nric", "A user with this NRIC already exists.")
+
+    # contact number
+    if "contactNo" in update_data:
+        try:
+            update_data["contactNo"] = Validation_Service.validate_contactNo(update_data["contactNo"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "contactNo", str(e.detail))
+
+        if (
+            "contactNo" in update_data
+            and update_data["contactNo"]
+            and not any(err["loc"][-1] == "contactNo" for err in errors)
+        ):
+            existing_user_contact = (
+                db.query(User)
+                .filter(
+                    User.contactNo == update_data["contactNo"],
+                    User.id != userId
+                )
+                .first()
+            )
+            if existing_user_contact:
+                add_error(errors, "contactNo", "A user with this contact number already exists.")
+
+    # date of birth
+    if "nric_DateOfBirth" in update_data and update_data["nric_DateOfBirth"]:
+        try:
+            update_data["nric_DateOfBirth"] = Validation_Service.validate_dob(
+                update_data["nric_DateOfBirth"]
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_DateOfBirth", str(e.detail))
+
+    # preferred name
+    if "preferredName" in update_data and update_data["preferredName"]:
+        try:
+            update_data["preferredName"] = Validation_Service.validate_uppercase_name(
+                update_data["preferredName"],
+                "preferredName"
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "preferredName", str(e.detail))
+
+    # full name
+    if "nric_FullName" in update_data and update_data["nric_FullName"]:
+        try:
+            update_data["nric_FullName"] = Validation_Service.validate_uppercase_name(
+                update_data["nric_FullName"],
+                "nric_FullName"
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_FullName", str(e.detail))
+
+    # optional extra check for required lockout reason when enabled
+    if update_data.get("lockOutEnabled") is True:
+        lockout_reason = update_data.get("lockOutReason", db_user.lockOutReason)
+        if not lockout_reason or not str(lockout_reason).strip():
+            add_error(errors, "lockOutReason", "Lockout Reason is required when Lockout Enabled is Yes.")
+
+    raise_if_errors(errors)
+
+    original_data = {field: getattr(db_user, field) for field in update_data.keys()}
+
+    stmt = (
+        update(User)
+        .where(User.id == userId)
+        .values(modifiedById=modified_by, **update_data)
+    )
 
     db.execute(stmt)
     db.commit()
 
-    # Fetch the updated user to return it
-    db_user = db.query(User).filter(User.id == userId).first()
-    return db_user
+    updated_user = db.query(User).filter(User.id == userId).first()
+
+    updated_data = {field: getattr(updated_user, field) for field in update_data.keys()}
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin updated user: {updated_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data=updated_data,
+    )
+
+    return updated_user
 
 #Admin update selected users role
-def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by):
+def update_users_role_admin(db: Session, userId: str, roleName: str, current_user: dict):
+    modified_by = current_user["userId"]
+
+    original_user = db.query(User).filter(User.id == userId).first()
+    if not original_user:
+        return None
+    original_role = original_user.roleName
+
     stmt = update(User).where(User.id == userId)
     # update roleName and modified by who
     stmt = stmt.values(roleName=roleName, modifiedById=modified_by)
@@ -214,9 +345,22 @@ def update_users_role_admin(db: Session, userId: str, roleName: str, modified_by
 
     # Fetch the updated user to return it
     db_user = db.query(User).filter(User.id == userId).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin updated role for user {db_user.nric_FullName} ({userId}) to {roleName}",
+        original_data={"roleName": original_role},
+        updated_data={"roleName": db_user.roleName},
+    )
+
     return db_user
 
-def delete_user(db: Session, userId: str):
+def delete_user(db: Session, userId: str, current_user: dict):
     db_user = db.query(User).filter(User.id == userId).first()
 
     # If the user does not exist, raise a 404 error
@@ -226,6 +370,13 @@ def delete_user(db: Session, userId: str):
             detail="User not found"
         )
 
+    original_data = {
+        "id": db_user.id,
+        "nric_FullName": db_user.nric_FullName,
+        "email": db_user.email,
+        "roleName": db_user.roleName,
+    }
+
     #delete user pic id from cloudinary
     if db_user.profilePicture:
         public_id = db_user.profilePicture.split("/")[-1].split(".")[0]  # Extracts `user_Ufa53ec48e2f_profile_picture`
@@ -234,9 +385,21 @@ def delete_user(db: Session, userId: str):
     ## Delete the user from the database
     db.delete(db_user)
     db.commit()
+
+    log_crud_action(
+        action=ActionType.DELETE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin deleted user: {original_data['nric_FullName']} ({userId})",
+        original_data=original_data,
+    )
+
     return db_user
 
-def soft_delete_admin_user(db: Session, userId: str):
+def soft_delete_admin_user(db: Session, userId: str, current_user: dict):
     db_user = db.query(User).filter(User.id == userId).first()
     # If the user does not exist, raise a 404 error
     if not db_user:
@@ -259,108 +422,161 @@ def soft_delete_admin_user(db: Session, userId: str):
     #soft delete, hence it only sets the isDeleted flag to True.
     db_user.isDeleted = True
     db.commit()
-    return db_user
 
-def verify_user(db: Session, user: schemas_User.UserCreate):
-    #Verify Info with User DB
-    db_user= db.query(User).filter(User.email == user.email).first()
-    if db_user is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found"
-        )
-    if db_user.verified == False:
-        if not Validation_Service.verify_userDetails(db_user, user):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Details do not match with pre-registered details"
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=current_user["userId"],
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=userId,
+        table='user',
+        message=f"Admin soft-deleted user: {db_user.nric_FullName} ({userId})",
+        original_data={"isDeleted": False, "status": "active"},
+        updated_data={"isDeleted": True, "status": "deleted"},
     )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Account has already been verified"
-        )
-    if (user.password != user.confirm_Password):
-        raise HTTPException(
-        status_code=status.HTTP_400_BAD_REQUEST,
-        detail="Password does not match"
-        )
-
-    # Use a transaction to ensure rollback on error
-    try:
-        #Check password format
-        Validation_Service.validate_password_format(user.password)
-        # Hashes the password
-        db_user.password = user_auth_service.get_password_hash(user.password)
-        #Set Account as Verified
-        db_user.verified = True
-
-        # Begin transaction
-        db.commit()
-        db.refresh(db_user)
-
-    except IntegrityError:
-        # Rollback transaction if any IntegrityError occurs
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An error occurred: possibly a duplicate unique field."
-        )
 
     return db_user
 
-def create_user(db: Session, user: schemas_User.TempUserCreate, created_by: int):
-    # Check NRIC Format
-    Validation_Service.validate_nric(user.nric)
-    # Combine checks for email and NRIC into a single query
-    existing_user = db.query(User).filter(
-        (User.email == user.email) | (User.nric == user.nric)
-    ).first()
+def create_user(db: Session, user: schemas_User.TempUserCreate, current_user: dict):
+    created_by = current_user["userId"]
+    create_data = user.model_dump()
+    errors = []
 
-    if existing_user:
-        if existing_user.email == user.email:
-            logger.error(f"Email conflict: {user.email} already exists.")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this email already exists."
-            )
-        if existing_user.nric == user.nric:
-            logger.error(f"NRIC conflict: {user.nric} already exists.")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A user with this nric already exists."
-            )
+    # Validate + normalize NRIC
+    if create_data.get("nric"):
+        try:
+            create_data["nric"] = Validation_Service.validate_nric(create_data["nric"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric", str(e.detail))
 
-    # Generate a unique ID with a fixed length of 12
+    # Validate + normalize email
+    if create_data.get("email"):
+        try:
+            create_data["email"] = Validation_Service.validate_email(create_data["email"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "email", str(e.detail))
+
+    # Validate + normalize contact number
+    if "contactNo" in create_data:
+        try:
+            create_data["contactNo"] = Validation_Service.validate_contactNo(create_data["contactNo"])
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "contactNo", str(e.detail))
+
+    # Validate DOB
+    if create_data.get("nric_DateOfBirth"):
+        try:
+            create_data["nric_DateOfBirth"] = Validation_Service.validate_dob(
+                create_data["nric_DateOfBirth"]
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_DateOfBirth", str(e.detail))
+
+    # Validate uppercase full name
+    if create_data.get("nric_FullName"):
+        try:
+            create_data["nric_FullName"] = Validation_Service.validate_uppercase_name(
+                create_data["nric_FullName"],
+                "nric_FullName"
+            )
+        except HTTPException as e:
+            if isinstance(e.detail, list):
+                errors.extend(e.detail)
+            else:
+                add_error(errors, "nric_FullName", str(e.detail))
+
+    # Duplicate checks only if field passed validation
+    if create_data.get("email") and not any(err["loc"][-1] == "email" for err in errors):
+        existing_email = (
+            db.query(User)
+            .filter(func.lower(User.email) == create_data["email"])
+            .first()
+        )
+        if existing_email:
+            add_error(errors, "email", "A user with this email already exists.")
+
+    if create_data.get("nric") and not any(err["loc"][-1] == "nric" for err in errors):
+        existing_nric = (
+            db.query(User)
+            .filter(func.upper(User.nric) == create_data["nric"])
+            .first()
+        )
+        if existing_nric:
+            add_error(errors, "nric", "A user with this NRIC already exists.")
+
+    if (
+        create_data.get("contactNo")
+        and not any(err["loc"][-1] == "contactNo" for err in errors)
+    ):
+        existing_contact = (
+            db.query(User)
+            .filter(User.contactNo == create_data["contactNo"])
+            .first()
+        )
+        if existing_contact:
+            add_error(errors, "contactNo", "A user with this contact number already exists.")
+
+    # Stop here if any validation errors collected
+    raise_if_errors(errors)
+
+    # Generate unique user id
     while True:
         unique_id = "U" + str(uuid.uuid4().hex[:11])
-        # Ensure the total length is 12 characters
-        userId =unique_id[:11]  # Truncate to 11 if necessary
+        userId = unique_id[:11]
         existing_user_id = db.query(User).filter(User.id == userId).first()
         if not existing_user_id:
             break
-    # Check ContactNo Format
-    Validation_Service.validate_contactNo(user.contactNo)
-    # Check DOB Format
-    Validation_Service.validate_dob(user.nric_DateOfBirth)
 
-    # Use a transaction to ensure rollback on error
     try:
-        db_user = User(**user.model_dump(), createdById = created_by, modifiedById= created_by, id=userId)
+        db_user = User(
+            **create_data,
+            createdById=created_by,
+            modifiedById=created_by,
+            id=userId,
+            # No email verification step anymore - accounts are usable
+            # immediately once an admin creates them.
+            verified=True,
+        )
 
-        # Begin transaction
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
 
-    except IntegrityError as e:
-        # Rollback transaction if any IntegrityError occurs
+    except IntegrityError:
         db.rollback()
-        print(e.orig)
+        # fallback for DB-level uniqueness/race conditions
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="An error occurred: possibly a duplicate unique field."
+            detail=[
+                {
+                    "loc": ["body", "non_field"],
+                    "msg": "An error occurred: possibly a duplicate unique field."
+                }
+            ]
         )
+
+    log_crud_action(
+        action=ActionType.CREATE,
+        user=created_by,
+        user_full_name=current_user["fullName"],
+        role=current_user["roleName"],
+        entity_id=db_user.id,
+        table='user',
+        message=f"Admin created user: {db_user.nric_FullName} ({db_user.id})",
+        updated_data=create_data,
+    )
 
     return db_user
 
@@ -372,7 +588,13 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
 
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-    original_data = db_user.__dict__.copy()
+
+    original_data = {
+        "email": db_user.email,
+        "contactNo": db_user.contactNo,
+        "nric_FullName": db_user.nric_FullName,
+    }
+
     # Update fields if provided
     update_data = user_update.model_dump(exclude_unset=True)  # Exclude unset fields
     for key, value in update_data.items():
@@ -383,27 +605,78 @@ def update_user(db: Session, user_id: str, user_update: UserUpdate, modified_by:
     db.commit()
     db.refresh(db_user)
 
+    updated_data = {
+        "email": db_user.email,
+        "contactNo": db_user.contactNo,
+        "nric_FullName": db_user.nric_FullName,
+    }
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=str(modified_by),
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=user_id,
+        table='user',
+        message=f"Updated user: {db_user.nric_FullName} ({user_id})",
+        original_data=original_data,
+        updated_data=updated_data,
+    )
 
     return db_user
 
-def reset_password(db: Session, userId: str, new_password: str):
+def reset_password(db: Session, userId: str, new_password: str, modified_by: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
     db_user.password = user_auth_service.get_password_hash(new_password)
+    db_user.modifiedById = modified_by
     db.commit()
     db.refresh(db_user)
+
+    log_crud_action(
+        action=ActionType.PASSWORD_CHANGE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Password reset for user {db_user.nric_FullName} ({userId})",
+        log_type="auth",
+    )
+
     return db_user
 
-def activate_user(db: Session, userId: str):
+def activate_user(db: Session, userId: str, modified_by: str):
     db_user = db.query(User).filter(User.id == userId).first()
     if not db_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    original_data = {
+        "isDeleted": db_user.isDeleted,
+        "status": "deleted" if db_user.isDeleted else "active",
+    }
     db_user.isDeleted = False
+    db_user.modifiedById = modified_by
     db.commit()
     db.refresh(db_user)
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Activated user: {db_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data={
+            "isDeleted": db_user.isDeleted,
+            "status": "deleted" if db_user.isDeleted else "active",
+        },
+    )
+
     return db_user
 
 def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: str):
@@ -416,10 +689,16 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
             detail="User not found"
         )
 
+    original_data = {
+        "isDeleted": db_user.isDeleted,
+        "lockOutReason": db_user.lockOutReason,
+        "status": "deleted" if db_user.isDeleted else "active",
+    }
+
     # Set the status to inactive and add the lockout reason
     stmt = update(User).where(User.id == userId).values(
         isDeleted = True,
-        lockoutReason=lockout_reason,
+        lockOutReason=lockout_reason,
         modifiedById=modified_by
     )
 
@@ -428,9 +707,31 @@ def deactivate_user(db: Session, userId: str, lockout_reason: str, modified_by: 
 
     # Fetch and return the updated user
     db_user = db.query(User).filter(User.id == userId).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=db_user.nric_FullName,
+        role=db_user.roleName,
+        entity_id=userId,
+        table='user',
+        message=f"Deactivated user: {db_user.nric_FullName} ({userId})",
+        original_data=original_data,
+        updated_data={
+            "isDeleted": db_user.isDeleted,
+            "lockOutReason": db_user.lockOutReason,
+            "status": "deleted" if db_user.isDeleted else "active",
+        },
+    )
+
     return db_user
 
 def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional[str], modified_by: str) -> Optional[User]:
+    original_user = db.query(User).filter(User.id == user_id).first()
+    if not original_user:
+        return None
+    original_data = {"profilePicture": original_user.profilePicture}
+
     stmt = (
         update(User)
         .where(User.id == user_id)
@@ -442,7 +743,22 @@ def update_user_profile_picture(db: Session, user_id: str, profile_url: Optional
     )
     db.execute(stmt)
     db.commit()
-    return db.query(User).filter(User.id == user_id).first()
+
+    updated_user = db.query(User).filter(User.id == user_id).first()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user=modified_by,
+        user_full_name=updated_user.nric_FullName,
+        role=updated_user.roleName,
+        entity_id=user_id,
+        table='user',
+        message=f"Updated profile picture for user {updated_user.nric_FullName} ({user_id})",
+        original_data=original_data,
+        updated_data={"profilePicture": updated_user.profilePicture},
+    )
+
+    return updated_user
 
 def get_changed_fields(original_data, updated_data):
     changed = {}
@@ -451,3 +767,36 @@ def get_changed_fields(original_data, updated_data):
         if old_value != new_value:
             changed[key] = {"old": old_value, "new": new_value}
     return changed
+
+def deactivate_guardian_user(db: Session, userId: str):
+    """Soft-delete a guardian's account once they no longer have any patients.
+
+    Called service-to-service by the patient service, so it only ever touches
+    GUARDIAN accounts. Already-deactivated accounts are returned as-is.
+    """
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if db_user.roleName != "GUARDIAN":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not a guardian")
+    if db_user.isDeleted:
+        return db_user
+
+    db_user.isDeleted = True
+    db.commit()
+
+    log_crud_action(
+        action=ActionType.UPDATE,
+        user="SYSTEM",
+        user_full_name="System",
+        role="SYSTEM",
+        entity_id=userId,
+        table='user',
+        message=f"Guardian account deactivated after last patient was unassigned: {db_user.nric_FullName} ({userId})",
+        original_data={"isDeleted": False, "status": "active"},
+        updated_data={"isDeleted": True, "status": "deleted"},
+        is_system_config=True,
+        log_type="system",
+    )
+
+    return db_user

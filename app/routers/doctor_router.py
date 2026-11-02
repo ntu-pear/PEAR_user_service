@@ -7,8 +7,7 @@ from ..crud import role_crud as crud_role
 from ..schemas import user as schemas_user
 from ..schemas import account as schemas_account
 from ..schemas import user_auth
-from ..service import email_service as EmailService
-from ..service import user_auth_service as AuthService 
+from ..service import user_auth_service as AuthService
 from app.models.user_model import User
 from typing import Optional
 
@@ -35,7 +34,7 @@ def get_doctor_by_name(userId: str, current_user: user_auth.TokenData = Depends(
     is_supervisor = current_user["roleName"] == "DOCTOR"
 
     if not is_supervisor:
-        raise HTTPException(status_code=404, detail="User is not authorised")
+        raise HTTPException(status_code=403, detail="User is not authorised")
     db_user=db.query(User).filter((User.roleName=="DOCTOR")&(User.id == userId)).first()
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")

@@ -22,7 +22,7 @@ if not SECRET_KEY:
     # raise ValueError("SECRET_KEY environment variable not set.")
 REFRESH_SECRET_KEY=os.getenv('REFRESH_SECRET_KEY')
 if not REFRESH_SECRET_KEY:
-    SECRET_KEY = "FakeKey2"
+    REFRESH_SECRET_KEY = "FakeKey2"
     logging.warning("REFRESH_SECRET_KEY environment variable not set. Using an insecure fallback for development.")
     # raise ValueError("SECRET_KEY environment variable not set.")
 ALGORITHM = "HS256"
@@ -58,6 +58,12 @@ unknown_token_exception = HTTPException(
 user_credentials_exception = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED,
     detail="Could not validate credentials of user",
+    headers={"WWW-Authenticate": "Bearer"},
+)
+
+user_deactivated_exception = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="This account has been deactivated",
     headers={"WWW-Authenticate": "Bearer"},
 )
 
@@ -163,11 +169,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     check_access_token(session_id=userDetails["sessionId"], token=token, db=db)
 
     user = db.query(User).filter(User.id == userDetails["userId"]).first()
+    if not user:
+        raise user_credentials_exception
+    if user.isDeleted:
+        raise user_deactivated_exception
     #Check if token's details matches with user's details in DB
     if ((userDetails["roleName"]!=user.roleName)| (userDetails["userId"]!=user.id) | (userDetails["fullName"]!=user.nric_FullName) | (userDetails["email"]!= user.email)):
         raise HTTPException(status_code=404, detail="Token value does not match with database")
-    if not user:
-        raise user_credentials_exception
 
     return {"userId": user.id, "fullName": user.nric_FullName, "roleName": user.roleName, "email": user.email}
 

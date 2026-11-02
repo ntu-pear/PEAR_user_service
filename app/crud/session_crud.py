@@ -11,13 +11,24 @@ from ..schemas import user as schemas_User
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from app.database import get_db
+from app.service import admin_config_service as AdminConfigService
 from app.service import user_auth_service as AuthService
 import uuid
-import os
-# Setup Variables
-SESSION_EXPIRY_MINUTES=int(os.getenv("SESSION_EXPIRE_MINUTES", "0"))
+from ..logger.logger_utils import log_crud_action, ActionType
 # Set timezone to Singapore Time (SGT)
 sgt_tz = pytz.timezone("Asia/Singapore")
+
+def _get_session_expiry_minutes(db: Session) -> int:
+    """
+    Fetch the session expiry duration in minutes from admin configs.
+    """
+    configs = AdminConfigService.get_all_configs(db)
+    raw_value = configs.get("SESSION_EXPIRE_MINUTES", 0)
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return 0
+
 
 #create session and return access & refresh token
 def create_session(user, db:Session = Depends(get_db)):
@@ -38,7 +49,7 @@ def create_session(user, db:Session = Depends(get_db)):
     #expiry_timestamp = datetime.now() + timedelta(days=2)
 
     # Set timezone to Singapore (SGT = UTC+8)
-    expiry_timestamp = datetime.now(sgt_tz) + timedelta(minutes=SESSION_EXPIRY_MINUTES)  # Expire in 10 min
+    expiry_timestamp = datetime.now(sgt_tz) + timedelta(minutes=_get_session_expiry_minutes(db))
 
     #Check for any other sessions, if yes delete them
     delete_user_sessions(userId=user.id, db=db)
@@ -101,7 +112,22 @@ def delete_sessions(db: Session = Depends(get_db)):
     db_session = db.query(User_Session).all()
     #loop thru all the sessions
     for session in db_session:
-        check_session_expiry(session_id=session.id, db=db)
+        session_id = session.id
+        session_user_id = session.user_id
+        was_expired = check_session_expiry(session_id=session_id, db=db)
+        if was_expired:
+            # Cron-only cleanup path (delete_expired_sessions_task is the sole
+            # caller of this function): no human triggered this deletion, so
+            # "SYSTEM" is the correct actor here and ONLY here.
+            log_crud_action(
+                action=ActionType.DELETE,
+                user="SYSTEM",
+                role="SYSTEM",
+                message=f"Scheduled cleanup deleted expired session {session_id} for user {session_user_id}",
+                entity_id=session_id,
+                original_data={"id": session_id, "user_id": session_user_id},
+                table="session",
+            )
 
 
 #Delete 1 session
