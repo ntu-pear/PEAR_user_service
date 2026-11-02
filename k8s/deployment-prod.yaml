@@ -20,6 +20,14 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
+          volumeMounts:
+            - name: log-volume
+              mountPath: /app/logs  # Path inside the container
+      volumes:
+        - name: log-volume
+          hostPath:
+            path: /home/VMadmin/FYP_microservices/PEAR_user_service/logs  # Path on the minikube node, read by Filebeat
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service
