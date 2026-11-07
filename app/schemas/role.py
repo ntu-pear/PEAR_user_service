@@ -11,6 +11,18 @@ class RoleBase(BaseModel):
 class RoleCreate(RoleBase):
     pass
 
+class RoleWithAccessLevelRead(RoleBase):
+    """RoleBase plus the access level's numeric rank.
+
+    Used by /roles/name/{roleName}, which other services call to find out
+    how much a role is allowed to see. Kept separate from RoleBase so the
+    create and update paths are unaffected.
+    """
+    accessLevelSensitive: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
 class RoleUpdate(BaseModel):
     roleName: Optional[str] = None
     description: Optional[str] = None
