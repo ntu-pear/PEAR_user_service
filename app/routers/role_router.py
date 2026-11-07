@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..models.role_model import Role
-from ..schemas.role import RoleBase, RoleUpdate, RoleRead, AdminRolePaginationResponse,RoleNamePaginationResponse
+from ..schemas.role import RoleBase, RoleUpdate, RoleRead, RoleWithAccessLevelRead, AdminRolePaginationResponse,RoleNamePaginationResponse
 from ..schemas import user_auth
 from ..crud import role_crud
 from ..database import get_db
@@ -15,7 +15,7 @@ def get_roles_name(page: Optional[int] = 0, page_size: Optional[int]=10, db: Ses
     roles = role_crud.get_roles(db, page=page, page_size=page_size)
     return roles
 
-@router.get("/roles/name/{roleName}", response_model=RoleBase)
+@router.get("/roles/name/{roleName}", response_model=RoleWithAccessLevelRead)
 def get_role_by_name(roleName: str , db: Session = Depends(get_db)):
     role= role_crud.get_role_by_name(db, roleName)
     if not role:
