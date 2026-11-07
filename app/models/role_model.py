@@ -23,6 +23,21 @@ class Role(Base):
     accessLevel = relationship("AccessLevel", back_populates="roles", lazy="joined")
     users = relationship("User", back_populates="role")
 
+    @property
+    def accessLevelSensitive(self):
+        """Numeric sensitivity rank of this role's access level.
+
+        The Patient service compares this against a patient's own
+        accessLevelSensitive to decide whether social history comes back in
+        full or masked. Its PrivacyStatus enum is LOW=1, MEDIUM=2, HIGH=3,
+        which lines up with levelRank here (NONE=0, LOW=1, MEDIUM=2, HIGH=3),
+        so the rank is what goes over the wire rather than the code string.
+
+        None when a role has no access level. Callers must treat that as
+        "no access" rather than comparing it.
+        """
+        return self.accessLevel.levelRank if self.accessLevel else None
+
     def get_created_date_sgt(self):
         return self.createdDate.replace(tzinfo=pytz.utc).astimezone(pytz.timezone("Asia/Singapore"))
 
